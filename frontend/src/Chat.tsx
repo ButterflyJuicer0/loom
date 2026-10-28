@@ -2187,6 +2187,7 @@ function Composer({
                 role="option"
                 aria-selected={c === selected}
                 className={c === selected ? "on" : ""}
+                onMouseEnter={() => setPick(matches.indexOf(c))}
                 // mousedown, not click: the textarea must keep focus.
                 onMouseDown={(e) => {
                   e.preventDefault()
