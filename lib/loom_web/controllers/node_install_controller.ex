@@ -69,7 +69,7 @@ defmodule LoomWeb.NodeInstallController do
   def download(conn, _params), do: send_resp(conn, 404, "no such target\n")
 
   # The Android app (one APK, no Termux). Bound to a device's install code and
-  # thus as short-lived as it (~a day): the code lets the device download the
+  # thus as short-lived as it (minutes): the code lets the device download the
   # app, and the app redeems that same code for the token. Checked without
   # consuming it, so the app can still redeem it afterwards.
   def app(conn, %{"code" => code}) do

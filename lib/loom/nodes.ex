@@ -44,6 +44,10 @@ defmodule Loom.Nodes do
   @name __MODULE__
   @persisted ~w(id name token_hash created_at os arch hostname version last_seen_at)a
   @install_ttl :timer.minutes(2)
+  # Six digits are guessable by brute force within @install_ttl, so this many
+  # wrong codes inside one @install_ttl voids every live code: making a new
+  # one in Devices is all it costs the user, and a guesser has to start over.
+  @miss_max 20
   @name_format ~r/^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$/
 
   def start_link(opts) do
@@ -156,7 +160,7 @@ defmodule Loom.Nodes do
 
     {nodes, wipes} = load(path)
     nodes = Map.new(nodes, &{&1.id, &1})
-    {:ok, %{path: path, nodes: nodes, wipes: wipes, online: %{}, codes: %{}}}
+    {:ok, %{path: path, nodes: nodes, wipes: wipes, online: %{}, codes: %{}, misses: []}}
   end
 
   @impl true
@@ -245,7 +249,7 @@ defmodule Loom.Nodes do
         _ -> false
       end
 
-    {:reply, valid, state}
+    {:reply, valid, if(valid, do: state, else: miss(state, now_ms))}
   end
 
   def handle_call({:redeem, code}, _from, state) do
@@ -260,7 +264,9 @@ defmodule Loom.Nodes do
       state = id |> drop_connection(state) |> then(&save(put_in(&1.nodes[id], node)))
       {:reply, {:ok, summary(node, state), token}, state}
     else
-      _ -> {:reply, {:error, :invalid_code}, %{state | codes: Map.delete(state.codes, code)}}
+      _ ->
+        state = %{state | codes: Map.delete(state.codes, code)}
+        {:reply, {:error, :invalid_code}, miss(state, now_ms)}
     end
   end
 
@@ -414,6 +420,22 @@ defmodule Loom.Nodes do
     do: String.downcase(a) == String.downcase(b)
 
   defp same_name?(_a, _b), do: false
+
+  # A wrong (or expired) install code. Too many within @install_ttl and every
+  # live code is voided: they are what a guesser is after.
+  defp miss(state, now_ms) do
+    misses = [now_ms | Enum.filter(state.misses, &(&1 > now_ms - @install_ttl))]
+
+    if length(misses) >= @miss_max do
+      if map_size(state.codes) > 0,
+        do:
+          Logger.warning("loom-node: #{length(misses)} wrong install codes; voided the live ones")
+
+      %{state | codes: %{}, misses: []}
+    else
+      %{state | misses: misses}
+    end
+  end
 
   defp new_code(id, state) do
     now_ms = System.monotonic_time(:millisecond)

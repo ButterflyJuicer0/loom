@@ -48,6 +48,29 @@ defmodule LoomWeb.NodeTest do
       assert {:error, :invalid_code} = Nodes.redeem(code)
     end
 
+    test "too many wrong codes void the live ones" do
+      # Its own registry: misses from the other tests would count otherwise.
+      dir = Path.join(System.tmp_dir!(), "nodes-miss-#{System.unique_integer([:positive])}")
+      File.mkdir_p!(dir)
+      on_exit(fn -> File.rm_rf!(dir) end)
+
+      s =
+        start_supervised!(
+          {Nodes,
+           name: :nodes_miss,
+           path: Path.join(dir, "nodes.json"),
+           cli_path: Path.join(dir, "cli.json")}
+        )
+
+      {:ok, _node, code} = Nodes.create("guessed", s)
+      wrong = if code == "000000", do: "000001", else: "000000"
+      for _ <- 1..19, do: assert({:error, :invalid_code} = Nodes.redeem(wrong, s))
+      assert Nodes.valid_code?(code, s)
+      # The 20th miss (here through the APK check, which counts too) voids it.
+      refute Nodes.valid_code?(wrong, s)
+      assert {:error, :invalid_code} = Nodes.redeem(code, s)
+    end
+
     test "reinstalling replaces the token" do
       {node, old} = register()
       {:ok, code} = Nodes.install_code(node.id)
