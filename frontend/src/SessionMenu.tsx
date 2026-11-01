@@ -33,8 +33,8 @@ export function SessionMenu({
   anchor: DOMRect
   onRename: () => void
   onPin: (pinned: boolean) => Promise<void>
-  // Out of the sidebar's Working group, or back in.
-  onDone?: (done: boolean) => Promise<void>
+  // Only for a session in the sidebar's Working group: out of it.
+  onDone?: () => Promise<void>
   // Only for the user's own chats; an employee's or Dream's carry on by themselves.
   onContinue?: () => Promise<void>
   onMove: (projectId: string | null) => Promise<void>
@@ -100,6 +100,12 @@ export function SessionMenu({
     >
       {view === "main" ? (
         <>
+          {/* First: in Working it is what the menu is opened for most. */}
+          {onDone && (
+            <button role="menuitem" onClick={() => run(onDone)}>
+              <Check /> Done
+            </button>
+          )}
           <button
             role="menuitem"
             onClick={() => {
@@ -112,11 +118,6 @@ export function SessionMenu({
           <button role="menuitem" onClick={() => run(() => onPin(!session.pinned))}>
             {session.pinned ? <PinOff /> : <Pin />} {session.pinned ? "Unpin" : "Pin"}
           </button>
-          {onDone && (
-            <button role="menuitem" onClick={() => run(() => onDone(session.done_at == null))}>
-              <Check /> {session.done_at == null ? "Done" : "Not done"}
-            </button>
-          )}
           {onContinue && (
             <button role="menuitem" onClick={() => run(onContinue)}>
               <CornerDownRight /> Continue in new chat

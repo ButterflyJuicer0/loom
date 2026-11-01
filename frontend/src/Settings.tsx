@@ -123,12 +123,15 @@ export function SettingsDialog({
 
 // The interface in px, as it is set; each area in percent of it.
 const AREAS: {
-  key: "sidebarScale" | "chatScale" | "codeScale"
+  key: "sidebarScale" | "chatScale" | "codeScale" | "cardTitleScale" | "cardTextScale"
   label: string
 }[] = [
   { key: "sidebarScale", label: "Sidebar" },
   { key: "chatScale", label: "Messages" },
   { key: "codeScale", label: "Code" },
+  // The sidebar's Working group: cards on a phone, a second line on a desktop.
+  { key: "cardTitleScale", label: "Working titles" },
+  { key: "cardTextScale", label: "Working text" },
 ]
 
 /**
@@ -153,6 +156,8 @@ function TextSizes({ settings, onChange }: { settings: Settings; onChange: (patc
                 sidebarScale: 1,
                 chatScale: 1,
                 codeScale: 1,
+                cardTitleScale: 1,
+                cardTextScale: 1,
               })
             }
           >

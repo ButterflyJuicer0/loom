@@ -21,7 +21,7 @@ import {
   Users,
   X,
 } from "lucide-react"
-import { useEffect, useRef, useState, type MouseEvent } from "react"
+import { useEffect, useState, type MouseEvent } from "react"
 import type { AgentBackend, AgentInfo, Device, Employee, Notice, Project } from "./api"
 import { Avatar, BudgetRing, short, STATUS, StatusIcon } from "./Employees"
 import { BellButton } from "./Notices"
@@ -147,7 +147,7 @@ type Props = {
   onMove: (id: string, projectId: string | null) => Promise<void>
   onArchive: (id: string, archived: boolean) => Promise<void>
   // Out of Working, or back into it.
-  onDone: (id: string, done: boolean) => Promise<void>
+  onDone: (id: string) => Promise<void>
   onCollapse: () => void
   browserOpen: boolean
   onToggleBrowser: () => void
@@ -236,7 +236,10 @@ export function Sidebar({
   const dreamOf = (scope: string) => dreams.find((d) => scopeOf(d) === scope)
   const homeDream = dreamOf("home")
 
-  const row = (s: AgentInfo, done?: boolean) => (
+  // A Working row. On a desktop it has a second line, where it got to, and a
+  // ✓ beside the … on hover; a phone keeps to one line, with Done in the …
+  // menu, out of a thumb's way, and the cards of the switcher (Switcher.tsx).
+  const row = (s: AgentInfo, working?: boolean) => (
     <div
       key={s.id}
       ref={s.id === cursorId ? (el) => el?.scrollIntoView({ block: "nearest" }) : undefined}
@@ -246,7 +249,7 @@ export function Sidebar({
         (s.id === activeId ? " active" : "") +
         (s.id === cursorId ? " cursor" : "") +
         (unread(s) ? " unread" : "") +
-        (done ? " working" : "")
+        (working && !narrow ? " working" : "")
       }
       onClick={() => onSelect(s.id)}
       // Outside its project, which one it is in: on hover here, and in its menu.
@@ -259,8 +262,7 @@ export function Sidebar({
       ) : (
         <span className="session-label">{s.title ?? s.id}</span>
       )}
-      {/* In Working, a second line: where it got to. */}
-      {done && <span className="session-gist">{gist(s)}</span>}
+      {working && !narrow && <span className="session-gist">{gist(s)}</span>}
       {s.queued > 0 && (
         <span className="session-queued" title="queued messages">
           {s.queued}
@@ -270,13 +272,13 @@ export function Sidebar({
       <span className="session-when" title={"last active " + new Date(lastActive(s)).toLocaleString()}>
         {when(lastActive(s))}
       </span>
-      {done && (
+      {working && !narrow && (
         <button
           className="session-del session-more"
           title="Done: move it down to Recents"
           onClick={(e) => {
             e.stopPropagation()
-            void onDone(s.id, true)
+            void onDone(s.id)
           }}
         >
           <Check />
@@ -423,18 +425,7 @@ export function Sidebar({
         {working.length > 0 && (
           <>
             <Heading label="Working" open={open(WORKING_SECTION)} onToggle={() => onToggle(WORKING_SECTION)} />
-            {open(WORKING_SECTION) &&
-              (narrow ? (
-                <WorkingStrip
-                  sessions={working}
-                  activeId={activeId}
-                  unread={unread}
-                  onSelect={onSelect}
-                  onDone={(id) => void onDone(id, true)}
-                />
-              ) : (
-                working.map((s) => row(s, true))
-              ))}
+            {open(WORKING_SECTION) && working.map((s) => row(s, true))}
           </>
         )}
 
@@ -457,7 +448,7 @@ export function Sidebar({
           onContinue={menuFor.kind == null && !menuFor.employee_id ? () => onContinue(menuFor.id) : undefined}
           onMove={(projectId) => onMove(menuFor.id, projectId)}
           onArchive={(on) => onArchive(menuFor.id, on)}
-          onDone={(on) => onDone(menuFor.id, on)}
+          onDone={working.some((w) => w.id === menuFor.id) ? () => onDone(menuFor.id) : undefined}
           onDelete={() => onDelete(menuFor.id)}
           onClose={() => setMenu(null)}
         />
@@ -577,88 +568,10 @@ export function Sidebar({
   )
 }
 
-/** A list's heading, ChatGPT's "Pinned" and "Recent": bold, and it folds. */
 /** What a Working session got to: its recap, or else the start of its last reply. */
-const gist = (s: AgentInfo) => s.recap ?? s.preview ?? ""
+export const gist = (s: AgentInfo) => s.recap ?? s.preview ?? ""
 
-/**
- * Working on a phone: cards side by side, swiped across, each with its gist,
- * to keep several in mind at once. Below, one crumb per card in the colour of
- * its state (working, waiting on the user, unread, idle), the one in view
- * drawn longer; a tap on one goes to that card.
- */
-function WorkingStrip({
-  sessions,
-  activeId,
-  unread,
-  onSelect,
-  onDone,
-}: {
-  sessions: AgentInfo[]
-  activeId: string | null
-  unread: (s: AgentInfo) => boolean
-  onSelect: (id: string) => void
-  onDone: (id: string) => void
-}) {
-  const strip = useRef<HTMLDivElement>(null)
-  const [shown, setShown] = useState(0)
-  const step = () => {
-    const el = strip.current
-    const card = el?.firstElementChild as HTMLElement | null
-    return card ? card.offsetWidth + parseFloat(getComputedStyle(el!).columnGap || "0") : 1
-  }
-  return (
-    <>
-      <div
-        ref={strip}
-        className="working-strip"
-        onScroll={(e) => setShown(Math.round(e.currentTarget.scrollLeft / step()))}
-      >
-        {sessions.map((s) => (
-          <div
-            key={s.id}
-            className={"working-card" + (s.id === activeId ? " active" : "") + (unread(s) ? " unread" : "")}
-            onClick={() => onSelect(s.id)}
-          >
-            <div className="working-title">
-              <span className={"dot " + s.status} title={s.status} />
-              <span className="session-label">{s.title ?? s.id}</span>
-              {unread(s) && <span className="session-unread" />}
-            </div>
-            <div className="working-preview">{gist(s)}</div>
-            <button
-              className="working-done"
-              title="Done: move it down to Recents"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDone(s.id)
-              }}
-            >
-              <Check /> Done
-            </button>
-          </div>
-        ))}
-      </div>
-      {sessions.length > 1 && (
-        <div className="working-crumbs">
-          {sessions.map((s, i) => (
-            <button
-              key={s.id}
-              className={
-                "working-crumb " +
-                (s.status === "idle" && unread(s) ? "unread" : s.status) +
-                (i === Math.min(shown, sessions.length - 1) ? " shown" : "")
-              }
-              aria-label={s.title ?? s.id}
-              onClick={() => strip.current?.scrollTo({ left: i * step(), behavior: "smooth" })}
-            />
-          ))}
-        </div>
-      )}
-    </>
-  )
-}
-
+/** A list's heading, ChatGPT's "Pinned" and "Recent": bold, and it folds. */
 function Heading({ label, open, onToggle }: { label: string; open: boolean; onToggle: () => void }) {
   return (
     <button className={"list-heading" + (open ? " open" : "")} onClick={onToggle} aria-expanded={open}>

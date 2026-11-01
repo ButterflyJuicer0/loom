@@ -170,127 +170,227 @@ samp,
   color: var(--unread);
 }
 
-/* Working on a phone: cards side by side, swiped across; the next one peeks
-   in from the edge so it is plain there are more. See Sidebar.tsx. */
-.working-strip {
+/* The phone's switcher for the sessions in Working (Switcher.tsx): iOS's app
+   switcher, cards over the chat blurred and dimmed behind them. */
+.switcher {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  font-family: var(--ui);
+  color: var(--fg);
+  background: color-mix(in srgb, var(--bg) 45%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  backdrop-filter: blur(24px) saturate(1.2);
+  animation: switcher-in 0.2s ease-out;
+}
+
+@keyframes switcher-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The whole screen, so a card thrown up is clipped only by its top edge. */
+.switcher-strip {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 14px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  padding: 4px 20px 8px;
-  margin-inline: -12px;
-  scroll-padding-inline: 20px;
+  /* Sideways is the strip's own scroll; up and down are left to the cards. */
+  touch-action: pan-x;
+  padding: 0 16vw;
   scrollbar-width: none;
 }
 
-.working-strip::-webkit-scrollbar {
+.switcher-strip::-webkit-scrollbar {
   display: none;
 }
 
-.working-card {
-  flex: 0 0 78%;
-  scroll-snap-align: start;
+.switcher-card {
+  flex: 0 0 68vw;
+  height: min(40vh, 340px);
+  scroll-snap-align: center;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 12px;
   min-width: 0;
-  padding: 14px 16px 10px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--fg) 6%, transparent);
-  cursor: pointer;
+  padding: 20px 18px;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--fg) 8%, var(--bg));
+  border: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+  box-shadow: 0 12px 40px var(--shadow);
+  transition:
+    transform 0.22s ease-out,
+    opacity 0.22s ease-out;
 }
 
-.working-card .dot.idle {
+.switcher-card.active {
+  border-color: color-mix(in srgb, var(--fg) 30%, transparent);
+}
+
+.switcher-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: calc(1.25rem * var(--card-title-scale, 1));
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.switcher-title .dot {
+  margin-top: 0.45em;
+}
+
+.switcher-title .dot.idle {
   display: none;
 }
 
-.working-card.active {
-  background: color-mix(in srgb, var(--fg) 11%, transparent);
+.switcher-title .session-unread {
+  margin-top: 0.4em;
 }
 
-.working-title {
+.switcher-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.switcher-gist {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  font-size: calc(1rem * var(--card-text-scale, 1));
+  line-height: 1.45;
+  color: var(--fg-dim);
+}
+
+/* A crumb per card, coloured by its state like the status dot; the one in
+   view drawn long. */
+.switcher-crumbs {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% + min(20vh, 170px) + 22px);
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+}
+
+.switcher-crumb {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 28%, transparent);
+  transition: width 0.2s;
+}
+
+.switcher-crumb.shown {
+  width: 20px;
+}
+
+.switcher-crumb.running,
+.switcher-crumb.starting {
+  background: var(--green);
+}
+
+.switcher-crumb.interrupted {
+  background: var(--red);
+}
+
+.switcher-crumb.unread {
+  background: var(--unread);
+}
+
+.switcher-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% - min(20vh, 170px) - 40px);
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--fg-dim);
+}
+
+/* Under the phone's composer, above the home indicator: the line that opens
+   the switcher. Faint, as the user asked; the touch area is wider than it. */
+.composer {
+  position: relative;
+}
+
+.grabber {
+  position: absolute;
+  left: 50%;
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) - 18px);
+  transform: translateX(-50%);
+  width: 140px;
+  height: 18px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-width: 0;
-  font-size: 1.125rem;
+  justify-content: center;
+  pointer-events: auto;
 }
 
-.working-title .session-label {
-  flex: 1 1 auto;
+.grabber span {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--fg) 15%, transparent);
+}
+
+/* "Done: … · Undo", a few seconds after a session leaves Working. */
+.undo-done {
+  font-family: var(--ui);
+  position: fixed;
+  left: 50%;
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 84px);
+  transform: translateX(-50%);
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 10px 10px 18px;
+  border-radius: 999px;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 0.9375rem;
+  box-shadow: 0 8px 28px var(--shadow);
+}
+
+.undo-done-text {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.working-card.unread .session-label {
-  font-weight: 600;
-}
-
-.working-preview {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  min-height: calc(3 * 1.35em);
-  line-height: 1.35;
-  font-size: 0.9375rem;
-  color: var(--fg-dim);
-}
-
-.working-done {
-  align-self: flex-end;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+.undo-done button {
+  flex: 0 0 auto;
   padding: 6px 12px;
   border: none;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--fg) 8%, transparent);
-  color: var(--fg);
+  background: color-mix(in srgb, var(--bg) 14%, transparent);
+  color: var(--bg);
   font: inherit;
-  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
 }
 
-/* Under the card strip: a crumb per card, coloured by its state like the
-   status dot, the one in view drawn long. */
-.working-crumbs {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  padding: 2px 0 6px;
-}
-
-.working-crumb {
-  width: 7px;
-  height: 7px;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--fg) 25%, transparent);
-  transition: width 0.2s;
-}
-
-.working-crumb.shown {
-  width: 18px;
-}
-
-.working-crumb.running,
-.working-crumb.starting {
-  background: var(--green);
-}
-
-.working-crumb.interrupted {
-  background: var(--red);
-}
-
-.working-crumb.unread {
-  background: var(--unread);
-}
-
 /* Working on a desktop: a second line under the title, where it got to. */
+.sidebar .session.working .session-label {
+  font-size: calc(1em * var(--card-title-scale, 1));
+}
+
 .sidebar .session.working {
   flex-wrap: wrap;
   row-gap: 0;
@@ -304,7 +404,7 @@ samp,
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 0.8125rem;
+  font-size: calc(0.8125rem * var(--card-text-scale, 1));
   color: var(--fg-dim);
 }
 

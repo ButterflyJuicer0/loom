@@ -4,6 +4,7 @@ import { Canvas } from "./Canvas"
 import { moved, touches, type CanvasItem } from "./canvasItems"
 import { Confirm } from "./Confirm"
 import { Chat } from "./Chat"
+import { Switcher, UndoDone } from "./Switcher"
 import type { TreeNav } from "./FileBrowser"
 import { KeyHelp, useGlobalKey, useKeys, WhichKey, type Keymap } from "./keys"
 import { Login } from "./Login"
@@ -616,6 +617,11 @@ function App() {
   const pending = useKeys(keysOn, keymap)
   useGlobalKey(keysOn, (e) => e.ctrlKey && e.code === "Backquote", () => void toggleTerminal())
 
+  // Out of Working (see `markDone`), and the phone's switcher (Switcher.tsx).
+  const [undo, setUndo] = useState<{ id: string; title: string } | null>(null)
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [switching, setSwitching] = useState(false)
+
   if (!authed) return <Login onSuccess={() => setAuthed(true)} />
   if (!loaded) return <div className="loading">connecting…</div>
 
@@ -627,6 +633,21 @@ function App() {
   // server, or an older route, may not carry it.
   const activeEmployee =
     (active && employees.find((e) => e.chat_session === active.id || e.work_session === active.id)) ?? null
+
+  // Out of Working, from the sidebar or the switcher: for a few seconds it
+  // can be undone, a slip of the thumb being easy.
+  const markDone = async (id: string) => {
+    upsert(await updateAgent(id, { done: true }))
+    if (undoTimer.current) clearTimeout(undoTimer.current)
+    setUndo({ id, title: sessions.find((x) => x.id === id)?.title ?? "session" })
+    undoTimer.current = setTimeout(() => setUndo(null), 5000)
+  }
+  const undoDone = async () => {
+    if (!undo) return
+    setUndo(null)
+    upsert(await updateAgent(undo.id, { done: false }))
+  }
+  const working = sidebarGroups(sessions, projects).working
 
   const sidebar = (
     <Sidebar
@@ -657,7 +678,7 @@ function App() {
       onPin={async (id, pinned) => upsert(await updateAgent(id, { pinned }))}
       onContinue={carryOn}
       onArchive={async (id, archived) => upsert(await updateAgent(id, { archived }))}
-      onDone={async (id, done) => upsert(await updateAgent(id, { done }))}
+      onDone={markDone}
       onMove={async (id, projectId) => {
         upsert(await updateAgent(id, { project_id: projectId }))
         if (projectId) reveal()
@@ -690,6 +711,7 @@ function App() {
     />
   )
 
+
   const chatProps = active && {
     sidebarOpen: !narrow && sidebarOpen,
     onToggleSidebar: () => (narrow ? setDrawerOpen(true) : setSidebarOpen((open) => !open)),
@@ -705,6 +727,7 @@ function App() {
     },
     focus: focusNotice ? { notice: focusNotice, onAnswered: upsertNotice } : null,
     onContinue: active.kind == null && !active.employee_id ? () => carryOn(active.id) : undefined,
+    onSwitch: narrow && working.length > 0 ? () => setSwitching(true) : undefined,
   }
 
   return (
@@ -1031,6 +1054,19 @@ function App() {
           onClose={() => setHelp(false)}
         />
       )}
+      {switching && (
+        <Switcher
+          sessions={working}
+          activeId={activeId}
+          onSelect={(id) => {
+            setSwitching(false)
+            select(id)
+          }}
+          onDone={(id) => void markDone(id)}
+          onClose={() => setSwitching(false)}
+        />
+      )}
+      {undo && <UndoDone title={undo.title} onUndo={() => void undoDone()} />}
     </div>
   )
 }

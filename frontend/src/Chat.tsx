@@ -36,6 +36,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react"
+import { Grabber } from "./Switcher"
 import { createPortal } from "react-dom"
 import { EffortButton } from "./Effort"
 import { ModelList, modelLabel } from "./Model"
@@ -123,6 +124,9 @@ type Props = {
   incognito?: { pinned: boolean; onPin: (pinned: boolean) => void; onKeep: () => void }
   // The project it is in: "‹ name" before the title goes back to its page.
   project?: { name: string; onOpen: () => void }
+  // On a phone with sessions in Working: the line under the composer that
+  // opens the switcher (Switcher.tsx).
+  onSwitch?: () => void
 }
 
 // How a card or link deep in the transcript opens something in the canvas.
@@ -155,6 +159,7 @@ export function Chat({
   onContinue,
   incognito,
   project,
+  onSwitch,
 }: Props) {
   const { transcript, joinError, submit, resend, discard, interrupt, dropQueued, rename, draft: remoteDraft } = useAgent(
     session.id,
@@ -411,6 +416,7 @@ export function Chat({
           tools={<EffortButton session={session} />}
           text={draft}
           setText={setDraft}
+          under={onSwitch && <Grabber onOpen={onSwitch} />}
         />
         </div>
       </OpenCanvas.Provider>
@@ -1869,6 +1875,7 @@ function Composer({
   tools,
   text,
   setText,
+  under,
 }: {
   busy: boolean
   interrupted: boolean
@@ -1880,6 +1887,8 @@ function Composer({
   // Held by the chat, so the suggested replies can fill it in.
   text: string
   setText: (text: string) => void
+  // Below the box, in the space kept for the home indicator.
+  under?: ReactNode
 }) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const picker = useRef<HTMLInputElement>(null)
@@ -2110,6 +2119,7 @@ function Composer({
           )}
         </div>
       </div>
+      {under}
     </div>
   )
 }
