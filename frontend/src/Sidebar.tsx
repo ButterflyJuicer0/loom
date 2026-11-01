@@ -199,8 +199,8 @@ export function Sidebar({
     return () => clearInterval(timer)
   }, [])
   const [devicesOpen, setDevicesOpen] = useState(false)
-  // A chat or an incognito one, on which engine: the desktop row's arrow
-  // asks; a phone's pill asks on a tap.
+  // A chat or an incognito one, on which engine: behind the arrow beside
+  // New chat, whose own click just makes one.
   const [newMenu, setNewMenu] = useState<DOMRect | null>(null)
   const toggleNewMenu = (e: MouseEvent) => {
     e.stopPropagation()
@@ -283,8 +283,12 @@ export function Sidebar({
           <div className="nav-item nav-new" role="button" onClick={() => onCreate(defaultBackend)}>
             <SquarePen className="nav-icon" />
             <span className="nav-label">New chat</span>
-            <button className="nav-new-more" onClick={toggleNewMenu} title="Incognito, or another engine">
-              <ChevronDown />
+            <button
+              className={"nav-new-more" + (newMenu ? " open" : "")}
+              onClick={toggleNewMenu}
+              title="Incognito, or another engine"
+            >
+              <ChevronRight className="nav-chevron" />
             </button>
           </div>
         )}
@@ -489,10 +493,15 @@ export function Sidebar({
       </div>
       {narrow && (
         <div className="sidebar-float">
-          <button className="new-chat" onClick={toggleNewMenu}>
-            <SquarePen />
-            New chat
-          </button>
+          <div className="new-chat-split">
+            <button className="new-chat" onClick={() => onCreate(defaultBackend)}>
+              <SquarePen />
+              New chat
+            </button>
+            <button className="new-chat-more" onClick={toggleNewMenu} title="Incognito, or another engine">
+              <ChevronDown />
+            </button>
+          </div>
           <button
             className="dial-btn"
             onClick={() => onToggle(FOOT_SECTION)}
@@ -505,7 +514,7 @@ export function Sidebar({
       )}
       {newMenu && (
         <NewMenu
-          owner=".nav-new-more, .new-chat"
+          owner=".nav-new-more, .new-chat-more"
           anchor={newMenu}
           defaultBackend={defaultBackend}
           onPick={(backend, model, incognito) => {
