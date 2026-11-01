@@ -121,6 +121,7 @@ defmodule Loom.Agent do
   defdelegate tidied(id), to: Session
   defdelegate seen(id, seq), to: Session
   defdelegate set_effort(id, effort), to: Session
+  defdelegate set_model(id, model), to: Session
   defdelegate move(id, project_id), to: Session
   defdelegate attach(id, since_seq \\ 0), to: Session
   defdelegate info(id), to: Session

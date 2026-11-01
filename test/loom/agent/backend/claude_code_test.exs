@@ -597,6 +597,29 @@ defmodule Loom.Agent.Backend.ClaudeCodeTest do
       assert payload.context_window == 1_000_000
     end
 
+    test "the turn says which model answered, and which was asked for" do
+      reply = fn model, parent ->
+        %{
+          "type" => "assistant",
+          "parent_tool_use_id" => parent,
+          "message" => %{"model" => model, "content" => []}
+        }
+      end
+
+      {_handle, out} =
+        feed(handle(), [
+          %{"type" => "system", "subtype" => "init", "model" => "us.anthropic.claude-opus-5-5"},
+          reply.("claude-opus-4-8", nil),
+          # A subagent's model is its own, not the conversation's.
+          reply.("claude-haiku-5-5", "toolu_1"),
+          @result
+        ])
+
+      assert [_status, {:turn_done, payload}] = events(out)
+      assert payload.model == "claude-opus-4-8"
+      assert payload.expected == "us.anthropic.claude-opus-5-5"
+    end
+
     test "success reports the stop reason and keeps the process warm" do
       {handle, out} = feed(handle(), [@result])
 

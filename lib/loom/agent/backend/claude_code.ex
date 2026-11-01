@@ -198,7 +198,12 @@ defmodule Loom.Agent.Backend.ClaudeCode do
       # Taken from the *last* API call of the turn, which is the only honest
       # measure of how big the conversation now is. See `context/2`.
       context_tokens: 0,
-      context_window: nil
+      context_window: nil,
+      # The model the process was started on (`system/init`), and the one that
+      # last answered this turn. They differ when Claude Code fell back, or the
+      # API answered from another model; `turn_done` carries both.
+      asked_model: nil,
+      turn_model: nil
     }
   end
 
@@ -208,7 +213,7 @@ defmodule Loom.Agent.Backend.ClaudeCode do
       handle = write(handle, message_line(text))
       # Block ids need no per-turn reset: they are qualified by the API call's
       # message id, which is unique across turns. See `block_id/2`.
-      {:ok, %{handle | tools: %{}, interrupted?: false}}
+      {:ok, Map.merge(handle, %{tools: %{}, interrupted?: false, turn_model: nil})}
     end
   end
 
@@ -352,6 +357,14 @@ defmodule Loom.Agent.Backend.ClaudeCode do
     if Map.get(handle, :effort) == effort,
       do: handle,
       else: %{teardown(handle) | effort: effort}
+  end
+
+  # Also a flag (`--model`), so the same as set_effort/2.
+  @impl Backend
+  def set_model(handle, model) do
+    if Map.get(handle, :model) == model,
+      do: handle,
+      else: %{teardown(handle) | model: model}
   end
 
   @impl Backend
@@ -528,6 +541,8 @@ defmodule Loom.Agent.Backend.ClaudeCode do
         booting: nil
     }
 
+    handle = Map.put(handle, :asked_model, message["model"])
+
     {handle, [{:event, :status, %{status: :running, backend_ref: handle.session_id}}]}
   end
 
@@ -635,8 +650,17 @@ defmodule Loom.Agent.Backend.ClaudeCode do
   defp translate(handle, %{"type" => "assistant", "message" => %{"model" => "<synthetic>"}}),
     do: {handle, []}
 
-  defp translate(handle, %{"type" => "assistant", "message" => %{"content" => content}})
+  defp translate(handle, %{"type" => "assistant", "message" => %{"content" => content}} = message)
        when is_list(content) do
+    # The main conversation's model; a subagent's (`parent_tool_use_id`) may
+    # be another by design.
+    model = message["message"]["model"]
+
+    handle =
+      if is_binary(model) and message["parent_tool_use_id"] == nil,
+        do: Map.put(handle, :turn_model, model),
+        else: handle
+
     Enum.reduce(content, {handle, []}, fn block, {acc, out} ->
       {acc, produced} = assistant_block(acc, block)
       {acc, out ++ produced}
@@ -684,7 +708,9 @@ defmodule Loom.Agent.Backend.ClaudeCode do
                 stop_reason: message["stop_reason"],
                 usage: usage,
                 context_tokens: handle.context_tokens,
-                context_window: handle.context_window
+                context_window: handle.context_window,
+                model: Map.get(handle, :turn_model) || Map.get(handle, :asked_model),
+                expected: Map.get(handle, :asked_model)
               }}
            ]}
 

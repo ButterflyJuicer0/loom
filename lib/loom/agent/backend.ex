@@ -257,7 +257,13 @@ defmodule Loom.Agent.Backend do
   """
   @callback set_effort(handle, effort :: String.t() | nil) :: handle
 
-  @optional_callbacks detach: 1, adopt: 1, checkpoint: 1, set_effort: 2
+  @doc """
+  The model from the next turn on, or nil for the agent's own default. Given
+  before every turn, like `set_effort/2`.
+  """
+  @callback set_model(handle, model :: String.t() | nil) :: handle
+
+  @optional_callbacks detach: 1, adopt: 1, checkpoint: 1, set_effort: 2, set_model: 2
 
   @doc """
   The thinking levels a backend takes, lowest first; empty for one that has
@@ -274,6 +280,15 @@ defmodule Loom.Agent.Backend do
 
     if Code.ensure_loaded?(module) and function_exported?(module, :set_effort, 2),
       do: module.set_effort(handle, effort),
+      else: handle
+  end
+
+  @doc "`set_model/2`, for a backend that has it."
+  def set_model(kind, handle, model) do
+    module = impl(kind)
+
+    if Code.ensure_loaded?(module) and function_exported?(module, :set_model, 2),
+      do: module.set_model(handle, model),
       else: handle
   end
 

@@ -5,6 +5,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Cpu,
   Clock as ClockIcon,
   Ellipsis,
   Forward,
@@ -33,6 +34,7 @@ import {
 } from "react"
 import { createPortal } from "react-dom"
 import { EffortButton } from "./Effort"
+import { ModelChip, ModelList, modelLabel } from "./Model"
 import { Card as NoticeCard } from "./Notices"
 import {
   applySnapshot,
@@ -69,6 +71,7 @@ import {
   downloadAgentOutput,
   downloadAgentZip,
   downloadAttachment,
+  modelName,
   outputUrl,
   type AgentFile,
   type AgentInfo,
@@ -268,6 +271,7 @@ export function Chat({
         <div className="chat-meta">
           {narrow ? (
             <PaneMenu
+              session={session}
               terminalOpen={terminalOpen}
               terminalCount={terminalCount}
               onToggleTerminal={onToggleTerminal}
@@ -276,6 +280,7 @@ export function Chat({
             />
           ) : (
             <>
+          <ModelChip session={session} />
           <button
             className={"chip button terminal-toggle" + (terminalOpen ? " on" : "")}
             onClick={onToggleTerminal}
@@ -574,15 +579,18 @@ function readAnswers(
 
 /**
  * The terminals and the canvas on a phone, folded into one `…`: the header has
- * room for the title or for four buttons, not both. And a reload.
+ * room for the title or for four buttons, not both. And the model, which swaps
+ * the list in place, and a reload.
  */
 function PaneMenu({
+  session,
   terminalOpen,
   terminalCount,
   onToggleTerminal,
   canvasOpen,
   onToggleCanvas,
 }: {
+  session: AgentInfo
   terminalOpen: boolean
   terminalCount: number
   onToggleTerminal: () => void
@@ -590,10 +598,11 @@ function PaneMenu({
   onToggleCanvas: () => void
 }) {
   const [at, setAt] = useState<{ top: number; right: number } | null>(null)
+  const [view, setView] = useState<"main" | "model">("main")
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!at) return
+    if (!at) return setView("main")
     const away = (e: PointerEvent) => {
       if (ref.current?.contains(e.target as Node)) return
       if ((e.target as Element | null)?.closest?.(".pane-more")) return
@@ -627,6 +636,17 @@ function PaneMenu({
       {at &&
         createPortal(
           <div className="session-menu pane-menu" role="menu" ref={ref} style={at}>
+            {view === "model" ? (
+              <ModelList session={session} onBack={() => setView("main")} onDone={() => setAt(null)} />
+            ) : (
+            <>
+            <button role="menuitem" onClick={() => setView("model")}>
+              <Cpu />
+              Model
+              <span className="pane-menu-count">{modelLabel(session.model)}</span>
+              <ChevronRight />
+            </button>
+            <div className="session-menu-sep" />
             <button role="menuitem" onClick={() => pick(onToggleTerminal)}>
               <SquareTerminal />
               {terminalOpen ? "Hide terminals" : "Terminals"}
@@ -642,6 +662,8 @@ function PaneMenu({
               <RotateCw />
               Reload
             </button>
+            </>
+            )}
           </div>,
           document.body,
         )}
@@ -1655,10 +1677,20 @@ function TurnLine({ item }: { item: Extract<TimelineItem, { kind: "turn" }> }) {
         : `${formatTokens(item.contextTokens)} ctx`,
     )
   }
+  const model = item.model ? modelName(item.model) : null
+  // Another model than asked for: Claude Code fell back, or the API answered
+  // from another one. Said, not hidden in the footnote's gray.
+  const off = model && item.expected && modelName(item.expected) !== model ? modelName(item.expected) : null
   return (
     <div className="turn-line">
       <Clock at={item.at} />
       {parts.map((part) => ` · ${part}`)}
+      {model && " · "}
+      {model && (
+        <span className={"turn-model" + (off ? " off" : "")} title={item.model ?? undefined}>
+          {off ? `${model}, not ${off}` : model}
+        </span>
+      )}
     </div>
   )
 }

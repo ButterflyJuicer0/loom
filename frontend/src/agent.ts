@@ -405,6 +405,10 @@ export type TimelineItem =
       at: number
       contextTokens: number
       contextWindow: number | null
+      // The model that answered, and the one asked for when the agent says
+      // (Claude Code); they differ after a fallback. Older turns have neither.
+      model: string | null
+      expected: string | null
     }
 
 /**
@@ -587,6 +591,8 @@ export function buildTimeline(t: Transcript): TimelineItem[] {
           at: event.at,
           contextTokens: Number(p.context_tokens ?? 0),
           contextWindow: (p.context_window as number | null) ?? null,
+          model: typeof p.model === "string" ? p.model : null,
+          expected: typeof p.expected === "string" ? p.expected : null,
         })
         break
 

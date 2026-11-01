@@ -218,6 +218,13 @@ defmodule Loom.Agent.Session do
   def set_effort(id, effort), do: GenServer.call(via(id), {:effort, effort})
 
   @doc """
+  The model from the next turn on: an id the session's agent knows, or nil
+  for its own default. Local to loom, and given to the backend as each turn
+  starts, like `set_effort/2`.
+  """
+  def set_model(id, model), do: GenServer.call(via(id), {:model, model})
+
+  @doc """
   Move the session into a project (by id), or out of any with nil.
 
   The conversation carries on where it is, from the project's workspace: the
@@ -283,6 +290,7 @@ defmodule Loom.Agent.Session do
           project_id: project && project.id,
           kind: Keyword.get(opts, :kind),
           employee_id: Keyword.get(opts, :employee),
+          model: Keyword.get(opts, :model) || Keyword.get(opts, :kiro_model),
           title: Keyword.get(opts, :title),
           title_by: Keyword.get(opts, :title_by, if(Keyword.get(opts, :title), do: "user")),
           created_at: now,
@@ -415,6 +423,7 @@ defmodule Loom.Agent.Session do
           seen_seq: if(is_integer(meta[:seen_seq]), do: meta[:seen_seq], else: 0),
           reply_seq: reply_seq(meta, transcript),
           effort: if(meta[:effort] in Backend.efforts(backend), do: meta[:effort]),
+          model: restored_model(meta),
           notice: restored_notice(meta),
           title: meta[:title],
           title_by: if(meta[:title_by] in ["auto", "user", "tidy"], do: meta[:title_by]),
@@ -548,6 +557,8 @@ defmodule Loom.Agent.Session do
       reply_seq: 0,
       # The thinking level, or nil for the model's default. See `set_effort/2`.
       effort: nil,
+      # The model, or nil for the agent's default. See `set_model/2`.
+      model: nil,
       # Told to the backend ahead of the next turn's message, once: what changed
       # about its project since the conversation began. See `moved_notice/2`.
       notice: nil,
@@ -717,6 +728,16 @@ defmodule Loom.Agent.Session do
       {:reply, :ok, state}
     else
       {:reply, {:error, "not a thinking level for this agent"}, state}
+    end
+  end
+
+  def handle_call({:model, model}, _from, state) do
+    if model == nil or model?(model) do
+      state = %{state | model: model}
+      persist_meta(state)
+      {:reply, :ok, state}
+    else
+      {:reply, {:error, "not a model id"}, state}
     end
   end
 
@@ -1075,7 +1096,10 @@ defmodule Loom.Agent.Session do
     state
     |> record_usage(payload)
     |> collect_outputs()
-    |> emit(:turn_done, Map.take(payload, [:stop_reason, :context_tokens, :context_window]))
+    |> emit(
+      :turn_done,
+      Map.take(payload, [:stop_reason, :context_tokens, :context_window, :model, :expected])
+    )
     |> finish_turn()
   end
 
@@ -1138,6 +1162,7 @@ defmodule Loom.Agent.Session do
 
     state = cancel_release(state)
     handle = Backend.set_effort(state.backend, state.handle, state.effort)
+    handle = Backend.set_model(state.backend, handle, state.model)
 
     case Backend.impl(state.backend).run_turn(handle, text) do
       {:ok, handle} ->
@@ -1349,6 +1374,7 @@ defmodule Loom.Agent.Session do
       seen_seq: state.seen_seq,
       reply_seq: state.reply_seq,
       effort: state.effort,
+      model: state.model,
       notice: state.notice,
       # Pending in `notice` until sent, which counts as told.
       replies_told: true,
@@ -1398,6 +1424,21 @@ defmodule Loom.Agent.Session do
       "They now read as follows, and replace what you were told before.]\n\n" <>
       Loom.Projects.instructions(project)
   end
+
+  # One saved before the session kept its own: the backend's pinned model
+  # (a virtual employee's), so the first turn does not drop it.
+  defp restored_model(meta) do
+    model =
+      if Map.has_key?(meta, :model),
+        do: meta[:model],
+        else: Backend.meta_get(meta, :cc_model) || Backend.meta_get(meta, :kiro_model)
+
+    if model?(model), do: model
+  end
+
+  # Passed to the agent as a flag's value, so never one that reads as a flag.
+  defp model?(model),
+    do: is_binary(model) and model =~ ~r/^[A-Za-z0-9][A-Za-z0-9._:\/\[\]-]{0,99}$/
 
   # A conversation that began before suggested replies existed was never told
   # about them, and its system prompt cannot be changed (see above). Told once,
@@ -1450,6 +1491,7 @@ defmodule Loom.Agent.Session do
       seen_seq: state.seen_seq,
       reply_seq: state.reply_seq,
       effort: state.effort,
+      model: state.model,
       title: state.title,
       title_by: state.title_by,
       created_at: state.created_at,

@@ -92,7 +92,9 @@ defmodule Loom.Agent.Backend.Kiro do
       announced?: false,
       tools: %{},
       interrupted?: false,
-      context_tokens: 0
+      context_tokens: 0,
+      # What Kiro says the session is on (`currentModelId`), for `turn_done`.
+      current_model: nil
     }
   end
 
@@ -130,6 +132,15 @@ defmodule Loom.Agent.Backend.Kiro do
   @impl Backend
   def persist(handle) do
     %{kiro_session_id: handle.session_id, kiro_cwd: handle.cwd, kiro_model: handle.model}
+  end
+
+  # In the agent file, written at every spawn: a warm process on another model
+  # is let go of, like Claude Code's.
+  @impl Backend
+  def set_model(handle, model) do
+    if handle.model == model,
+      do: handle,
+      else: %{teardown(handle) | model: model}
   end
 
   @impl Backend
@@ -417,11 +428,11 @@ defmodule Loom.Agent.Backend.Kiro do
     end
   end
 
-  defp reply(handle, :new, %{"result" => %{"sessionId" => id}}) do
-    opened(%{handle | session_id: id})
+  defp reply(handle, :new, %{"result" => %{"sessionId" => id} = result}) do
+    opened(current_model(%{handle | session_id: id}, result))
   end
 
-  defp reply(handle, :load, %{"result" => _}), do: opened(handle)
+  defp reply(handle, :load, %{"result" => result}), do: opened(current_model(handle, result))
 
   # A conversation Kiro no longer has: started afresh rather than failing every
   # turn after. The history shown stays; the agent's is gone.
@@ -449,7 +460,8 @@ defmodule Loom.Agent.Backend.Kiro do
                 stop_reason: result["stopReason"],
                 usage: %{},
                 context_tokens: handle.context_tokens,
-                context_window: @window
+                context_window: @window,
+                model: Map.get(handle, :current_model) || handle.model
               }}
            ]}
     end
@@ -463,6 +475,11 @@ defmodule Loom.Agent.Backend.Kiro do
   end
 
   defp reply(handle, _what, _message), do: {handle, []}
+
+  defp current_model(handle, %{"models" => %{"currentModelId" => model}}) when is_binary(model),
+    do: Map.put(handle, :current_model, model)
+
+  defp current_model(handle, _result), do: handle
 
   # The session is there; the turn begins.
   defp opened(handle) do

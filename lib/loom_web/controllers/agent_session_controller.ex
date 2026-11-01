@@ -53,7 +53,7 @@ defmodule LoomWeb.AgentSessionController do
   end
 
   # PATCH /api/agents/:id — any of `title` (rename), `pinned`, `archived`, `seen_seq` (read
-  # up to there), `effort` (the thinking level, null for the default) and `project_id` (move into that project, or out of any with
+  # up to there), `effort` (the thinking level, null for the default), `model` (likewise) and `project_id` (move into that project, or out of any with
   # null). All but the last are local to loom and never pushed to the backend;
   # a move relocates it.
   def update(conn, %{"id" => id} = params) do
@@ -64,6 +64,7 @@ defmodule LoomWeb.AgentSessionController do
         {"archived", &Agent.archive(id, &1)},
         {"seen_seq", &Agent.seen(id, &1)},
         {"effort", &Agent.set_effort(id, &1)},
+        {"model", &Agent.set_model(id, &1)},
         {"project_id", &Agent.move(id, &1)}
       ]
       |> Enum.filter(fn {key, _} -> Map.has_key?(params, key) end)
@@ -112,6 +113,7 @@ defmodule LoomWeb.AgentSessionController do
       seen_seq: info.seen_seq,
       reply_seq: Map.get(info, :reply_seq, 0),
       effort: Map.get(info, :effort),
+      model: Map.get(info, :model),
       created_at: info.created_at,
       last_active_at: info.last_active_at,
       status: info.status,

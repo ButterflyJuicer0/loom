@@ -138,12 +138,17 @@ defmodule Loom.Agent.Backend.Codex do
       context_tokens: 0,
       context_window: nil,
       # Sent with each turn; nil leaves the thread's own. See set_effort/2.
-      effort: nil
+      effort: nil,
+      # Likewise; nil is `model` in config.toml.
+      model: nil
     }
   end
 
   @impl Backend
   def set_effort(handle, effort), do: Map.put(handle, :effort, effort)
+
+  @impl Backend
+  def set_model(handle, model), do: Map.put(handle, :model, model)
 
   @impl Backend
   def run_turn(%{thread_id: nil}, _text), do: {:error, "no codex thread"}
@@ -172,7 +177,12 @@ defmodule Loom.Agent.Backend.Codex do
   end
 
   defp start_turn(handle, text) do
-    case Server.start_turn(handle.thread_id, text, effort: Map.get(handle, :effort)) do
+    case Server.start_turn(handle.thread_id, text,
+           effort: Map.get(handle, :effort),
+           # Every turn: a turn's model stays the thread's after it, so going
+           # back to the default has to be said too.
+           model: Map.get(handle, :model) || configured_model()
+         ) do
       {:ok, turn_id} ->
         {:ok, %{handle | turn_id: turn_id, aborted?: false, tools: %{}}}
 
@@ -428,8 +438,19 @@ defmodule Loom.Agent.Backend.Codex do
       stop_reason: "end_turn",
       usage: handle.usage,
       context_tokens: handle.context_tokens,
-      context_window: handle.context_window
+      context_window: handle.context_window,
+      model: Map.get(handle, :model) || configured_model()
     }
+  end
+
+  # The model a turn runs on when the session picks none.
+  defp configured_model do
+    home = System.get_env("CODEX_HOME") || Path.join(System.user_home!(), ".codex")
+
+    with {:ok, toml} <- File.read(Path.join(home, "config.toml")),
+         [_, model] <- Regex.run(~r/^model\s*=\s*"([^"]+)"/m, toml),
+         do: model,
+         else: (_ -> nil)
   end
 
   defp retry_count(message) when is_binary(message) do

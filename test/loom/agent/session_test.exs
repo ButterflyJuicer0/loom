@@ -418,6 +418,19 @@ defmodule Loom.Agent.SessionTest do
     end
   end
 
+  describe "model" do
+    test "is kept in the header; nothing that reads as a flag is taken" do
+      id = new_session()
+      assert :ok = Agent.set_model(id, "us.anthropic.claude-fable-5-1[1m]")
+      assert Agent.info(id).model == "us.anthropic.claude-fable-5-1[1m]"
+      assert {:ok, %{model: "us.anthropic.claude-fable-5-1[1m]"}} = Store.read_meta(id)
+
+      assert {:error, _} = Agent.set_model(id, "--dangerously-skip-permissions")
+      assert :ok = Agent.set_model(id, nil)
+      assert Agent.info(id).model == nil
+    end
+  end
+
   describe "the transcript" do
     test "events are numbered, persisted and replayable" do
       id = new_session()

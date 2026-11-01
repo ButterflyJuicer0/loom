@@ -110,6 +110,16 @@
   height: 16px;
 }
 
+.model-chip {
+  gap: 2px;
+  font-size: 0.846rem;
+}
+
+.model-chip svg {
+  width: 14px;
+  height: 14px;
+}
+
 .pane-menu-count {
   margin-left: auto;
   color: var(--fg-dim);
@@ -689,6 +699,11 @@ pre.code {
   color: var(--fg-dim);
   font-size: 0.769rem;
   letter-spacing: 0.02em;
+}
+
+.turn-model.off {
+  color: var(--fg);
+  font-weight: 600;
 }
 
 /* ── Queue ───────────────────────────────────────────────────────────────

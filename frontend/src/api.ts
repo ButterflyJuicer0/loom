@@ -163,6 +163,9 @@ export type AgentInfo = {
   // The thinking level from the next turn on; null for the model's default.
   // See `EFFORTS` for what each agent takes. Older servers do not send it.
   effort?: string | null
+  // The model from the next turn on; null for the agent's default. See
+  // `MODELS`. Older servers do not send it.
+  model?: string | null
   created_at: number
   // The last message either way, as ms since the epoch: what orders the
   // sidebar and what its age shows. Older servers do not send it.
@@ -231,6 +234,48 @@ export const EFFORTS: Record<AgentBackend, string[]> = {
 }
 
 /**
+ * The models offered for each agent, besides its default: Bedrock's for
+ * Claude Code, Bedrock Mantle's for Codex (`~/.codex/config.toml`), and what
+ * `kiro-cli chat --list-models` lists. The server takes any id; this is only
+ * the menu.
+ */
+export const MODELS: Record<AgentBackend, string[]> = {
+  claude_code: [
+    "us.anthropic.claude-opus-5-5",
+    "us.anthropic.claude-fable-5-1[1m]",
+    "us.anthropic.claude-sonnet-5-5",
+    "us.anthropic.claude-haiku-5-5",
+  ],
+  codex: ["openai.gpt-6-astra", "openai.gpt-6.1-sol", "openai.gpt-6.1-terra", "openai.gpt-6-luna", "openai.gpt-5.5"],
+  // Kiro's default is "auto", which picks per task.
+  kiro: [
+    "claude-opus-5.5",
+    "claude-fable-5.1",
+    "claude-sonnet-5",
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "glm-5",
+    "deepseek-3.2",
+  ],
+}
+
+/**
+ * A model id as a person says it: `us.anthropic.claude-opus-5-5` and Kiro's
+ * `claude-opus-5.5` are both "Opus 5.5", `openai.gpt-6-astra` "GPT-6 Astra".
+ */
+export function modelName(id: string): string {
+  const bare = id.replace(/\[.*\]$/, "").replace(/^(us|eu|apac|global)\./, "").replace(/^(anthropic|openai)\./, "")
+  const claude = bare.match(/^claude-([a-z]+)-(\d+)(?:[-.](\d))?(?![\d])/)
+  if (claude) {
+    const [, family, major, minor] = claude
+    return `${family[0].toUpperCase()}${family.slice(1)} ${major}${minor ? "." + minor : ""}`
+  }
+  const gpt = bare.match(/^gpt-([\d.]+)(?:-(.+))?$/)
+  if (gpt) return `GPT-${gpt[1]}${gpt[2] ? " " + gpt[2][0].toUpperCase() + gpt[2].slice(1) : ""}`
+  return bare === "auto" ? "Auto" : bare
+}
+
+/**
  * Archived, and not used since: out of the lists, in Settings → Archived.
  * Writing in one (or a task writing in it) brings it back by itself.
  */
@@ -249,6 +294,7 @@ export function updateAgent(
     project_id?: string | null
     seen_seq?: number
     effort?: string | null
+    model?: string | null
   },
 ): Promise<AgentInfo> {
   return apiCall(`/api/agents/${id}`, { method: "PATCH", body: JSON.stringify(attrs) })
