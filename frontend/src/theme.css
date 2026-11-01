@@ -373,6 +373,12 @@ samp,
   padding-block: 6px;
 }
 
+/* The dot by the title, not halfway down the two lines. */
+.sidebar .session.working .dot {
+  align-self: flex-start;
+  margin-top: 0.55em;
+}
+
 .sidebar .session.working + .session.working {
   margin-top: 2px;
 }
