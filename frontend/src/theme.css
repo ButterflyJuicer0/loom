@@ -1500,6 +1500,16 @@ pre.code,
   }
 }
 
+/* A phone's header grows with what pads its top (the notch, iOS's band
+   below): at the shared --head-h its title spilled out of it, under what
+   hangs below (an employee's tabs). */
+@media (max-width: 640px) {
+  .chat-header {
+    height: auto;
+    min-height: var(--head-h);
+  }
+}
+
 /* An app opened from the iOS home screen (`.ios-app`, set in index.html), on
    a phone. iOS 26+ blurs the top of the screen there, about 93pt down — past
    the status bar, over the first row of whatever is on top — and nothing on
