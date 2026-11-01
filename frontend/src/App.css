@@ -530,13 +530,10 @@
   flex: 0 0 auto;
 }
 
-/* Lucide's line robot reads small beside the filled logos. */
-.device-icon.bot {
-  width: 21px;
-  height: 21px;
+.device > .device-icon {
+  margin: 0 2px;
 }
 
-.device-icon-btn,
 .device-icon-pick {
   flex: 0 0 auto;
   display: inline-flex;
@@ -556,8 +553,6 @@
   color: var(--fg-dim);
 }
 
-.device-icon-btn:hover,
-.device-icon-btn.on,
 .device-icon-pick:hover {
   background: var(--bg-card);
   color: var(--fg);
@@ -571,10 +566,6 @@
 .device-icons {
   display: flex;
   gap: 4px;
-}
-
-.device-icon-row {
-  margin: 0 8px 8px 25px;
 }
 
 .device-add {

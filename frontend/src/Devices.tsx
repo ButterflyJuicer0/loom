@@ -10,7 +10,6 @@ import {
   deviceInstallCode,
   installCommands,
   renameDevice,
-  setDeviceIcon,
   type Device,
   type Employee,
 } from "./api"
@@ -99,16 +98,6 @@ export function DevicesDialog({
     }
   }
 
-  const changeIcon = async (device: Device, value: Device["icon"]) => {
-    try {
-      const { node } = await setDeviceIcon(device.id, value)
-      onUpsert(node)
-      setError(null)
-    } catch (e) {
-      setError((e as Error).message)
-    }
-  }
-
   return createPortal(
     <div className="modal-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal devices" role="dialog" aria-label="Devices">
@@ -131,7 +120,6 @@ export function DevicesDialog({
               <DeviceRow
                 device={d}
                 onRename={(value) => rename(d, value)}
-                onIcon={(value) => changeIcon(d, value)}
                 onReinstall={() => reinstall(d)}
                 onRemove={() => remove(d)}
               />
@@ -171,8 +159,8 @@ export function DevicesDialog({
 }
 
 /**
- * The five marks in a row; tapping the chosen one again unpicks it, so the icon
- * goes back to following the os.
+ * The five marks to pick from when adding a device; tapping the chosen one
+ * again unpicks it, so the icon follows the os. Once added it stays.
  */
 function IconPicker({ value, onChange }: { value: Device["icon"]; onChange: (icon: Device["icon"]) => void }) {
   return (
@@ -197,19 +185,16 @@ function IconPicker({ value, onChange }: { value: Device["icon"]; onChange: (ico
 function DeviceRow({
   device,
   onRename,
-  onIcon,
   onReinstall,
   onRemove,
 }: {
   device: Device
   onRename: (name: string) => void
-  onIcon: (icon: Device["icon"]) => void
   onReinstall: () => void
   onRemove: () => void
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(device.name)
-  const [picking, setPicking] = useState(false)
 
   const commit = () => {
     const value = draft.trim()
@@ -220,71 +205,52 @@ function DeviceRow({
   const system = device.os ? `${device.os}/${device.arch}` : null
 
   return (
-    <>
-      <div className="device">
-        <span
-          className={"dot" + (device.online ? " online" : "")}
-          title={device.online ? "online" : "offline"}
-        />
-        <button
-          className={"device-icon-btn" + (picking ? " on" : "")}
-          title="Change icon"
-          onClick={() => setPicking(!picking)}
-        >
-          <DeviceIcon icon={deviceIcon(device)} />
-        </button>
-        <div className="device-body">
-          {editing ? (
-            <input
-              className="device-name-input"
-              value={draft}
-              autoFocus
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commit}
-              onKeyDown={(e) => {
-                if (isComposing(e)) return
-                if (e.key === "Enter") commit()
-                if (e.key === "Escape") {
-                  setDraft(device.name)
-                  setEditing(false)
-                }
-              }}
-            />
-          ) : (
-            <span
-              className="device-name"
-              title="Double-click to rename"
-              onDoubleClick={() => {
+    <div className="device">
+      <span
+        className={"dot" + (device.online ? " online" : "")}
+        title={device.online ? "online" : "offline"}
+      />
+      <DeviceIcon icon={deviceIcon(device)} />
+      <div className="device-body">
+        {editing ? (
+          <input
+            className="device-name-input"
+            value={draft}
+            autoFocus
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (isComposing(e)) return
+              if (e.key === "Enter") commit()
+              if (e.key === "Escape") {
                 setDraft(device.name)
-                setEditing(true)
-              }}
-            >
-              {device.name}
-            </span>
-          )}
-          <span className="device-meta">
-            {[system, device.hostname, seen(device)].filter(Boolean).join(" · ")}
-          </span>
-        </div>
-        <button className="device-action" onClick={onReinstall} title="New install command (replaces this device's token)">
-          install
-        </button>
-        <button className="session-del device-del" onClick={onRemove} title="Remove device">
-          <X />
-        </button>
-      </div>
-      {picking && (
-        <div className="device-icon-row">
-          <IconPicker
-            value={device.icon}
-            onChange={(icon) => {
-              onIcon(icon)
-              setPicking(false)
+                setEditing(false)
+              }
             }}
           />
-        </div>
-      )}
-    </>
+        ) : (
+          <span
+            className="device-name"
+            title="Double-click to rename"
+            onDoubleClick={() => {
+              setDraft(device.name)
+              setEditing(true)
+            }}
+          >
+            {device.name}
+          </span>
+        )}
+        <span className="device-meta">
+          {[system, device.hostname, seen(device)].filter(Boolean).join(" · ")}
+        </span>
+      </div>
+      <button className="device-action" onClick={onReinstall} title="New install command (replaces this device's token)">
+        install
+      </button>
+      <button className="session-del device-del" onClick={onRemove} title="Remove device">
+        <X />
+      </button>
+    </div>
   )
 }
 

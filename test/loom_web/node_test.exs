@@ -91,13 +91,11 @@ defmodule LoomWeb.NodeTest do
       assert {:ok, %{name: "box"}} = Nodes.rename(other.id, "box")
     end
 
-    test "an icon is one of the known marks, set at creation or later" do
+    test "an icon is one of the known marks, set at creation and kept" do
       {:ok, node, _code} = Nodes.create("dog", "bot")
       assert node.icon == "bot"
       assert {:error, _} = Nodes.create("toaster", "toaster")
-      assert {:ok, %{icon: "linux"}} = Nodes.set_icon(node.id, "linux")
-      assert {:ok, %{icon: nil}} = Nodes.set_icon(node.id, nil)
-      assert {:error, _} = Nodes.set_icon(node.id, "toaster")
+      assert {:ok, %{icon: "bot"}} = Nodes.rename(node.id, "dog2")
     end
 
     test "a removed device too old to uninstall itself is refused, then for good" do

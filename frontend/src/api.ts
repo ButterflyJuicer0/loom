@@ -610,7 +610,7 @@ export async function putLayout(layout: Layout): Promise<Layout> {
 export type Device = {
   id: string
   name: string
-  // Picked in Devices; null follows `os` (see DeviceIcon).
+  // Picked when the device is added; null follows `os` (see DeviceIcon).
   icon: "windows" | "mac" | "android" | "linux" | "bot" | null
   online: boolean
   os: string | null
@@ -651,10 +651,6 @@ export function createDevice(name: string, icon: Device["icon"]): Promise<{ node
 
 export function renameDevice(id: string, name: string): Promise<{ node: Device }> {
   return apiCall(`/api/devices/${id}`, { method: "PATCH", body: JSON.stringify({ name }) })
-}
-
-export function setDeviceIcon(id: string, icon: Device["icon"]): Promise<{ node: Device }> {
-  return apiCall(`/api/devices/${id}`, { method: "PATCH", body: JSON.stringify({ icon }) })
 }
 
 export function deleteDevice(id: string): Promise<void> {

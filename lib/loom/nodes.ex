@@ -43,8 +43,8 @@ defmodule Loom.Nodes do
 
   @name __MODULE__
   @persisted ~w(id name icon token_hash created_at os arch hostname version last_seen_at)a
-  # The mark the Devices dialog draws before a device's name. Unset, it follows
-  # the os the device reports.
+  # The mark the Devices dialog draws before a device's name, picked when it is
+  # added and fixed from then on. Unset, it follows the os the device reports.
   @icons ~w(windows mac android linux bot)
   @install_ttl :timer.minutes(2)
   # Six digits are guessable by brute force within @install_ttl, so this many
@@ -66,9 +66,6 @@ defmodule Loom.Nodes do
 
   @doc "Rename a device. Its token, and so the device itself, is unaffected."
   def rename(id, name, server \\ @name), do: GenServer.call(server, {:rename, id, name})
-
-  @doc "Set the icon shown for a device: one of #{inspect(@icons)}, or nil to follow its os."
-  def set_icon(id, icon, server \\ @name), do: GenServer.call(server, {:set_icon, id, icon})
 
   @doc """
   Forget a device: it can no longer be reached, and it uninstalls itself as soon
@@ -210,18 +207,6 @@ defmodule Loom.Nodes do
     with {:ok, node} <- fetch(id, state),
          {:ok, name} <- check_name(name, id, state) do
       node = %{node | name: name}
-      state = save(put_in(state.nodes[id], node))
-      announce(node, state)
-      {:reply, {:ok, summary(node, state)}, state}
-    else
-      error -> {:reply, error, state}
-    end
-  end
-
-  def handle_call({:set_icon, id, icon}, _from, state) do
-    with {:ok, node} <- fetch(id, state),
-         {:ok, icon} <- check_icon(icon) do
-      node = %{node | icon: icon}
       state = save(put_in(state.nodes[id], node))
       announce(node, state)
       {:reply, {:ok, summary(node, state)}, state}

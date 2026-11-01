@@ -21,16 +21,8 @@ defmodule LoomWeb.DevicesController do
     end
   end
 
-  # A rename, or a new icon: `"name"` and `"icon"` each change only if sent.
   def update(conn, %{"id" => id} = params) do
-    result =
-      with {:ok, node} <-
-             if(Map.has_key?(params, "name"), do: Nodes.rename(id, params["name"]), else: {:ok, nil}) do
-        if Map.has_key?(params, "icon"), do: Nodes.set_icon(id, params["icon"]), else: {:ok, node}
-      end
-
-    case result do
-      {:ok, nil} -> refuse(conn, "nothing to change")
+    case Nodes.rename(id, params["name"]) do
       {:ok, node} -> json(conn, %{node: node})
       {:error, reason} -> refuse(conn, reason)
     end
