@@ -14,6 +14,7 @@ import {
   MonitorSmartphone,
   MoreHorizontal,
   PanelLeft,
+  PinOff,
   Settings,
   SquarePen,
   UserPlus,
@@ -248,6 +249,20 @@ export function Sidebar({
       <span className="session-when" title={"last active " + new Date(lastActive(s)).toLocaleString()}>
         {when(lastActive(s))}
       </span>
+      {/* A pinned incognito chat is in the sidebar only while pinned: one tap
+          puts it back in Settings → Incognito. */}
+      {s.kind === "incognito" && s.pinned && (
+        <button
+          className="session-del session-more session-unpin"
+          title="Unpin: back to Settings → Incognito only"
+          onClick={(e) => {
+            e.stopPropagation()
+            void onPin(s.id, false)
+          }}
+        >
+          <PinOff />
+        </button>
+      )}
       <button
         className="session-del session-more"
         title="Rename, pin, move to a project, delete"

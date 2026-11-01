@@ -1733,3 +1733,8 @@ body.sidebar-resizing iframe {
   background: color-mix(in srgb, #000 16%, transparent);
   box-shadow: 1px 0 0 color-mix(in srgb, #fff 20%, transparent);
 }
+
+/* A pinned incognito row's unpin: shown always, not only on hover. */
+.session .session-unpin {
+  visibility: visible;
+}
