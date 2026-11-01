@@ -12,6 +12,7 @@ import {
   Ellipsis,
   Forward,
   HatGlasses,
+  Inbox,
   Merge,
   Moon,
   PanelLeft,
@@ -118,8 +119,8 @@ type Props = {
   // Carry it on in a new session ("Continue in a new chat"), offered under a
   // turn that ended in an error. Only for a plain conversation.
   onContinue?: () => Promise<void>
-  /** Set only for an incognito session: keep it, into Recents. */
-  onKeep?: () => Promise<void>
+  /** Set only for an incognito session: pin it (it stays incognito), or keep it, into Recents. */
+  incognito?: { pinned: boolean; onPin: (pinned: boolean) => void; onKeep: () => void }
   // The project it is in: "‹ name" before the title goes back to its page.
   project?: { name: string; onOpen: () => void }
 }
@@ -152,7 +153,7 @@ export function Chat({
   reading = true,
   focus,
   onContinue,
-  onKeep,
+  incognito,
   project,
 }: Props) {
   const { transcript, joinError, submit, resend, discard, interrupt, dropQueued, rename, draft: remoteDraft } = useAgent(
@@ -286,7 +287,7 @@ export function Chat({
           onRename={rename}
         />
         {tabs}
-        {onKeep && <KeepChip onKeep={onKeep} />}
+        {incognito && <PinChip pinned={incognito.pinned} onPin={incognito.onPin} />}
 
         <div className="chat-meta">
           {narrow ? (
@@ -298,6 +299,7 @@ export function Chat({
               canvasOpen={canvasOpen}
               onToggleCanvas={onToggleCanvas}
               onContinue={onContinue}
+              onKeep={incognito?.onKeep}
             />
           ) : (
             <>
@@ -324,6 +326,11 @@ export function Chat({
           {onContinue && (
             <button className="chip button" onClick={() => onContinue().catch(() => {})} title="Continue in a new chat">
               <CornerDownRight />
+            </button>
+          )}
+          {incognito && (
+            <button className="chip button" onClick={incognito.onKeep} title="Keep it: into Recents, out of incognito">
+              <Inbox />
             </button>
           )}
             </>
@@ -412,23 +419,23 @@ export function Chat({
 
 /** Under a turn that ended in an error: carry the session on in a new one. */
 /**
- * An incognito session says so beside its title; tapping it keeps the
- * session — into Recents, out of its sandbox. Refused mid-turn, which it
- * says in its title.
+ * An incognito session says so beside its title, with a pin: pinned, it is
+ * in the sidebar's Pinned and never deleted, and stays incognito. Keeping it
+ * (into Recents) is under the header's "…" instead.
  */
-function KeepChip({ onKeep }: { onKeep: () => Promise<void> }) {
-  const [error, setError] = useState<string | null>(null)
+function PinChip({ pinned, onPin }: { pinned: boolean; onPin: (pinned: boolean) => void }) {
   return (
     <button
-      className={"chip button keep-chip" + (error ? " failed" : "")}
-      onClick={() => {
-        setError(null)
-        onKeep().catch((e) => setError((e as Error).message))
-      }}
-      title={error ?? "Incognito: no memory, not in Recents, deleted after 30 days. Tap to keep it."}
+      className="chip button keep-chip"
+      onClick={() => onPin(!pinned)}
+      title={
+        pinned
+          ? "Incognito, pinned: in Pinned, never deleted. Tap to unpin."
+          : "Incognito: no memory, not in Recents, deleted 30 days after its last message. Tap to pin."
+      }
     >
       <HatGlasses />
-      <span>Keep</span>
+      <span>{pinned ? "Unpin" : "Pin"}</span>
     </button>
   )
 }
@@ -661,6 +668,7 @@ function PaneMenu({
   canvasOpen,
   onToggleCanvas,
   onContinue,
+  onKeep,
 }: {
   session: AgentInfo
   terminalOpen: boolean
@@ -669,6 +677,7 @@ function PaneMenu({
   canvasOpen: boolean
   onToggleCanvas: () => void
   onContinue?: () => Promise<void>
+  onKeep?: () => void
 }) {
   const [at, setAt] = useState<{ top: number; right: number } | null>(null)
   const [view, setView] = useState<"main" | "model">("main")
@@ -733,6 +742,12 @@ function PaneMenu({
               <button role="menuitem" onClick={() => pick(() => void onContinue().catch(() => {}))}>
                 <CornerDownRight />
                 Continue in new chat
+              </button>
+            )}
+            {onKeep && (
+              <button role="menuitem" onClick={() => pick(onKeep)}>
+                <Inbox />
+                Keep chat
               </button>
             )}
             <div className="session-menu-sep" />

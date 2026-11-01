@@ -113,6 +113,15 @@ defmodule Loom.Agent.Backend.Kiro do
     end
   end
 
+  # Spawned with no prompt: the handshake runs and the session waits, idle.
+  # A message typed during the handshake waits for it, as on any spawn.
+  @impl Backend
+  def warm(%{proc: proc} = handle) when proc != nil do
+    if Proc.alive?(proc), do: {:ok, handle}, else: spawn_process(teardown(handle))
+  end
+
+  def warm(handle), do: spawn_process(handle)
+
   @impl Backend
   def steer(_handle, _text), do: {:error, "kiro takes one prompt at a time"}
 
@@ -504,6 +513,9 @@ defmodule Loom.Agent.Backend.Kiro do
     do: Map.put(handle, :current_model, model)
 
   defp current_model(handle, _result), do: handle
+
+  # The session is there; the turn begins — unless it was warmed with none.
+  defp opened(%{prompt: nil} = handle), do: {%{handle | phase: :idle}, []}
 
   # The session is there; the turn begins.
   defp opened(handle) do

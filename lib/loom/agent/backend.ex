@@ -263,7 +263,15 @@ defmodule Loom.Agent.Backend do
   """
   @callback set_model(handle, model :: String.t() | nil) :: handle
 
-  @optional_callbacks detach: 1, adopt: 1, checkpoint: 1, set_effort: 2, set_model: 2
+  @doc """
+  Start the engine ahead of the first message, so it answers sooner: a new
+  session the user opened and is about to type in. Claude Code's first reply
+  came 2.1 s after the message instead of 4.5 s (measured, 2.1.312). Codex has
+  nothing to do: its thread is opened by `start/2`.
+  """
+  @callback warm(handle) :: {:ok, handle} | {:error, term()}
+
+  @optional_callbacks detach: 1, adopt: 1, checkpoint: 1, set_effort: 2, set_model: 2, warm: 1
 
   @doc """
   The thinking levels a backend takes, lowest first; empty for one that has
@@ -281,6 +289,15 @@ defmodule Loom.Agent.Backend do
     if Code.ensure_loaded?(module) and function_exported?(module, :set_effort, 2),
       do: module.set_effort(handle, effort),
       else: handle
+  end
+
+  @doc "`warm/1`, for a backend that has it."
+  def warm(kind, handle) do
+    module = impl(kind)
+
+    if Code.ensure_loaded?(module) and function_exported?(module, :warm, 1),
+      do: module.warm(handle),
+      else: {:ok, handle}
   end
 
   @doc "`set_model/2`, for a backend that has it."

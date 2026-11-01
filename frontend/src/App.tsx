@@ -120,11 +120,15 @@ function App() {
       ),
     [everything],
   )
-  const sessions = useMemo(() => ordinary.filter((s) => !isArchived(s)), [ordinary])
-  // Incognito sessions are listed in Settings only, newest first.
+  // Incognito sessions are listed in Settings, newest first; a pinned one in
+  // the sidebar's Pinned too, never in Recents.
   const incognito = useMemo(
     () => everything.filter((s) => s.kind === "incognito").sort((a, b) => lastActive(b) - lastActive(a)),
     [everything],
+  )
+  const sessions = useMemo(
+    () => [...ordinary.filter((s) => !isArchived(s)), ...incognito.filter((s) => s.pinned)],
+    [ordinary, incognito],
   )
   const archived = useMemo(
     () => ordinary.filter(isArchived).sort((a, b) => (b.archived_at ?? 0) - (a.archived_at ?? 0)),
@@ -308,8 +312,8 @@ function App() {
     setDrawerOpen(false)
   }
 
-  const create = async (backend: AgentBackend, projectId?: string, incognito?: boolean) => {
-    const session = await createAgent(backend, projectId, incognito)
+  const create = async (backend: AgentBackend, projectId?: string, incognito?: boolean, model?: string | null) => {
+    const session = await createAgent(backend, projectId, incognito, model)
     if (projectId) reveal()
     upsert(session)
     setActiveId(session.id)
@@ -399,6 +403,8 @@ function App() {
   // Asked first, always: the history does not come back. See `Confirm`.
   const [deleting, setDeleting] = useState<string | null>(null)
   const remove = (id: string) => setDeleting(id)
+  // Keeping an incognito session cannot be undone, so it is asked first.
+  const [keeping, setKeeping] = useState<string | null>(null)
   const [renaming, setRenaming] = useState<string | null>(null)
   const renamed = async (id: string, title: string | null) => {
     if (title !== null) upsert(await renameAgent(id, title))
@@ -789,9 +795,13 @@ function App() {
               session={active}
               {...chatProps}
               onSeen={(seq) => updateAgent(active.id, { seen_seq: seq }).then(upsert, () => {})}
-              onKeep={
+              incognito={
                 active.kind === "incognito"
-                  ? async () => upsert(await updateAgent(active.id, { incognito: false }))
+                  ? {
+                      pinned: active.pinned ?? false,
+                      onPin: async (pinned) => upsert(await updateAgent(active.id, { pinned })),
+                      onKeep: () => setKeeping(active.id),
+                    }
                   : undefined
               }
               project={
@@ -934,6 +944,16 @@ function App() {
           onClose={() => setDeleting(null)}
         />
       )}
+      {keeping && (
+        <Confirm
+          title={`Keep ${everything.find((s) => s.id === keeping)?.title ?? "this chat"}?`}
+          detail="It joins Recents as an ordinary chat and leaves its sandbox: from the next message it can write files and memory like any other. It cannot be made incognito again."
+          action="Keep"
+          danger={false}
+          onYes={async () => upsert(await updateAgent(keeping, { incognito: false }))}
+          onClose={() => setKeeping(null)}
+        />
+      )}
       {projectDialog && (
         <ProjectDialog
           project={projectDialog === "new" ? null : projectDialog}
@@ -998,7 +1018,7 @@ function App() {
           }}
           onUnarchive={async (id) => upsert(await updateAgent(id, { archived: false }))}
           incognito={incognito}
-          onKeep={async (id) => upsert(await updateAgent(id, { incognito: false }))}
+          onKeep={setKeeping}
           onDelete={remove}
         />
       )}

@@ -1,4 +1,4 @@
-import { ArchiveRestore, ChevronDown, ChevronLeft, ChevronRight, Moon, Sun, Trash2, X } from "lucide-react"
+import { ArchiveRestore, ChevronLeft, ChevronRight, Moon, Sun, Trash2, X } from "lucide-react"
 import { useEffect, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import type { AgentBackend, AgentInfo, Project } from "./api"
@@ -33,11 +33,11 @@ export function SettingsDialog({
   onOpen: (id: string) => void
   onUnarchive: (id: string) => Promise<void>
   incognito: AgentInfo[]
-  onKeep: (id: string) => Promise<void>
+  onKeep: (id: string) => void
   onDelete: (id: string) => void
 }) {
   // A page opened from a row, in place of the list, with a way back.
-  const [page, setPage] = useState<"boss" | null>(null)
+  const [page, setPage] = useState<"boss" | "archived" | "incognito" | null>(null)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && (page ? setPage(null) : onClose())
     document.addEventListener("keydown", onKey)
@@ -51,7 +51,7 @@ export function SettingsDialog({
           {page ? (
             <button className="settings-back" onClick={() => setPage(null)}>
               <ChevronLeft />
-              Boss profile
+              {page === "boss" ? "Boss profile" : page === "archived" ? "Archived" : "Incognito"}
             </button>
           ) : (
             <span>Settings</span>
@@ -64,6 +64,14 @@ export function SettingsDialog({
         {page === "boss" ? (
           <div className="settings-body">
             <BossPage />
+          </div>
+        ) : page === "archived" ? (
+          <div className="settings-body">
+            <Archived sessions={archived} projects={projects} onOpen={onOpen} onUnarchive={onUnarchive} />
+          </div>
+        ) : page === "incognito" ? (
+          <div className="settings-body">
+            <Incognito sessions={incognito} onOpen={onOpen} onKeep={onKeep} onDelete={onDelete} />
           </div>
         ) : (
           <div className="settings-body">
@@ -94,9 +102,17 @@ export function SettingsDialog({
 
             <BossRow onOpen={() => setPage("boss")} />
 
-            <Archived sessions={archived} projects={projects} onOpen={onOpen} onUnarchive={onUnarchive} />
+            <PageRow
+              label="Archived"
+              hint={archived.length ? `${archived.length}, hidden from the lists.` : "None."}
+              onOpen={() => setPage("archived")}
+            />
 
-            <Incognito sessions={incognito} onOpen={onOpen} onKeep={onKeep} onDelete={onDelete} />
+            <PageRow
+              label="Incognito"
+              hint={incognito.length ? `${incognito.length}, out of Recents, with no memory.` : "None."}
+              onOpen={() => setPage("incognito")}
+            />
           </div>
         )}
       </div>
@@ -181,9 +197,22 @@ function TextSizes({ settings, onChange }: { settings: Settings; onChange: (patc
   )
 }
 
+/** A row that opens a page of its own, like Boss profile's. */
+function PageRow({ label, hint, onOpen }: { label: string; hint: string; onOpen: () => void }) {
+  return (
+    <div className="settings-row archived">
+      <button className="settings-text archived-head" onClick={onOpen}>
+        <span className="settings-label">{label}</span>
+        <span className="settings-hint">{hint}</span>
+        <ChevronRight className="archived-fold" />
+      </button>
+    </div>
+  )
+}
+
 /**
  * The archived sessions: out of the sidebar's lists, nothing else changed.
- * Folded; open, a row each — tap to open it, or bring it back.
+ * A row each — tap to open it, or bring it back.
  */
 function Archived({
   sessions,
@@ -196,33 +225,22 @@ function Archived({
   onOpen: (id: string) => void
   onUnarchive: (id: string) => Promise<void>
 }) {
-  const [open, setOpen] = useState(false)
   const name = (id?: string | null) => (id ? (projects.find((p) => p.id === id)?.name ?? "") : "")
   return (
-    <div className="settings-row archived">
-      <button className="settings-text archived-head" onClick={() => setOpen((o) => !o)} disabled={!sessions.length}>
-        <span className="settings-label">Archived</span>
-        <span className="settings-hint">
-          {sessions.length ? `${sessions.length}, hidden from the lists. Writing in one brings it back.` : "None."}
-        </span>
-        {sessions.length > 0 &&
-          (open ? <ChevronDown className="archived-fold" /> : <ChevronRight className="archived-fold" />)}
-      </button>
-      {open && sessions.length > 0 && (
-        <div className="archived-list">
-          {sessions.map((s) => (
-            <div className="archived-item" key={s.id}>
-              <button className="archived-open" onClick={() => onOpen(s.id)}>
-                <span className="archived-title">{s.title || "Untitled"}</span>
-                {s.project_id && <span className="archived-project">{name(s.project_id)}</span>}
-              </button>
-              <button className="icon-btn" title="Unarchive" onClick={() => void onUnarchive(s.id)}>
-                <ArchiveRestore />
-              </button>
-            </div>
-          ))}
+    <div className="archived-list">
+      <p className="settings-hint">Hidden from the lists. Writing in one brings it back.</p>
+      {sessions.length === 0 && <p className="settings-hint">None.</p>}
+      {sessions.map((s) => (
+        <div className="archived-item" key={s.id}>
+          <button className="archived-open" onClick={() => onOpen(s.id)}>
+            <span className="archived-title">{s.title || "Untitled"}</span>
+            {s.project_id && <span className="archived-project">{name(s.project_id)}</span>}
+          </button>
+          <button className="icon-btn" title="Unarchive" onClick={() => void onUnarchive(s.id)}>
+            <ArchiveRestore />
+          </button>
         </div>
-      )}
+      ))}
     </div>
   )
 }
@@ -232,7 +250,7 @@ const DAY_MS = 24 * 60 * 60 * 1000
 /**
  * The incognito sessions, listed nowhere else: each deleted 30 days after its
  * last message (`Loom.Agent.Incognito`), unless kept — into Recents, out of
- * its sandbox. Folded like Archived.
+ * its sandbox, after a confirmation (the app's).
  */
 function Incognito({
   sessions,
@@ -242,41 +260,30 @@ function Incognito({
 }: {
   sessions: AgentInfo[]
   onOpen: (id: string) => void
-  onKeep: (id: string) => Promise<void>
+  onKeep: (id: string) => void
   onDelete: (id: string) => void
 }) {
-  const [open, setOpen] = useState(false)
   const left = (s: AgentInfo) => Math.max(0, 30 - Math.floor((Date.now() - lastActive(s)) / DAY_MS))
   return (
-    <div className="settings-row archived">
-      <button className="settings-text archived-head" onClick={() => setOpen((o) => !o)} disabled={!sessions.length}>
-        <span className="settings-label">Incognito</span>
-        <span className="settings-hint">
-          {sessions.length
-            ? `${sessions.length}, no memory, out of Recents. Each goes 30 days after its last message.`
-            : "None. The arrow beside New chat starts one."}
-        </span>
-        {sessions.length > 0 &&
-          (open ? <ChevronDown className="archived-fold" /> : <ChevronRight className="archived-fold" />)}
-      </button>
-      {open && sessions.length > 0 && (
-        <div className="archived-list">
-          {sessions.map((s) => (
-            <div className="archived-item" key={s.id}>
-              <button className="archived-open" onClick={() => onOpen(s.id)}>
-                <span className="archived-title">{s.title || "Untitled"}</span>
-                <span className="archived-project">{left(s)}d left</span>
-              </button>
-              <button className="keep-btn" title="Keep it: into Recents" onClick={() => void onKeep(s.id)}>
-                Keep
-              </button>
-              <button className="icon-btn" title="Delete" onClick={() => onDelete(s.id)}>
-                <Trash2 />
-              </button>
-            </div>
-          ))}
+    <div className="archived-list">
+      <p className="settings-hint">
+        No memory, not in Recents. Each is deleted 30 days after its last message unless pinned or kept.
+      </p>
+      {sessions.length === 0 && <p className="settings-hint">None. New chat → Incognito chat starts one.</p>}
+      {sessions.map((s) => (
+        <div className="archived-item" key={s.id}>
+          <button className="archived-open" onClick={() => onOpen(s.id)}>
+            <span className="archived-title">{s.title || "Untitled"}</span>
+            <span className="archived-project">{s.pinned ? "pinned" : `${left(s)}d left`}</span>
+          </button>
+          <button className="keep-btn" title="Keep it: into Recents" onClick={() => onKeep(s.id)}>
+            Keep
+          </button>
+          <button className="icon-btn" title="Delete" onClick={() => onDelete(s.id)}>
+            <Trash2 />
+          </button>
         </div>
-      )}
+      ))}
     </div>
   )
 }

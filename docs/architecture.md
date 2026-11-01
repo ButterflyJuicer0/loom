@@ -404,8 +404,25 @@ beside New chat; any engine). Hygiene, not security: nothing is hidden.
 - **Kept** with `incognito: false` (`Session.promote/1`, refused mid-turn): the
   sandbox goes, the session relocates to the home directory and joins Recents,
   and the backend is told ahead of its next message. Files stay where they were.
-- **Deleted 30 days after its last message** (`Loom.Agent.Incognito`, hourly),
-  with Claude Code's directory for it.
+- **Pinned**, it is also in the sidebar's Pinned (never Recents), stays
+  incognito, and is not deleted. The header's chip pins; Keep is under "…".
+- **Deleted 30 days after its last message** (`Loom.Agent.Incognito`, hourly)
+  unless pinned, with Claude Code's directory for it.
+
+### 2.13 New sessions
+
+New chat asks: Chat or Incognito chat, each on the default engine and model,
+or any engine's model behind its arrow (`model` on `POST /api/agents`).
+
+- **Warmed at once.** A session made there starts its engine before the first
+  message (`Backend.warm/2`): Claude Code's process loads and waits on stdin
+  (its first reply 2.1 s after the message instead of 4.5 s), Kiro runs its
+  ACP handshake. Codex already opened its thread in `start/2`. The idle
+  release takes the process back as usual.
+- **Deleted when left empty.** Five minutes after it was made (`@unused_ms`,
+  rescheduled on restore), a session of the user's own (no kind, or
+  incognito) with nothing sent or seeded, not named, pinned or with a draft
+  waiting, is deleted. A draft gives it another five minutes.
 
 ## 3. Client protocol
 

@@ -69,7 +69,7 @@ defmodule Loom.Agent.Sandbox do
     read-only, and you have no memory: save nothing to memory, skills or \
     project files, and do not try to work around the read-only filesystem. \
     It is not listed in the user's Recents and is deleted 30 days after its \
-    last message unless the user keeps it.\
+    last message unless the user pins or keeps it.\
     """
   end
 end

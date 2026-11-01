@@ -157,6 +157,7 @@ export function ProjectPage({
       {newMenu && (
         <NewMenu
           owner=".proj-new"
+          engines
           anchor={newMenu}
           onPick={(backend) => {
             setNewMenu(null)

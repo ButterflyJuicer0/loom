@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom"
 import { useEffect, useRef, useState } from "react"
 import { isComposing } from "./ime"
 
@@ -10,12 +11,15 @@ export function Confirm({
   title,
   detail,
   action = "Delete",
+  danger = true,
   onYes,
   onClose,
 }: {
   title: string
   detail?: string
   action?: string
+  /** Red, for what cannot be had back; a plain button otherwise. */
+  danger?: boolean
   onYes: () => Promise<void> | void
   onClose: () => void
 }) {
@@ -51,7 +55,8 @@ export function Confirm({
     return () => window.removeEventListener("keydown", onKey, true)
   }, [])
 
-  return (
+  // On the body, after whatever dialog asked: over Settings, say, not under it.
+  return createPortal(
     <div className="modal-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal confirm" role="alertdialog" aria-label={title}>
         <div className="modal-head">{title}</div>
@@ -62,13 +67,14 @@ export function Confirm({
             <button className="text-btn" onClick={onClose}>
               Cancel <kbd>n</kbd>
             </button>
-            <button className="text-btn danger" onClick={() => void yes()}>
+            <button className={"text-btn" + (danger ? " danger" : "")} onClick={() => void yes()}>
               {action} <kbd>y</kbd>
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

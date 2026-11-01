@@ -161,6 +161,41 @@ defmodule LoomWeb.ProjectControllerTest do
     assert String.ends_with?(text, "hello")
   end
 
+  test "a new session nothing is written in is deleted; a draft or a message keeps it", %{
+    conn: conn
+  } do
+    new = fn -> conn |> post(~p"/api/agents", %{backend: "claude_code"}) |> json_response(201) end
+    expire = fn id ->
+      [{pid, _}] = Registry.lookup(Loom.Agent.Registry, id)
+      ref = Process.monitor(pid)
+      send(pid, :expire_unused)
+      _ = :sys.get_state(pid)
+      ref
+    end
+
+    %{"id" => empty} = new.()
+    ref = expire.(empty)
+    assert_receive {:DOWN, ^ref, _, _, _}, 1_000
+    # The directory goes just after the process.
+    assert Enum.any?(1..50, fn _ ->
+             Process.sleep(10)
+             Loom.Agent.Store.read_meta(empty) == :error
+           end)
+
+    %{"id" => drafted} = new.()
+    Loom.Agent.Draft.write(drafted, "half a thought")
+    expire.(drafted)
+    Process.sleep(100)
+    assert Agent.exists?(drafted)
+
+    %{"id" => used} = new.()
+    {:ok, :started} = Agent.submit(used, "hello")
+    BackendStub.await_turn()
+    expire.(used)
+    Process.sleep(100)
+    assert Agent.exists?(used)
+  end
+
   test "the next turn after a move tells the backend, once, and the transcript nothing", %{
     conn: conn
   } do

@@ -19,7 +19,8 @@ defmodule LoomWeb.AgentSessionController do
   # in a project, whose workspace becomes its cwd for good (`Loom.Projects`).
   # Without one a session has no root, and the model composes absolute paths
   # from the conversation. A channel only ever attaches to an existing session,
-  # so creation goes through here. `incognito: true` starts one in its own
+  # so creation goes through here. `model` picks one of the engine's models.
+  # `incognito: true` starts one in its own
   # sandboxed directory, out of every list but Settings (`Loom.Agent.Sandbox`).
   def create(conn, params) do
     case Loom.Agent.Backend.parse(params["backend"]) do
@@ -110,6 +111,10 @@ defmodule LoomWeb.AgentSessionController do
     |> maybe_put(:title, params["title"])
     |> maybe_put(:project, params["project_id"])
     |> maybe_put(:kind, if(params["incognito"] == true and params["project_id"] == nil, do: "incognito"))
+    |> maybe_put(:model, if(is_binary(params["model"]) and params["model"] != "", do: params["model"]))
+    # Someone is about to type in it: the engine starts now, not on the
+    # first message (`Backend.warm/2`).
+    |> maybe_put(:warm, true)
   end
 
   defp maybe_put(opts, _key, nil), do: opts

@@ -201,13 +201,16 @@ export async function createAgent(
   backend: AgentBackend,
   projectId?: string | null,
   incognito?: boolean,
+  model?: string | null,
 ): Promise<AgentInfo> {
+  const body: Record<string, unknown> = { backend }
+  if (projectId) body.project_id = projectId
+  else if (incognito) body.incognito = true
+  if (model) body.model = model
   const res = await fetch("/api/agents", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(
-      projectId ? { backend, project_id: projectId } : incognito ? { backend, incognito: true } : { backend },
-    ),
+    body: JSON.stringify(body),
   })
   if (res.status === 401) throw unauthorized()
   if (!res.ok) throw new Error(`createAgent failed: ${res.status}`)

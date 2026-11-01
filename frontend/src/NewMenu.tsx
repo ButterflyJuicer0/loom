@@ -1,8 +1,9 @@
-import { HatGlasses } from "lucide-react"
-import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { ChevronLeft, ChevronRight, HatGlasses, SquarePen } from "lucide-react"
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
-import type { AgentBackend } from "./api"
+import { MODELS, type AgentBackend } from "./api"
 import { BackendIcon } from "./BackendIcon"
+import { modelLabel } from "./Model"
 
 const BACKENDS: { id: AgentBackend; label: string }[] = [
   { id: "claude_code", label: "Claude Code" },
@@ -10,28 +11,35 @@ const BACKENDS: { id: AgentBackend; label: string }[] = [
   { id: "kiro", label: "Kiro" },
 ]
 
+type Kind = "chat" | "incognito"
+
 /**
- * Which engine a new session runs on, in the session menu's look: a project
- * page's "+", and the arrow beside New chat, which also offers each engine
- * incognito (out of Recents, sandboxed; see `Loom.Agent.Sandbox`). Opens
+ * What a new session is, in the session menu's look. From New chat: a chat or
+ * an incognito one (out of Recents, sandboxed; see `Loom.Agent.Sandbox`), on
+ * the default engine and model — or, behind each one's arrow, on any engine's
+ * model. From a project page's "+" (`engines`): just which engine. Opens
  * upwards when there is no room below, as from the phone's floating pill.
  */
 export function NewMenu({
   anchor,
   owner,
-  incognito = false,
+  engines = false,
+  defaultBackend = "claude_code",
   onPick,
   onClose,
 }: {
   anchor: DOMRect
   /** The button it opened from, whose own click closes it. */
   owner: string
-  incognito?: boolean
-  onPick: (backend: AgentBackend, incognito: boolean) => void
+  engines?: boolean
+  defaultBackend?: AgentBackend
+  onPick: (backend: AgentBackend, model: string | null, incognito: boolean) => void
   onClose: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [place, setPlace] = useState<{ top: number; left: number } | null>(null)
+  // Which one's models are shown, in place of the two.
+  const [models, setModels] = useState<Kind | null>(null)
 
   useLayoutEffect(() => {
     const el = ref.current
@@ -40,9 +48,9 @@ export function NewMenu({
     const below = anchor.bottom + 4 + height <= window.innerHeight - 8
     setPlace({
       top: below ? anchor.bottom + 4 : Math.max(8, anchor.top - 4 - height),
-      left: Math.min(Math.max(8, anchor.right - width), window.innerWidth - width - 8),
+      left: Math.min(Math.max(8, anchor.left), window.innerWidth - width - 8),
     })
-  }, [anchor])
+  }, [anchor, models])
 
   useEffect(() => {
     const away = (e: MouseEvent) => {
@@ -50,39 +58,73 @@ export function NewMenu({
       if ((e.target as Element | null)?.closest?.(owner)) return
       onClose()
     }
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose()
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && (models ? setModels(null) : onClose())
     document.addEventListener("mousedown", away)
     window.addEventListener("keydown", onKey)
     return () => {
       document.removeEventListener("mousedown", away)
       window.removeEventListener("keydown", onKey)
     }
-  }, [onClose, owner])
+  }, [onClose, owner, models])
 
-  const items = (incog: boolean) =>
+  const kind = (k: Kind, icon: ReactNode, label: string) => (
+    <div className="new-menu-kind">
+      <button role="menuitem" onClick={() => onPick(defaultBackend, null, k === "incognito")}>
+        {icon}
+        <span className="session-menu-label">{label}</span>
+      </button>
+      <button className="new-menu-more" title="Choose the model" onClick={() => setModels(k)}>
+        <ChevronRight />
+      </button>
+    </div>
+  )
+
+  const body = engines ? (
     BACKENDS.map((b) => (
-      <button key={b.id + incog} role="menuitem" onClick={() => onPick(b.id, incog)}>
+      <button key={b.id} role="menuitem" onClick={() => onPick(b.id, null, false)}>
         <BackendIcon backend={b.id} /> {b.label}
       </button>
     ))
+  ) : models ? (
+    <>
+      <button role="menuitem" className="session-menu-back" onClick={() => setModels(null)}>
+        <ChevronLeft /> {models === "incognito" ? "Incognito chat" : "Chat"}
+      </button>
+      <div className="session-menu-sep" />
+      {BACKENDS.map((b) => (
+        <div key={b.id}>
+          <div className="menu-heading">
+            <BackendIcon backend={b.id} /> {b.label}
+          </div>
+          {[null, ...(MODELS[b.id] ?? [])].map((m) => (
+            <button
+              key={m ?? ""}
+              role="menuitem"
+              className="new-menu-model"
+              title={m ?? undefined}
+              onClick={() => onPick(b.id, m, models === "incognito")}
+            >
+              <span className="session-menu-label">{modelLabel(m)}</span>
+            </button>
+          ))}
+        </div>
+      ))}
+    </>
+  ) : (
+    <>
+      {kind("chat", <SquarePen />, "Chat")}
+      {kind("incognito", <HatGlasses />, "Incognito chat")}
+    </>
+  )
 
   return createPortal(
     <div
       ref={ref}
-      className="session-menu"
+      className="session-menu new-menu"
       role="menu"
       style={place ? { top: place.top, left: place.left } : { visibility: "hidden" }}
     >
-      {items(false)}
-      {incognito && (
-        <>
-          <div className="menu-sep" />
-          <div className="menu-heading">
-            <HatGlasses /> Incognito
-          </div>
-          {items(true)}
-        </>
-      )}
+      {body}
     </div>,
     document.body,
   )

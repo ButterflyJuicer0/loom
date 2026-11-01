@@ -223,6 +223,11 @@ defmodule Loom.Agent.Backend.ClaudeCode do
     end
   end
 
+  # Spawned with nothing written: Claude Code loads, then waits on stdin, and
+  # says `system/init` only once the first message comes.
+  @impl Backend
+  def warm(handle), do: ensure_process(handle)
+
   @impl Backend
   def steer(%{proc: nil}, _text) do
     # Nothing is running, so there is nothing to join. The session falls back to

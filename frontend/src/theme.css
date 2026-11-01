@@ -1534,58 +1534,24 @@ pre.code,
 }
 
 /* ── Incognito ──────────────────────────────────────────────────────────
-   The arrow beside New chat opens NewMenu: each engine, then each again
-   incognito. On a desktop it is the row's end; on a phone, the pill's. */
-.nav-new-more {
-  display: grid;
-  place-items: center;
-  margin-left: auto;
-  width: 1.75rem;
-  height: 1.75rem;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  background: none;
-  color: var(--fg-dim);
-  cursor: pointer;
-}
-
-.nav-new-more:hover {
-  background: var(--bg-card);
-  color: var(--fg);
-}
-
-.nav-new-more svg {
-  width: 1rem;
-  height: 1rem;
-}
-
-.new-chat-split {
+   New chat opens NewMenu: Chat or Incognito chat, each with an arrow to its
+   models. */
+.session-menu .new-menu-kind {
   display: flex;
-  pointer-events: auto;
+  align-items: center;
 }
 
-.new-chat-split .new-chat {
-  border-radius: 999px 0 0 999px;
-  padding-right: 12px;
+.session-menu .new-menu-kind > button:first-child {
+  flex: 1 1 auto;
 }
 
-.new-chat-more {
-  display: grid;
-  place-items: center;
-  height: 3rem;
-  padding: 0 14px 0 10px;
-  border: 0;
-  border-left: 1px solid color-mix(in srgb, var(--bg) 30%, transparent);
-  border-radius: 0 999px 999px 0;
-  background: var(--fg);
-  color: var(--bg);
-  cursor: pointer;
+.session-menu .new-menu-more {
+  flex: 0 0 auto;
+  padding: 7px 8px;
 }
 
-.new-chat-more svg {
-  width: 18px;
-  height: 18px;
+.session-menu .new-menu-model {
+  padding-left: 34px;
 }
 
 .session-menu .menu-sep {
@@ -1656,4 +1622,12 @@ pre.code,
     width: 18px;
     height: 18px;
   }
+}
+
+/* A pinned incognito session's row in Pinned: marked, never in Recents. */
+.session-incognito {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  color: var(--fg-dim);
 }

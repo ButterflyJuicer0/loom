@@ -28,7 +28,7 @@ defmodule Loom.Agent.SandboxTest do
              ~r{/projects/-home-u--loom-sessions-a-x-1-workspace$}
   end
 
-  test "incognito sessions go 30 days after their last message, unless busy" do
+  test "incognito sessions go 30 days after their last message, unless busy or pinned" do
     now = 100 * 24 * 3600 * 1000
     old = now - 31 * 24 * 3600 * 1000
 
@@ -36,7 +36,8 @@ defmodule Loom.Agent.SandboxTest do
       %{id: "a", kind: "incognito", status: :idle, last_active_at: old},
       %{id: "b", kind: "incognito", status: :running, last_active_at: old},
       %{id: "c", kind: "incognito", status: :idle, last_active_at: now - 1000},
-      %{id: "d", kind: nil, status: :idle, last_active_at: old}
+      %{id: "d", kind: nil, status: :idle, last_active_at: old},
+      %{id: "e", kind: "incognito", status: :idle, last_active_at: old, pinned: true}
     ]
 
     assert Incognito.expired(sessions, now) == ["a"]

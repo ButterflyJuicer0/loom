@@ -8,6 +8,7 @@ import {
   Folder,
   FolderPlus,
   Globe,
+  HatGlasses,
   Keyboard,
   KeyboardOff,
   MonitorSmartphone,
@@ -120,7 +121,7 @@ type Props = {
   renamingId: string | null
   onRenamed: (id: string, title: string | null) => Promise<void>
   onSelect: (id: string) => void
-  onCreate: (backend: AgentBackend, projectId?: string, incognito?: boolean) => void
+  onCreate: (backend: AgentBackend, projectId?: string, incognito?: boolean, model?: string | null) => void
   onDelete: (id: string) => void
   // From a row's menu: put its name up for editing, pin it, move it.
   onRename: (id: string) => void
@@ -198,7 +199,7 @@ export function Sidebar({
     return () => clearInterval(timer)
   }, [])
   const [devicesOpen, setDevicesOpen] = useState(false)
-  // The arrow beside New chat: another engine, or incognito.
+  // New chat asks first: a chat or an incognito one, and on which model.
   const [newMenu, setNewMenu] = useState<DOMRect | null>(null)
   const toggleNewMenu = (e: MouseEvent) => {
     e.stopPropagation()
@@ -231,6 +232,7 @@ export function Sidebar({
       title={projectName(s) ? `in ${projectName(s)}` : undefined}
     >
       <span className={"dot " + s.status} title={s.status} />
+      {s.kind === "incognito" && <HatGlasses className="session-incognito" aria-label="Incognito" />}
       {s.id === renamingId ? (
         <RenameInput value={s.title ?? s.id} stem={false} onDone={(title) => onRenamed(s.id, title)} />
       ) : (
@@ -277,12 +279,9 @@ export function Sidebar({
       <div className="session-list">
         {/* ChatGPT's first row on a desktop. A phone has its floating pill. */}
         {!narrow && (
-          <div className="nav-item nav-new" role="button" onClick={() => onCreate(defaultBackend)}>
+          <div className="nav-item nav-new" role="button" onClick={toggleNewMenu}>
             <SquarePen className="nav-icon" />
             <span className="nav-label">New chat</span>
-            <button className="nav-new-more" onClick={toggleNewMenu} title="Another engine, or incognito">
-              <ChevronDown />
-            </button>
           </div>
         )}
         {/* A top-level entry, like the sidebar's others: folded until asked. */}
@@ -486,15 +485,10 @@ export function Sidebar({
       </div>
       {narrow && (
         <div className="sidebar-float">
-          <div className="new-chat-split">
-            <button className="new-chat" onClick={() => onCreate(defaultBackend)}>
-              <SquarePen />
-              New chat
-            </button>
-            <button className="new-chat-more" onClick={toggleNewMenu} title="Another engine, or incognito">
-              <ChevronDown />
-            </button>
-          </div>
+          <button className="new-chat" onClick={toggleNewMenu}>
+            <SquarePen />
+            New chat
+          </button>
           <button
             className="dial-btn"
             onClick={() => onToggle(FOOT_SECTION)}
@@ -507,12 +501,12 @@ export function Sidebar({
       )}
       {newMenu && (
         <NewMenu
-          owner=".nav-new-more, .new-chat-more"
+          owner=".nav-new, .new-chat"
           anchor={newMenu}
-          incognito
-          onPick={(backend, incognito) => {
+          defaultBackend={defaultBackend}
+          onPick={(backend, model, incognito) => {
             setNewMenu(null)
-            onCreate(backend, undefined, incognito)
+            onCreate(backend, undefined, incognito, model)
           }}
           onClose={() => setNewMenu(null)}
         />

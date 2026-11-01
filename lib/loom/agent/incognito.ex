@@ -2,7 +2,8 @@ defmodule Loom.Agent.Incognito do
   @moduledoc """
   Deletes incognito sessions 30 days after their last message, as ChatGPT
   does its temporary chats. Checked at boot and hourly; one mid-turn waits for
-  the next check. A kept session is no longer incognito, so it stays.
+  the next check. A kept session is no longer incognito, and a pinned one is
+  the user's to delete, so both stay.
   """
   use GenServer
 
@@ -18,6 +19,7 @@ defmodule Loom.Agent.Incognito do
   def expired(sessions, now) do
     for s <- sessions,
         s.kind == "incognito",
+        s[:pinned] != true,
         s.status not in [:starting, :running],
         now - (s[:last_active_at] || s[:created_at] || now) >= @max_age_ms,
         do: s.id

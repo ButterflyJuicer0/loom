@@ -104,6 +104,9 @@ defmodule Loom.Agent.Session do
   # open overnight costs nothing.
   @idle_release_ms :timer.minutes(15)
 
+  # A new session nothing is written in goes after this; see `unused?/1`.
+  @unused_ms :timer.minutes(5)
+
   # How long a first message waits for `Loom.Projects.Classifier` before the
   # turn starts where the session already is. It answers in about two seconds.
   @classify_timeout_ms :timer.seconds(15)
@@ -312,7 +315,8 @@ defmodule Loom.Agent.Session do
         {:ok, handle} ->
           state = %{state | handle: handle}
           persist_meta(state)
-          {:ok, state}
+          if Keyword.get(opts, :warm, false), do: send(self(), :warm_backend)
+          {:ok, expire_if_unused(state, @unused_ms)}
 
         {:error, reason} ->
           Store.close_logs(logs)
@@ -488,7 +492,10 @@ defmodule Loom.Agent.Session do
           state = %{state | status: restore_status(meta[:status])}
           state = if adopted?, do: schedule_release(state), else: state
           announce(state)
-          {:ok, state}
+          # Made, never written in, then a restart: what is left of its five
+          # minutes, and a minute for the page to come back first.
+          left = (state.created_at || 0) + @unused_ms - System.system_time(:millisecond)
+          {:ok, expire_if_unused(state, max(left, :timer.minutes(1)))}
       end
     else
       {:error, reason} -> {:stop, {:restore_failed, reason}}
@@ -853,6 +860,40 @@ defmodule Loom.Agent.Session do
   # ── Backend output ──────────────────────────────────────────────────────
 
   @impl true
+  def handle_info(:warm_backend, %{status: :idle, handle: handle} = state) when handle != nil do
+    handle = Backend.set_effort(state.backend, handle, state.effort)
+    handle = Backend.set_model(state.backend, handle, state.model)
+
+    case Backend.warm(state.backend, handle) do
+      {:ok, handle} ->
+        {:noreply, schedule_release(%{state | handle: handle})}
+
+      {:error, reason} ->
+        Logger.warning("Session #{state.id}: could not warm the backend: #{inspect(reason)}")
+        {:noreply, state}
+    end
+  end
+
+  def handle_info(:warm_backend, state), do: {:noreply, state}
+
+  # Five minutes after it was made, still empty: deleted, unless something is
+  # typed and not yet sent (the draft), which gives it another five.
+  def handle_info(:expire_unused, state) do
+    cond do
+      not unused?(state) ->
+        {:noreply, state}
+
+      String.trim(Loom.Agent.Draft.read(state.id).text) != "" ->
+        {:noreply, expire_if_unused(state, @unused_ms)}
+
+      true ->
+        Logger.info("Session #{state.id}: deleted, nothing written in it for five minutes")
+        id = state.id
+        Task.Supervisor.start_child(Loom.Agent.TaskSupervisor, fn -> Loom.Agent.delete_session(id) end)
+        {:noreply, state}
+    end
+  end
+
   def handle_info(:release_backend, %{status: status} = state)
       when status in [:starting, :running] do
     # A turn started between the timer firing and this landing. Leave it alone
@@ -1268,6 +1309,20 @@ defmodule Loom.Agent.Session do
   end
 
   # ── Keeping the backend warm ────────────────────────────────────────────
+
+  # A chat the user opened and never wrote in: nothing sent, nothing seeded,
+  # not named or pinned. Only the user's own kinds; employees, tasks, Dream
+  # and the bell make theirs on purpose.
+  defp unused?(state) do
+    state.kind in [nil, "incognito"] and state.employee_id == nil and state.turns == 0 and
+      state.notice == nil and state.title_by != "user" and not state.pinned and
+      state.status == :idle and not Enum.any?(state.transcript, &(&1.kind == :user))
+  end
+
+  defp expire_if_unused(state, after_ms) do
+    if unused?(state), do: Process.send_after(self(), :expire_unused, after_ms)
+    state
+  end
 
   defp cancel_release(%{release_timer: nil} = state), do: state
 
