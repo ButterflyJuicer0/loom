@@ -148,6 +148,10 @@ export type AgentInfo = {
   // When the user archived it (ms), or null. Only the page reads it; see
   // `isArchived`.
   archived_at?: number | null
+  // When the user marked it done (ms), or null: out of the sidebar's Working.
+  done_at?: number | null
+  // The start of its last reply, as plain text, for a Working card.
+  preview?: string | null
   // "dream" for a scope's sleep session, which the lists leave out and the
   // moon opens; see `Sleep.tsx`. "employee_chat" and "employee_work" for a
   // virtual employee's, opened from its page; see `Employees.tsx`. "bell" for
@@ -301,6 +305,7 @@ export function updateAgent(
   attrs: {
     pinned?: boolean
     archived?: boolean
+    done?: boolean
     project_id?: string | null
     seen_seq?: number
     effort?: string | null

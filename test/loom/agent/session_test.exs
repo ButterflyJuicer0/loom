@@ -108,6 +108,15 @@ defmodule Loom.Agent.SessionTest do
       assert Agent.info(id).status == :starting
     end
 
+    test "a session marked done is not done once the user writes in it again" do
+      id = new_session()
+      assert :ok = Agent.done(id, true)
+      assert is_integer(Agent.info(id).done_at)
+
+      Agent.submit(id, "one more thing")
+      assert Agent.info(id).done_at == nil
+    end
+
     test "the session is named after its first message" do
       id = new_session()
       Agent.submit(id, "fix the login bug\nand also the logout one")

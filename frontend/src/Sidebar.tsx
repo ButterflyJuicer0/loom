@@ -1,6 +1,7 @@
 import {
   Bell,
   BellOff,
+  Check,
   ChevronDown,
   ChevronRight,
   ChevronUp,
@@ -40,18 +41,19 @@ import { useNarrow } from "./useNarrow"
  */
 export const PROJECTS_SECTION = "section:projects"
 export const SESSIONS_SECTION = "section:sessions"
+export const WORKING_SECTION = "section:working"
 export const PINNED_SECTION = "section:pinned"
 export const EMPLOYEES_SECTION = "section:employees"
 // The foot's switches: a list, or folded to a row of their icons.
 export const FOOT_SECTION = "section:foot"
 
-const OPEN_AT_FIRST = [SESSIONS_SECTION, PINNED_SECTION, EMPLOYEES_SECTION, FOOT_SECTION]
+const OPEN_AT_FIRST = [WORKING_SECTION, SESSIONS_SECTION, PINNED_SECTION, EMPLOYEES_SECTION, FOOT_SECTION]
 export const isOpen = (toggled: Set<string>, key: string) =>
   OPEN_AT_FIRST.includes(key) ? !toggled.has(key) : toggled.has(key)
 
 /**
- * The sidebar as a phone opens it, to keep to the conversations: Recents
- * open, Projects, Employees and the foot folded. Pinned is left as it was —
+ * The sidebar as a phone opens it, to keep to the conversations: Working and
+ * Recents open, Projects, Employees and the foot folded. Pinned is left as it was —
  * pinning is already a choice to keep it in view.
  */
 export function focused(toggled: Set<string>): Set<string> {
@@ -61,6 +63,7 @@ export function focused(toggled: Set<string>): Set<string> {
     if (next.has(key)) next.delete(key)
     else next.add(key)
   }
+  want(WORKING_SECTION, true)
   want(SESSIONS_SECTION, true)
   for (const key of [PROJECTS_SECTION, EMPLOYEES_SECTION, FOOT_SECTION]) want(key, false)
   return next
@@ -70,9 +73,10 @@ export function focused(toggled: Set<string>): Set<string> {
  * The sidebar's lists, which overlap on purpose: each project (most recently
  * used first) with all its sessions; then the pinned sessions; then the rest,
  * most recently active first. A session put in a project stays in the list it
- * was found in.
+ * was found in. The rest is split: Working, those in use (see `isWorking`),
+ * above Recents.
  */
-export function sidebarGroups(sessions: AgentInfo[], projects: Project[]) {
+export function sidebarGroups(sessions: AgentInfo[], projects: Project[], now = Date.now()) {
   const inside = new Map<string, AgentInfo[]>(projects.map((p) => [p.id, []]))
   for (const s of sessions) if (s.project_id) inside.get(s.project_id)?.push(s)
   const used = (p: Project) => {
@@ -82,14 +86,27 @@ export function sidebarGroups(sessions: AgentInfo[], projects: Project[]) {
   const groups = [...projects]
     .sort((a, b) => used(b) - used(a))
     .map((project) => ({ project, sessions: inside.get(project.id)! }))
-  return { groups, pinned: sessions.filter((s) => s.pinned), recent: sessions.filter((s) => !s.pinned) }
+  const rest = sessions.filter((s) => !s.pinned)
+  return {
+    groups,
+    pinned: sessions.filter((s) => s.pinned),
+    working: rest.filter((s) => isWorking(s, now)),
+    recent: rest.filter((s) => !isWorking(s, now)),
+  }
 }
+
+/**
+ * In the Working group: used within the hour and not marked done. The user's
+ * next message in a done one clears the mark (server side), so it comes back.
+ */
+export const isWorking = (s: AgentInfo, now: number) => s.done_at == null && now - lastActive(s) < 3_600_000
 
 /** What j/k walks: every session row that is showing, each once, top to bottom. Projects list theirs on their own pages. */
 export function sidebarOrder(sessions: AgentInfo[], projects: Project[], toggled: Set<string>): AgentInfo[] {
-  const { pinned, recent } = sidebarGroups(sessions, projects)
+  const { pinned, working, recent } = sidebarGroups(sessions, projects)
   const rows = [
     ...(isOpen(toggled, PINNED_SECTION) ? pinned : []),
+    ...(isOpen(toggled, WORKING_SECTION) ? working : []),
     ...(isOpen(toggled, SESSIONS_SECTION) ? recent : []),
   ]
   return rows.filter((s, i) => rows.findIndex((r) => r.id === s.id) === i)
@@ -129,6 +146,8 @@ type Props = {
   onContinue: (id: string) => Promise<void>
   onMove: (id: string, projectId: string | null) => Promise<void>
   onArchive: (id: string, archived: boolean) => Promise<void>
+  // Out of Working, or back into it.
+  onDone: (id: string, done: boolean) => Promise<void>
   onCollapse: () => void
   browserOpen: boolean
   onToggleBrowser: () => void
@@ -174,6 +193,7 @@ export function Sidebar({
   onContinue,
   onMove,
   onArchive,
+  onDone,
   onCollapse,
   browserOpen,
   onToggleBrowser,
@@ -207,7 +227,7 @@ export function Sidebar({
     setNewMenu((m) => (m ? null : anchor))
   }
   const online = devices.filter((d) => d.online).length
-  const { groups, pinned, recent } = sidebarGroups(sessions, projects)
+  const { groups, pinned, working, recent } = sidebarGroups(sessions, projects)
   const open = (key: string) => isOpen(toggled, key)
   // The row whose menu is open, and where its button is.
   const [menu, setMenu] = useState<{ id: string; anchor: DOMRect } | null>(null)
@@ -216,7 +236,7 @@ export function Sidebar({
   const dreamOf = (scope: string) => dreams.find((d) => scopeOf(d) === scope)
   const homeDream = dreamOf("home")
 
-  const row = (s: AgentInfo) => (
+  const row = (s: AgentInfo, done?: boolean) => (
     <div
       key={s.id}
       ref={s.id === cursorId ? (el) => el?.scrollIntoView({ block: "nearest" }) : undefined}
@@ -247,6 +267,18 @@ export function Sidebar({
       <span className="session-when" title={"last active " + new Date(lastActive(s)).toLocaleString()}>
         {when(lastActive(s))}
       </span>
+      {done && (
+        <button
+          className="session-del session-more"
+          title="Done: move it down to Recents"
+          onClick={(e) => {
+            e.stopPropagation()
+            void onDone(s.id, true)
+          }}
+        >
+          <Check />
+        </button>
+      )}
       <button
         className="session-del session-more"
         title="Rename, pin, move to a project, delete"
@@ -385,6 +417,45 @@ export function Sidebar({
           </>
         )}
 
+        {working.length > 0 && (
+          <>
+            <Heading label="Working" open={open(WORKING_SECTION)} onToggle={() => onToggle(WORKING_SECTION)} />
+            {open(WORKING_SECTION) &&
+              (narrow ? (
+                // On a phone, cards side by side, each with the start of its
+                // last reply: where it got to, to keep several in mind at once.
+                <div className="working-strip">
+                  {working.map((s) => (
+                    <div
+                      key={s.id}
+                      className={"working-card" + (s.id === activeId ? " active" : "") + (unread(s) ? " unread" : "")}
+                      onClick={() => onSelect(s.id)}
+                    >
+                      <div className="working-title">
+                        <span className={"dot " + s.status} title={s.status} />
+                        <span className="session-label">{s.title ?? s.id}</span>
+                        {unread(s) && <span className="session-unread" />}
+                      </div>
+                      <div className="working-preview">{s.preview ?? ""}</div>
+                      <button
+                        className="working-done"
+                        title="Done: move it down to Recents"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          void onDone(s.id, true)
+                        }}
+                      >
+                        <Check /> Done
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                working.map((s) => row(s, true))
+              ))}
+          </>
+        )}
+
         <Heading label="Recents" open={open(SESSIONS_SECTION)} onToggle={() => onToggle(SESSIONS_SECTION)} />
         {open(SESSIONS_SECTION) &&
           (recent.length ? (
@@ -404,6 +475,7 @@ export function Sidebar({
           onContinue={menuFor.kind == null && !menuFor.employee_id ? () => onContinue(menuFor.id) : undefined}
           onMove={(projectId) => onMove(menuFor.id, projectId)}
           onArchive={(on) => onArchive(menuFor.id, on)}
+          onDone={(on) => onDone(menuFor.id, on)}
           onDelete={() => onDelete(menuFor.id)}
           onClose={() => setMenu(null)}
         />

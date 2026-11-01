@@ -183,6 +183,12 @@ defmodule Loom.Agent.Session do
   def archive(id, archived?), do: GenServer.call(via(id), {:archive, archived?})
 
   @doc """
+  Mark the session done, or not: it leaves the sidebar's Working group for
+  Recents. Local to loom. The user's next message in it clears the mark.
+  """
+  def done(id, done?), do: GenServer.call(via(id), {:done, done?})
+
+  @doc """
   Begin a session with what it should know, without a turn: `display` is shown
   as a message (`origin`, "tidy" unless given), and `prompt` goes to the
   backend ahead of the next message, as a project move does. How a merge of
@@ -438,6 +444,7 @@ defmodule Loom.Agent.Session do
           project_id: meta[:project_id],
           pinned: meta[:pinned] == true,
           archived_at: if(is_integer(meta[:archived_at]), do: meta[:archived_at]),
+          done_at: if(is_integer(meta[:done_at]), do: meta[:done_at]),
           tidied_at: if(is_integer(meta[:tidied_at]), do: meta[:tidied_at]),
           kind: if(is_binary(meta[:kind]), do: meta[:kind]),
           employee_id: if(is_binary(meta[:employee_id]), do: meta[:employee_id]),
@@ -565,6 +572,8 @@ defmodule Loom.Agent.Session do
       pinned: false,
       # When the user archived it, or nil. See `archive/2`.
       archived_at: nil,
+      # When the user marked it done, or nil. See `done/2`.
+      done_at: nil,
       # When a tidying last looked at it, or nil. See `tidied/1`.
       tidied_at: nil,
       # nil for a conversation; "dream" for a project's sleep session, which
@@ -688,6 +697,13 @@ defmodule Loom.Agent.Session do
   def handle_call({:archive, archived?}, _from, state) do
     at = if archived? == true, do: System.system_time(:millisecond)
     state = %{state | archived_at: at}
+    persist_meta(state)
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:done, done?}, _from, state) do
+    at = if done? == true, do: System.system_time(:millisecond)
+    state = %{state | done_at: at}
     persist_meta(state)
     {:reply, :ok, state}
   end
@@ -1064,6 +1080,8 @@ defmodule Loom.Agent.Session do
     state =
       state
       |> maybe_title(if String.trim(text) == "", do: Files.title(files), else: text)
+      # Writing in it again means it is not done after all.
+      |> Map.put(:done_at, nil)
       |> emit(:user, %{
         text: text,
         # Structured rather than folded into `text`, so a bubble can show
@@ -1462,6 +1480,28 @@ defmodule Loom.Agent.Session do
     )
   end
 
+  # The start of the last reply, as a line of text: what a Working card on the
+  # phone shows, to recall where the session got to.
+  defp preview(transcript) do
+    Enum.find_value(transcript, fn
+      %{kind: :assistant_text, payload: %{text: text}} when is_binary(text) ->
+        text =
+          text
+          |> String.replace(~r/<!--.*?(-->|$)/su, " ")
+          |> String.replace(~r/\|?(\s*:?-{3,}:?\s*\|)+/u, " ")
+          |> String.replace(~r/\[([^\]]*)\]\([^)]*\)/u, "\\1")
+          |> String.replace(~r/[*`~]+/u, "")
+          |> String.replace(~r/[#>|]+/u, " ")
+          |> String.replace(~r/\s+/u, " ")
+          |> String.trim()
+
+        if text != "", do: String.slice(text, 0, 160)
+
+      _ ->
+        nil
+    end)
+  end
+
   defp write_meta(state) do
     base = %{
       id: state.id,
@@ -1469,6 +1509,7 @@ defmodule Loom.Agent.Session do
       project_id: state.project_id,
       pinned: state.pinned,
       archived_at: state.archived_at,
+      done_at: state.done_at,
       tidied_at: state.tidied_at,
       kind: state.kind,
       employee_id: state.employee_id,
@@ -1592,6 +1633,7 @@ defmodule Loom.Agent.Session do
       project_id: state.project_id,
       pinned: state.pinned,
       archived_at: state.archived_at,
+      done_at: state.done_at,
       tidied_at: state.tidied_at,
       kind: state.kind,
       employee_id: state.employee_id,
@@ -1603,6 +1645,7 @@ defmodule Loom.Agent.Session do
       title_by: state.title_by,
       created_at: state.created_at,
       last_active_at: state.last_active_at,
+      preview: preview(state.transcript),
       status: state.status,
       queued: length(state.queue),
       queue: state.queue,

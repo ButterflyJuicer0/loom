@@ -657,6 +657,7 @@ function App() {
       onPin={async (id, pinned) => upsert(await updateAgent(id, { pinned }))}
       onContinue={carryOn}
       onArchive={async (id, archived) => upsert(await updateAgent(id, { archived }))}
+      onDone={async (id, done) => upsert(await updateAgent(id, { done }))}
       onMove={async (id, projectId) => {
         upsert(await updateAgent(id, { project_id: projectId }))
         if (projectId) reveal()

@@ -63,7 +63,7 @@ defmodule LoomWeb.AgentSessionController do
     end
   end
 
-  # PATCH /api/agents/:id — any of `title` (rename), `pinned`, `archived`, `seen_seq` (read
+  # PATCH /api/agents/:id — any of `title` (rename), `pinned`, `archived`, `done`, `seen_seq` (read
   # up to there), `effort` (the thinking level, null for the default), `model` (likewise) and `project_id` (move into that project, or out of any with
   # null), and `incognito: false` (keep an incognito session: into Recents,
   # out of its sandbox). Only a move and keeping touch the backend.
@@ -73,6 +73,7 @@ defmodule LoomWeb.AgentSessionController do
         {"title", &Agent.rename(id, &1)},
         {"pinned", &Agent.pin(id, &1)},
         {"archived", &Agent.archive(id, &1)},
+        {"done", &Agent.done(id, &1)},
         {"seen_seq", &Agent.seen(id, &1)},
         {"effort", &Agent.set_effort(id, &1)},
         {"model", &Agent.set_model(id, &1)},
@@ -129,6 +130,8 @@ defmodule LoomWeb.AgentSessionController do
       project_id: info.project_id,
       pinned: info.pinned,
       archived_at: Map.get(info, :archived_at),
+      done_at: Map.get(info, :done_at),
+      preview: Map.get(info, :preview),
       kind: info.kind,
       employee_id: Map.get(info, :employee_id),
       seen_seq: info.seen_seq,
