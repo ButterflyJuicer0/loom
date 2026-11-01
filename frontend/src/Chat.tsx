@@ -345,10 +345,10 @@ export function Chat({
       {session.flagged_at && (
         <div className="chat-banner flagged continue-row">
           {session.kind && session.kind !== "incognito" ? (
-            "A safety classifier stopped the model here, so Loom carries this on in a fresh session next time."
+            "Stopped by a safety classifier; Loom goes on in a fresh session next time."
           ) : (
             <>
-              A safety classifier stopped the model here; it may stop every reply after this.
+              Stopped by a safety classifier; later replies here may be too.
               {onContinue && !busy && <ContinueButton onContinue={onContinue} />}
             </>
           )}

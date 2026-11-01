@@ -66,7 +66,7 @@ defmodule Loom.Agent do
   def set_aside_opts(id, what) do
     [
       earlier_opt(id),
-      note: "Carried on from a session a safety classifier stopped, shown above.",
+      note: "Carried on from an earlier session that a safety classifier stopped.",
       notice:
         "[Note from Loom, not written by the user: this session carries on from an " <>
           "earlier one that a safety classifier stopped, so it starts afresh. Do not " <>
