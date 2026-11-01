@@ -1701,12 +1701,12 @@ body.sidebar-resizing iframe {
 }
 
 .new-chat-more {
+  position: relative;
   display: grid;
   place-items: center;
   height: 3rem;
   padding: 0 14px 0 10px;
   border: 0;
-  border-left: 1px solid color-mix(in srgb, var(--bg) 30%, transparent);
   border-radius: 0 999px 999px 0;
   background: var(--fg);
   color: var(--bg);
@@ -1716,4 +1716,19 @@ body.sidebar-resizing iframe {
 .new-chat-more svg {
   width: 18px;
   height: 18px;
+}
+
+/* The split is a fine groove, not a line: a soft shade with a highlight
+   beside it, short of the pill's edges. */
+.new-chat-more::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 28%;
+  bottom: 28%;
+  width: 1px;
+  border-radius: 1px;
+  /* Shade and light, the same on the light pill and the dark one. */
+  background: color-mix(in srgb, #000 16%, transparent);
+  box-shadow: 1px 0 0 color-mix(in srgb, #fff 20%, transparent);
 }
