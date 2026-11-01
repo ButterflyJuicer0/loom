@@ -163,14 +163,3 @@ export function Grabber({ onOpen }: { onOpen: () => void }) {
     </div>
   )
 }
-
-/** "Done · Undo", for a few seconds after a session leaves Working. */
-export function UndoDone({ title, onUndo }: { title: string; onUndo: () => void }) {
-  return createPortal(
-    <div className="undo-done" role="status">
-      <span className="undo-done-text">Done: {title}</span>
-      <button onClick={onUndo}>Undo</button>
-    </div>,
-    document.body,
-  )
-}

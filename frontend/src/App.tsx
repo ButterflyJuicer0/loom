@@ -4,7 +4,7 @@ import { Canvas } from "./Canvas"
 import { moved, touches, type CanvasItem } from "./canvasItems"
 import { Confirm } from "./Confirm"
 import { Chat } from "./Chat"
-import { Switcher, UndoDone } from "./Switcher"
+import { Switcher } from "./Switcher"
 import type { TreeNav } from "./FileBrowser"
 import { KeyHelp, useGlobalKey, useKeys, WhichKey, type Keymap } from "./keys"
 import { Login } from "./Login"
@@ -662,9 +662,7 @@ function App() {
   const pending = useKeys(keysOn, keymap)
   useGlobalKey(keysOn, (e) => e.ctrlKey && e.code === "Backquote", () => void toggleTerminal())
 
-  // Out of Working (see `markDone`), and the phone's switcher (Switcher.tsx).
-  const [undo, setUndo] = useState<{ id: string; title: string } | null>(null)
-  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // The phone's switcher (Switcher.tsx).
   const [switching, setSwitching] = useState(false)
 
   if (!authed) return <Login onSuccess={() => setAuthed(true)} />
@@ -680,19 +678,9 @@ function App() {
   const activeEmployee =
     (active && employees.find((e) => e.chat_session === active.id || e.work_session === active.id)) ?? null
 
-  // Out of Working, from the sidebar or the switcher: for a few seconds it
-  // can be undone, a slip of the thumb being easy.
-  const markDone = async (id: string) => {
-    upsert(await updateAgent(id, { done: true }))
-    if (undoTimer.current) clearTimeout(undoTimer.current)
-    setUndo({ id, title: sessions.find((x) => x.id === id)?.title ?? "session" })
-    undoTimer.current = setTimeout(() => setUndo(null), 5000)
-  }
-  const undoDone = async () => {
-    if (!undo) return
-    setUndo(null)
-    upsert(await updateAgent(undo.id, { done: false }))
-  }
+  // Out of Working, from the sidebar or the switcher. Writing in it again
+  // brings it back.
+  const markDone = async (id: string) => upsert(await updateAgent(id, { done: true }))
   const working = sidebarGroups(sessions, projects).working
 
   const sidebar = (
@@ -1118,7 +1106,6 @@ function App() {
           onClose={() => setSwitching(false)}
         />
       )}
-      {undo && <UndoDone title={undo.title} onUndo={() => void undoDone()} />}
     </div>
   )
 }
