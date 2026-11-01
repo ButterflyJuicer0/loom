@@ -32,6 +32,7 @@ On a device:
   loom-node daemon                          stay connected to loom (what the service runs)
   loom-node install --url URL --token TOKEN [--shell SHELL]
   loom-node uninstall
+  loom-node control <path> [k=v ...]        drive the screen via the app (Android)
   loom-node version
 `
 
@@ -53,6 +54,8 @@ func main() {
 		code = cliRead(args)
 	case "write":
 		code = cliWrite(args)
+	case "control":
+		code = cliControl(args)
 	case "daemon":
 		code = runDaemon(args)
 	case "install":

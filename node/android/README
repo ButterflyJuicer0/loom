@@ -90,3 +90,26 @@ the distro's (`apt install aapt zipalign`); d8/apksigner are JVM wrappers.
   app; there is no way to auto-answer a runtime-permission dialog.
 - iOS cannot be a node: no persistent background execution and no global
   accessibility for third-party apps.
+
+## Screen control (layer 2) and self-update
+
+`ControlService` is an AccessibilityService — the no-root way to see and drive
+the screen. It exposes a token-guarded HTTP API on 127.0.0.1:8766:
+screenshot (takeScreenshot, API 30+), dump (getRootInActiveWindow), tap/swipe
+(dispatchGesture), text (ACTION_SET_TEXT, so Chinese needs no ADBKeyboard),
+back/home/recents, launch. The token lives in the app's private
+.config/loom-node/control.token, so no other app can call it. The user enables
+it once in Accessibility settings; it survives reboot. FLAG_SECURE windows
+screenshot black, by design.
+
+Because a stripped HarmonyOS shell has no curl, the daemon drops a symlink
+$HOME/loom-node → the native binary and loom-node gains a `control` subcommand
+(the local client). Agents call e.g. `"$HOME/loom-node" control dump`.
+
+Self-update: `ApkProvider` (a minimal FileProvider) serves filesDir/update.apk
+to the system installer over a content:// URI (SELinux blocks a path read, a
+granted URI works). `control update` fires the install intent and the service
+auto-taps the installer's confirm button, so pushing a new build needs no user
+tap — after a one-time "install unknown apps" grant for this app. build.sh
+stamps a strictly-increasing versionCode (epoch minutes) so each build installs
+as an update.

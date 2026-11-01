@@ -40,9 +40,14 @@ XML
 echo "[1/6] aapt2 compile resources"
 "$AAPT2" compile --dir res -o build/res.zip
 
-echo "[2/6] aapt2 link"
+# Every build is strictly newer (epoch minutes, fits a 31-bit int until ~4147),
+# so the system installer always accepts it as an update over the installed one.
+VC=$(( $(date +%s) / 60 ))
+VN="1.$VC"
+echo "[2/6] aapt2 link (versionCode $VC)"
 "$AAPT2" link -o build/base.apk -I "$JAR" --manifest AndroidManifest.xml \
-  --java build/gen --min-sdk-version "$MINSDK" --target-sdk-version "$TARGETSDK" build/res.zip
+  --java build/gen --min-sdk-version "$MINSDK" --target-sdk-version "$TARGETSDK" \
+  --version-code "$VC" --version-name "$VN" build/res.zip
 
 echo "[3/6] javac"
 find src build/gen -name '*.java' > build/sources.txt

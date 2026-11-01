@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Loom Node</string>
+    <string name="control_summary">让 Loom 远程看屏幕、点按、输入</string>
+    <string name="control_desc">开启后，Loom 可以截屏、读取界面、点击/滑动/输入。仅本机回环，带随机令牌，其他 App 无法调用。关掉即停。</string>
 </resources>

@@ -64,3 +64,58 @@ loom itself could not finish: the device is offline, unknown, or dropped the
 connection mid-command (the command was killed on the device). stderr says
 which. Run `loom-node list` to check that the device is back online before
 retrying; if it stays offline, tell the user rather than retrying in a loop.
+
+## 4. Drive an Android screen (see, tap, type)
+
+An Android device (OS `android`) running the Loom Node app can also be *driven*
+— screenshot, read the on-screen UI, tap, swipe, type, Back/Home/Recents — once
+the user has turned on **屏幕控制** (the app's accessibility service). No adb, no
+root, no curl needed on the device.
+
+The daemon drops a callable copy of itself at `$HOME/loom-node`; use its
+`control` subcommand, which fills in the local token for you:
+
+```sh
+loom-node exec <device> -- '"$HOME/loom-node" control <call> [k=v ...]'
+```
+
+If a call says "turn on 屏幕控制" / can't reach the service, it is not enabled:
+ask the user to open the Loom Node app and tap **开启屏幕控制**.
+
+Calls (all print small JSON unless noted):
+
+- `control ping` — `{"ok":"true"}` when live.
+- `control dump` — the interactive UI as `{"nodes":[{cls,text,desc,id,bounds:[l,t,r,b],cx,cy,clickable,editable,scrollable},…]}`. `cx,cy` is the tap point. Read this first and tap by its coordinates rather than guessing.
+- `control tap x=<cx> y=<cy>`
+- `control swipe x1= y1= x2= y2= ms=300` — scroll by swiping (up = y1 high → y2 low).
+- `control text s="你好"` — set the focused field's text (Chinese works). Tap the field first. Replaces, does not append.
+- `control key name=back|home|recents|notifications`
+- `control launch pkg=<package>` — open an app by package name.
+
+Screenshot is a file (binary), not inline: the call writes a PNG on the device
+and prints its path; pull it back and view it:
+
+```sh
+loom-node exec <device> -- '"$HOME/loom-node" control screenshot'
+# → {"path":"/data/.../cache/screen.png","w":...,"h":...}
+loom-node read <device> /data/.../cache/screen.png > output/screen.png
+```
+
+Loop: screenshot or `dump` → decide → `tap`/`text`/`swipe` → screenshot again
+to confirm. A window marked FLAG_SECURE (banking apps, DRM video) screenshots
+black — expected. Per the user's standing rule, bank screens are read-only and
+every payment step is confirmed with the user first.
+
+### Updating a device's app (Android, no user tap)
+
+Once 屏幕控制 is on, you can push a new build with no tap from the user — the
+accessibility service taps the installer's confirm button itself:
+
+```sh
+loom-node write <device> update.apk < priv/node/loom-node.apk
+loom-node exec  <device> -- '"$HOME/loom-node" control update'
+```
+
+First time only, the device must have "install unknown apps" allowed for Loom
+Node: if `control update` returns `{"need":"allow-unknown-sources"}`, it has
+opened that settings screen — ask the user to turn it on once, then retry.

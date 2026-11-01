@@ -81,6 +81,7 @@ func runDaemon(args []string) int {
 	}
 	log.SetFlags(log.LstdFlags)
 	daemonLog()
+	ensureControlLink()
 	log.Printf("loom-node %s starting", version)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

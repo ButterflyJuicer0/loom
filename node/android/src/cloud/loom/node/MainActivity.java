@@ -35,7 +35,7 @@ public class MainActivity extends Activity {
     private final Handler ui = new Handler(Looper.getMainLooper());
     private EditText input;
     private TextView status;
-    private Button connect, stop, paste;
+    private Button connect, stop, paste, control;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -45,10 +45,16 @@ public class MainActivity extends Activity {
         connect = findViewById(R.id.connect);
         stop = findViewById(R.id.stop);
         paste = findViewById(R.id.paste);
+        control = findViewById(R.id.control);
 
         connect.setOnClickListener(v -> onConnect());
         stop.setOnClickListener(v -> disconnect());
         paste.setOnClickListener(v -> pasteFromClipboard());
+        control.setOnClickListener(v -> {
+            try {
+                startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+            } catch (Exception ignored) {}
+        });
 
         if (Build.VERSION.SDK_INT >= 33) {
             requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1);
@@ -56,25 +62,42 @@ public class MainActivity extends Activity {
         refresh();
     }
 
+    @Override protected void onResume() {
+        super.onResume();
+        refresh();
+    }
+
     private void refresh() {
+        boolean screen = controlEnabled();
+        control.setText(screen ? "屏幕控制：已开启（点此管理）" : "开启屏幕控制");
         if (Config.configured(this)) {
             input.setVisibility(View.GONE);
             paste.setVisibility(View.GONE);
             connect.setVisibility(View.GONE);
             stop.setVisibility(View.VISIBLE);
+            control.setVisibility(View.VISIBLE);
             // Idempotent, and run while the activity is in the foreground (so a
             // foreground-service start is allowed on Android 14): this is how
             // the node recovers if it was ever left not running.
             NodeService.start(this);
-            setStatus("已配置。节点在后台运行，Loom 的 Devices 里应显示绿点。\n日志：" + Config.logFile(this));
+            setStatus("已配置。节点在后台运行，Loom 的 Devices 里应显示绿点。\n"
+                    + "屏幕控制：" + (screen ? "已开启" : "未开启（如需 Loom 看屏幕/点按，点上面的按钮开启无障碍）")
+                    + "\n日志：" + Config.logFile(this));
         } else {
             input.setVisibility(View.VISIBLE);
             paste.setVisibility(View.VISIBLE);
             connect.setVisibility(View.VISIBLE);
             connect.setText("连接");
             stop.setVisibility(View.GONE);
+            control.setVisibility(View.GONE);
             setStatus("未连接。");
         }
+    }
+
+    private boolean controlEnabled() {
+        String flat = Settings.Secure.getString(
+                getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        return flat != null && flat.contains(getPackageName() + "/" + ControlService.class.getName());
     }
 
     private void pasteFromClipboard() {
