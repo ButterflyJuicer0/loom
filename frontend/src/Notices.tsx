@@ -70,7 +70,7 @@ export function NoticesSheet({
 }: {
   notices: Notice[]
   todos: Todo[]
-  // The bell's chat, once its session exists; asked for on first use.
+  // The bell's chat, once its session exists; asked for whenever it is opened.
   chat: ReactNode | null
   onWantChat: () => void
   onOpen: (n: Notice) => void
@@ -85,9 +85,10 @@ export function NoticesSheet({
   const settled = notices.filter((n) => n.status !== "open").sort((a, b) => (b.done_at ?? 0) - (a.done_at ?? 0))
   const openTodos = todos.filter((t) => !t.done).length
 
+  // Each time, not just the first: the server starts the chat afresh each day.
   useEffect(() => {
-    if (tab === "chat" && !chat) onWantChat()
-  }, [tab, chat])
+    if (tab === "chat") onWantChat()
+  }, [tab])
 
   return createPortal(
     <div className="search-sheet" onClick={onClose}>

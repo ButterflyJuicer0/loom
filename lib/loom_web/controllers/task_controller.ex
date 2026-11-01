@@ -3,9 +3,10 @@ defmodule LoomWeb.TaskController do
   Tasks — `Loom.Cron`'s jobs — for the Tasks page.
 
   A task made here gets a session of its own, named after it, unless it names
-  one to go to: every run's reply lands there, which is where the user reads
-  it. One of its own is `kind: "task"`, kept out of the sidebar's lists and
-  opened from the task. Deleting the task leaves that session.
+  one to go to, where every run's reply lands. One of its own is
+  `kind: "task"`, kept out of the sidebar's lists and opened from the task,
+  and is new for every run, the runs before shown above it (`Loom.Cron`).
+  Deleting the task leaves those sessions.
 
   Times are the user's wall clock: `utc_offset`, minutes east of UTC, Shanghai
   (480) unless the request or `config :loom, Loom.Cron, utc_offset:` says

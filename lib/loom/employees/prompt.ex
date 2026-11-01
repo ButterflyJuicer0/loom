@@ -265,6 +265,17 @@ defmodule Loom.Employees.Prompt do
     """
   end
 
+  defp fresh(%{fresh: "flagged"}) do
+    """
+    ## A fresh session
+
+    This work session is new: a safety classifier stopped the model in the last
+    one, so Loom set it aside. Do not read its transcript, and do not redo the
+    step that was stopped the same way. Before anything else, read `HANDOFF.md`
+    and the end of `worklog.md`.
+    """
+  end
+
   defp fresh(_ctx), do: ""
 
   defp notices([]), do: ""

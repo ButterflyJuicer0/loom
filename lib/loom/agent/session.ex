@@ -98,6 +98,8 @@ defmodule Loom.Agent.Session do
   @transcript_limit 500
 
   @title_limit 80
+  # How a turn a safety classifier stopped ends, in any backend's words.
+  @flagged_error ~r/safeguards|usage policy|anthropic\.com\/legal\/aup/i
 
   # How long a finished session keeps its backend warm. Long enough to cover
   # reading the output and typing a follow-up; short enough that a session left
@@ -301,6 +303,8 @@ defmodule Loom.Agent.Session do
           kind: Keyword.get(opts, :kind),
           employee_id: Keyword.get(opts, :employee),
           model: Keyword.get(opts, :model) || Keyword.get(opts, :kiro_model),
+          notice: Keyword.get(opts, :notice),
+          earlier: Keyword.get(opts, :earlier, []),
           title: Keyword.get(opts, :title),
           title_by: Keyword.get(opts, :title_by, if(Keyword.get(opts, :title), do: "user")),
           created_at: now,
@@ -314,6 +318,13 @@ defmodule Loom.Agent.Session do
       case Backend.impl(backend).start(id, backend_meta(id, opts, project, employee)) do
         {:ok, handle} ->
           state = %{state | handle: handle}
+
+          state =
+            case Keyword.get(opts, :note) do
+              note when is_binary(note) -> emit(state, :loom_note, %{text: note})
+              _ -> state
+            end
+
           persist_meta(state)
           if Keyword.get(opts, :warm, false), do: send(self(), :warm_backend)
           {:ok, expire_if_unused(state, @unused_ms)}
@@ -425,7 +436,10 @@ defmodule Loom.Agent.Session do
              backend,
              id,
              meta
-             |> Map.put(:instructions, instructions(id, project, {meta[:employee_id], meta[:kind]}))
+             |> Map.put(
+               :instructions,
+               instructions(id, project, {meta[:employee_id], meta[:kind]})
+             )
              |> Map.put(:sandbox, meta[:kind] == "incognito"),
              logs
            ) do
@@ -441,6 +455,9 @@ defmodule Loom.Agent.Session do
           tidied_at: if(is_integer(meta[:tidied_at]), do: meta[:tidied_at]),
           kind: if(is_binary(meta[:kind]), do: meta[:kind]),
           employee_id: if(is_binary(meta[:employee_id]), do: meta[:employee_id]),
+          flagged_at: if(is_integer(meta[:flagged_at]), do: meta[:flagged_at]),
+          flagged_category: if(is_binary(meta[:flagged_category]), do: meta[:flagged_category]),
+          earlier: Enum.filter(List.wrap(meta[:earlier]), &is_binary/1),
           seen_seq: if(is_integer(meta[:seen_seq]), do: meta[:seen_seq], else: 0),
           reply_seq: reply_seq(meta, transcript),
           effort: if(meta[:effort] in Backend.efforts(backend), do: meta[:effort]),
@@ -573,6 +590,14 @@ defmodule Loom.Agent.Session do
       # The virtual employee whose chat or work this is, for "employee_chat"
       # and "employee_work". See `Loom.Employees`.
       employee_id: nil,
+      # When a safety classifier last stopped the model here, and why, or nil.
+      # What tripped it stays in the conversation, so a session kept for a
+      # fixed job is set aside by what runs it. See `Loom.Agent.flagged?/1`.
+      flagged_at: nil,
+      flagged_category: nil,
+      # The sessions this one carries on from, newest first, which the page
+      # shows above it as one thread.
+      earlier: [],
       # How far the user has read, for an unread mark. See `seen/2`.
       seen_seq: 0,
       # Where the agent last said something: the sidebar's unread mark is
@@ -889,7 +914,11 @@ defmodule Loom.Agent.Session do
       true ->
         Logger.info("Session #{state.id}: deleted, nothing written in it for five minutes")
         id = state.id
-        Task.Supervisor.start_child(Loom.Agent.TaskSupervisor, fn -> Loom.Agent.delete_session(id) end)
+
+        Task.Supervisor.start_child(Loom.Agent.TaskSupervisor, fn ->
+          Loom.Agent.delete_session(id)
+        end)
+
         {:noreply, state}
     end
   end
@@ -1191,10 +1220,25 @@ defmodule Loom.Agent.Session do
   end
 
   defp apply_out(state, {:event, :turn_failed, payload}) do
+    message = failure_message(payload)
+
     state
     |> collect_outputs()
-    |> emit(:error, %{message: failure_message(payload)})
+    |> then(&if(message =~ @flagged_error, do: flag(&1, nil), else: &1))
+    |> emit(:error, %{message: message})
     |> finish_turn()
+  end
+
+  defp apply_out(state, {:event, :flagged, payload}) do
+    state = flag(state, payload[:category])
+
+    note =
+      if payload[:fell_back],
+        do:
+          "A safety classifier stopped the model here; another model answered the rest of the turn.",
+        else: "A safety classifier stopped the model here."
+
+    emit(state, :loom_note, %{text: note})
   end
 
   # What a turn cost, for budgets (`Loom.Employees`): told, not kept.
@@ -1209,6 +1253,17 @@ defmodule Loom.Agent.Session do
   end
 
   defp apply_out(state, {:event, kind, payload}), do: emit(state, kind, payload)
+
+  defp flag(state, category) do
+    state = %{
+      state
+      | flagged_at: System.system_time(:millisecond),
+        flagged_category: category || state.flagged_category
+    }
+
+    persist_meta(state)
+    state
+  end
 
   defp failure_message(%{reason: reason}) when is_binary(reason), do: reason
   defp failure_message(payload), do: inspect(payload)
@@ -1291,7 +1346,8 @@ defmodule Loom.Agent.Session do
     Phoenix.PubSub.broadcast(
       Loom.PubSub,
       Loom.Agent.turns_topic(),
-      {:turn_ended, state.id, %{title: state.title, outcome: outcome, kind: state.kind}}
+      {:turn_ended, state.id,
+       %{title: state.title, outcome: outcome, kind: state.kind, flagged: state.flagged_at != nil}}
     )
 
     state
@@ -1472,6 +1528,9 @@ defmodule Loom.Agent.Session do
       tidied_at: state.tidied_at,
       kind: state.kind,
       employee_id: state.employee_id,
+      flagged_at: state.flagged_at,
+      flagged_category: state.flagged_category,
+      earlier: state.earlier,
       seen_seq: state.seen_seq,
       reply_seq: state.reply_seq,
       effort: state.effort,
@@ -1595,6 +1654,9 @@ defmodule Loom.Agent.Session do
       tidied_at: state.tidied_at,
       kind: state.kind,
       employee_id: state.employee_id,
+      flagged_at: state.flagged_at,
+      flagged_category: state.flagged_category,
+      earlier: state.earlier,
       seen_seq: state.seen_seq,
       reply_seq: state.reply_seq,
       effort: state.effort,

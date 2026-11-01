@@ -187,7 +187,14 @@ export function EmployeePage({
   const bar = <EmployeeBar employee={employee} work={workSession} tab={tab} onTab={onTab} onUpsert={onUpsert} />
 
   if (tab === "chat" && chatSession)
-    return <Chat {...chat} session={{ ...chatSession, title: employee.name }} subhead={bar} />
+    return (
+      <Chat
+        {...chat}
+        session={{ ...chatSession, title: employee.name }}
+        subhead={bar}
+        earlier={employee.past_chat}
+      />
+    )
   if (tab === "updates" && workSession)
     return (
       <Chat
