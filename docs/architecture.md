@@ -424,6 +424,34 @@ or any engine behind its arrow; the model is picked later in the header.
   incognito) with nothing sent or seeded, not named, pinned or with a draft
   waiting, is deleted. A draft gives it another five minutes.
 
+### 2.14 Sessions a classifier stopped
+
+When a safety classifier stops the model, what tripped it stays in the
+conversation and trips it again on later turns (measured 2026-11-01: a sleep
+went on on Opus 4.8; the user's "hello" there the next morning was refused).
+A session kept for a fixed job would then fail at that job for good, so each
+one is set aside by what runs it.
+
+- **One signal.** Claude Code's `system/informational` ("…safeguards stopped
+  the response…", it goes on once on another model) and
+  `system/model_refusal_no_fallback` become a `:flagged` event; a turn of any
+  backend that fails with "safeguards"/"usage policy" counts too. The session
+  keeps `flagged_at` and `flagged_category` (`Loom.Agent.flagged?/1`) and shows
+  a line in the conversation; the page shows a banner, with Continue for the
+  user's own chats (`Loom.Agent.Carry`).
+- **Who sets aside what.** Dream: the moon opens a fresh session, told the
+  last report. An employee's work session: turned over at the next wake-up,
+  handoff or not, told not to read the old one. An employee's chat: afresh
+  each day (after 30 quiet minutes) and as soon as a flagged turn ends; a new
+  day's may look back with `loom-session read`. The bell's chat: likewise,
+  daily and when flagged. A task's own session (`kind: "task"`): a new one
+  for every run; a session a task was pointed at is the user's and stays.
+- **Nothing of the flagged conversation goes along** but what Loom passes in
+  the first message's notice (Dream's report) and the files an employee keeps.
+  The new session lists the ones before it in `earlier` (30 kept), which the
+  page shows above it as one thread, opened on the last while nothing has been
+  said yet.
+
 ## 3. Client protocol
 
 ```

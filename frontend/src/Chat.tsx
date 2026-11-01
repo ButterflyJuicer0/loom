@@ -178,6 +178,7 @@ export function Chat({
     },
   )
   const busy = isBusy(transcript)
+  const thread = earlier ?? session.earlier ?? []
   // At the end of the transcript, where the newest reply is.
   const [atEnd, setAtEnd] = useState(true)
   const pageVisible = usePageVisible()
@@ -347,6 +348,18 @@ export function Chat({
       {subhead}
 
       {joinError && <div className="chat-banner">{joinError}</div>}
+      {session.flagged_at && (
+        <div className="chat-banner flagged continue-row">
+          {session.kind && session.kind !== "incognito" ? (
+            "Stopped by a safety classifier; Loom goes on in a fresh session next time."
+          ) : (
+            <>
+              Stopped by a safety classifier; later replies here may be too.
+              {onContinue && !busy && <ContinueButton onContinue={onContinue} />}
+            </>
+          )}
+        </div>
+      )}
       </div>
 
       {/* `output/…` links in a reply become downloads from this session, and
@@ -358,7 +371,12 @@ export function Chat({
             items={items}
             sessionId={session.id}
             truncatedBefore={transcript.truncatedBefore}
-            before={earlier && earlier.length > 0 && <EarlierDays ids={earlier} currentAt={session.created_at} />}
+            before={
+              thread.length > 0 && (
+                // A fresh one, with nothing said yet, opens on the last.
+                <EarlierDays ids={thread} currentAt={session.created_at} open={session.turns === 0} />
+              )
+            }
             onAnswer={submit}
             onAtEnd={setAtEnd}
             tail={<Working status={transcript.status} queued={transcript.queue.length} />}
@@ -991,7 +1009,7 @@ const dayOf = (ms: number) =>
  * each is joined once for its transcript and left. Oldest at the top, each
  * under a line with its date.
  */
-function EarlierDays({ ids, currentAt }: { ids: string[]; currentAt: number }) {
+function EarlierDays({ ids, currentAt, open }: { ids: string[]; currentAt: number; open?: boolean }) {
   const [days, setDays] = useState<{ id: string; at: number; items: TimelineItem[] }[]>([])
   const [loading, setLoading] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -1024,6 +1042,10 @@ function EarlierDays({ ids, currentAt }: { ids: string[]; currentAt: number }) {
         channel.leave()
       })
   }
+
+  useEffect(() => {
+    if (open && days.length === 0) load()
+  }, [open])
 
   return (
     <>

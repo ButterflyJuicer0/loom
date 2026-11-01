@@ -1390,7 +1390,27 @@ pre.code,
    width and the conversation its column, so only the text changes size. */
 .sidebar {
   zoom: var(--sidebar-scale, 1);
-  flex-basis: calc(min(16.25rem, 80vw) / var(--sidebar-scale, 1));
+  /* A dragged width leaves the chat at least 400px, the window resized or not. */
+  flex-basis: calc(min(var(--sidebar-w, 16.25rem), 80vw, 100vw - 400px) / var(--sidebar-scale, 1));
+}
+
+/* The desktop sidebar's drag edge (App.tsx): no line, only the cursor. */
+.sidebar-resize {
+  flex: 0 0 8px;
+  margin: 0 -4px;
+  position: relative;
+  z-index: 5;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+body.sidebar-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+body.sidebar-resizing iframe {
+  pointer-events: none;
 }
 
 .drawer .sidebar {
@@ -1932,4 +1952,73 @@ pre.code,
 .chat-header .chip.button.pane-more.desk svg {
   width: 1rem;
   height: 1rem;
+}
+
+/* New chat creates on a click; the arrow beside it opens NewMenu. On a
+   desktop it is the row's chevron, where Projects and Employees have theirs;
+   on a phone, the pill's other half. */
+.nav-new-more {
+  display: grid;
+  place-items: center;
+  margin: 0 0 0 -6px;
+  padding: 6px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.nav-new-more:hover .nav-chevron {
+  color: var(--fg);
+}
+
+.nav-new-more.open .nav-chevron {
+  transform: rotate(90deg);
+}
+
+.new-chat-split {
+  display: flex;
+  pointer-events: auto;
+}
+
+.new-chat-split .new-chat {
+  border-radius: 999px 0 0 999px;
+  padding-right: 12px;
+}
+
+.new-chat-more {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 3rem;
+  padding: 0 14px 0 10px;
+  border: 0;
+  border-radius: 0 999px 999px 0;
+  background: var(--fg);
+  color: var(--bg);
+  cursor: pointer;
+}
+
+.new-chat-more svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* The split is a fine groove, not a line: a soft shade with a highlight
+   beside it, short of the pill's edges. */
+.new-chat-more::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 28%;
+  bottom: 28%;
+  width: 1px;
+  border-radius: 1px;
+  /* Shade and light, the same on the light pill and the dark one. */
+  background: color-mix(in srgb, #000 16%, transparent);
+  box-shadow: 1px 0 0 color-mix(in srgb, #fff 20%, transparent);
+}
+
+/* A pinned incognito row's unpin: shown always, not only on hover. */
+.session .session-unpin {
+  visibility: visible;
 }

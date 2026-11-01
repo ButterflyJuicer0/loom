@@ -15,7 +15,7 @@ defmodule LoomWeb.DevicesController do
   def index(conn, _params), do: json(conn, %{nodes: Nodes.list()})
 
   def create(conn, params) do
-    case Nodes.create(params["name"]) do
+    case Nodes.create(params["name"], params["icon"]) do
       {:ok, node, code} -> conn |> put_status(201) |> json(%{node: node, code: code})
       {:error, reason} -> refuse(conn, reason)
     end

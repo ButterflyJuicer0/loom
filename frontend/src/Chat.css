@@ -290,6 +290,16 @@
   color: var(--red);
   font-size: 0.923rem;
 }
+.chat-banner.flagged {
+  background: none;
+  color: var(--fg-dim);
+  font-size: 0.846rem;
+  gap: 4px 10px;
+}
+.chat-banner.flagged .text-btn {
+  padding: 2px 10px;
+  font-size: inherit;
+}
 
 /* ── Timeline ────────────────────────────────────────────────────────── */
 

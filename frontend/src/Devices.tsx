@@ -1,6 +1,7 @@
 import { X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
+import { DEVICE_ICONS, DeviceIcon, ICON_LABELS, deviceIcon } from "./DeviceIcon"
 import { isComposing } from "./ime"
 import {
   androidInstall,
@@ -35,6 +36,8 @@ export function DevicesDialog({
   onClose: () => void
 }) {
   const [name, setName] = useState("")
+  // The icon for the device being added; null follows the os it reports.
+  const [icon, setIcon] = useState<Device["icon"]>(null)
   const [error, setError] = useState<string | null>(null)
   // The device whose install commands are on screen, and its code.
   const [install, setInstall] = useState<{ id: string; code: string } | null>(null)
@@ -49,9 +52,10 @@ export function DevicesDialog({
     const value = name.trim()
     if (value === "") return
     try {
-      const { node, code } = await createDevice(value)
+      const { node, code } = await createDevice(value, icon)
       onUpsert(node)
       setName("")
+      setIcon(null)
       setError(null)
       setInstall({ id: node.id, code })
     } catch (e) {
@@ -135,6 +139,7 @@ export function DevicesDialog({
             void add()
           }}
         >
+          <IconPicker value={icon} onChange={setIcon} />
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -150,6 +155,30 @@ export function DevicesDialog({
       </div>
     </div>,
     document.body,
+  )
+}
+
+/**
+ * The five marks to pick from when adding a device; tapping the chosen one
+ * again unpicks it, so the icon follows the os. Once added it stays.
+ */
+function IconPicker({ value, onChange }: { value: Device["icon"]; onChange: (icon: Device["icon"]) => void }) {
+  return (
+    <div className="device-icons" role="radiogroup" aria-label="Icon">
+      {DEVICE_ICONS.map((i) => (
+        <button
+          key={i}
+          type="button"
+          role="radio"
+          aria-checked={value === i}
+          className={"device-icon-pick" + (value === i ? " on" : "")}
+          title={ICON_LABELS[i]}
+          onClick={() => onChange(value === i ? null : i)}
+        >
+          <DeviceIcon icon={i} />
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -181,6 +210,7 @@ function DeviceRow({
         className={"dot" + (device.online ? " online" : "")}
         title={device.online ? "online" : "offline"}
       />
+      <DeviceIcon icon={deviceIcon(device)} />
       <div className="device-body">
         {editing ? (
           <input

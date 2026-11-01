@@ -380,6 +380,35 @@ defmodule Loom.Agent.Backend.ClaudeCodeTest do
     end
   end
 
+  describe "a safety classifier" do
+    # As Claude Code 2.1.312 wrote them, from a Loom sleep on 2026-11-01.
+    test "going on on another model, and refusing outright, both flag the session" do
+      {_handle, out} =
+        feed(handle(), [
+          %{
+            "type" => "system",
+            "subtype" => "informational",
+            "content" =>
+              "Opus 5.5's safeguards stopped the response above · continuing once with that noted",
+            "level" => "notice"
+          },
+          %{
+            "type" => "system",
+            "subtype" => "model_refusal_no_fallback",
+            "original_model" => "us.anthropic.claude-opus-5-5",
+            "api_refusal_category" => "cyber",
+            "content" => ""
+          },
+          %{"type" => "system", "subtype" => "informational", "content" => "Auto-update ready"}
+        ])
+
+      assert [
+               {:flagged, %{fell_back: true, category: nil}},
+               {:flagged, %{fell_back: false, category: "cyber"}}
+             ] = events(out)
+    end
+  end
+
   describe "compaction" do
     test "a compact_boundary is reported, and its size becomes the context" do
       # Verbatim shape from a manual `/compact`. The turn that follows is an

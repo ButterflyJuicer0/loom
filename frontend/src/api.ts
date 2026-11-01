@@ -162,6 +162,14 @@ export type AgentInfo = {
   // Older servers do not send it.
   kind?: "dream" | "employee_chat" | "employee_work" | "bell" | "task" | "incognito" | null
   employee_id?: string | null
+  // When a safety classifier stopped the model here (ms), and why; a session
+  // kept for a fixed job is then carried on in a fresh one. See
+  // `Loom.Agent.flagged?/1`. Older servers do not send it.
+  flagged_at?: number | null
+  flagged_category?: string | null
+  // The sessions this one carries on from, newest first, shown above it as
+  // one thread.
+  earlier?: string[]
   // How far the user has read; with `seq`, the moon's unread mark.
   seen_seq?: number
   // Where the agent last said something; past `seen_seq`, a conversation is
@@ -610,6 +618,8 @@ export async function putLayout(layout: Layout): Promise<Layout> {
 export type Device = {
   id: string
   name: string
+  // Picked when the device is added; null follows `os` (see DeviceIcon).
+  icon: "windows" | "mac" | "android" | "linux" | "bot" | null
   online: boolean
   os: string | null
   arch: string | null
@@ -643,8 +653,8 @@ export async function searchSessions(q: string, signal?: AbortSignal): Promise<S
 }
 
 /** Register a device: it comes back with its one-time install code. */
-export function createDevice(name: string): Promise<{ node: Device; code: string }> {
-  return apiCall("/api/devices", { method: "POST", body: JSON.stringify({ name }) })
+export function createDevice(name: string, icon: Device["icon"]): Promise<{ node: Device; code: string }> {
+  return apiCall("/api/devices", { method: "POST", body: JSON.stringify({ name, icon }) })
 }
 
 export function renameDevice(id: string, name: string): Promise<{ node: Device }> {
@@ -945,6 +955,8 @@ export type Employee = {
   // Its earlier work sessions, newest first: one a day, shown above the
   // current one as a single thread.
   past_work?: string[]
+  // And its earlier chats: one a day, or one a safety classifier stopped.
+  past_chat?: string[]
   created_at: number
   kpis: Kpi[]
   // Newest first: one line per work turn.

@@ -178,6 +178,7 @@ defmodule Loom.Dream do
 
   def handle_call({:open, scope}, _from, state) do
     with :ok <- known(scope),
+         {:ok, state} <- set_aside(state, scope),
          {:ok, id, state} <- ensure_session(state, scope) do
       {:reply, {:ok, id}, save(state)}
     else
@@ -426,6 +427,30 @@ defmodule Loom.Dream do
     end
   end
 
+  # A safety classifier stopped the model in the scope's session: what tripped
+  # it would trip every answer there, so the user's next word goes to a fresh
+  # one, told the report it would have answered. Not while it is still at it.
+  defp set_aside(state, scope) do
+    s = scope_state(state, scope)
+
+    with id when is_binary(id) <- s["session"],
+         true <- Agent.flagged?(id),
+         false <- Agent.busy?(id),
+         report = Agent.last_reply(id),
+         what = report && "The last sleep's report, which the user may answer here:\n\n" <> report,
+         {:ok, new} <- start_session(scope, Agent.set_aside_opts(id, what)) do
+      s =
+        s
+        |> Map.put("session", new)
+        |> Map.update("past", [id], &Enum.take([id | &1], @runs_kept))
+
+      {:ok, put_in(state.scopes[scope], s)}
+    else
+      {:error, _} = error -> error
+      _ -> {:ok, state}
+    end
+  end
+
   # The scope's sleep session: the one on record if it is still there, else one
   # already marked as such (a lost dream.json), else a new one.
   defp ensure_session(state, scope) do
@@ -455,11 +480,11 @@ defmodule Loom.Dream do
     end
   end
 
-  defp start_session(scope) do
+  defp start_session(scope, extra \\ []) do
     id = Agent.new_id()
     project = if scope == "home", do: nil, else: scope
 
-    opts = [backend: :claude_code, kind: "dream", title: "Sleep"]
+    opts = [backend: :claude_code, kind: "dream", title: "Sleep"] ++ extra
     opts = if project, do: [{:project, project} | opts], else: opts
 
     case Agent.start_session(id, opts) do

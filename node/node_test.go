@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"encoding/binary"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -95,5 +98,16 @@ func TestSelfUninstallLeavesNothing(t *testing.T) {
 		if _, err := os.Stat(p); !os.IsNotExist(err) {
 			t.Errorf("%s is still there", p)
 		}
+	}
+}
+
+func TestDialErrorHidesToken(t *testing.T) {
+	tok := "s3cret+/=tok"
+	_, err := dial(context.Background(), "http://127.0.0.1:1", tok, nil)
+	if err == nil {
+		t.Fatal("dial to a closed port succeeded")
+	}
+	if strings.Contains(err.Error(), tok) || strings.Contains(err.Error(), url.QueryEscape(tok)) {
+		t.Fatalf("token leaked: %v", err)
 	}
 }

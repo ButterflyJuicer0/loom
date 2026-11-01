@@ -55,6 +55,47 @@ const CANVAS_KEY = "loom_canvas"
 const TREE_KEY = "loom_canvas_tree"
 const VIM_KEY = "loom_vim"
 const TOGGLED_KEY = "loom_sidebar_toggled"
+const SIDEBAR_W_KEY = "loom_sidebar_width"
+
+// The desktop sidebar's width, dragged at its right edge and kept in this
+// browser; a double-click goes back to the default. Set as a CSS variable so a
+// drag moves the edge without rendering the app again.
+const setSidebarWidth = (px: number | null) =>
+  px === null
+    ? document.documentElement.style.removeProperty("--sidebar-w")
+    : document.documentElement.style.setProperty("--sidebar-w", `${px}px`)
+{
+  const saved = Number(localStorage.getItem(SIDEBAR_W_KEY))
+  if (saved > 0) setSidebarWidth(saved)
+}
+
+function SidebarResize() {
+  const drag = (e: React.PointerEvent<HTMLDivElement>) => {
+    const sidebar = e.currentTarget.previousElementSibling as HTMLElement | null
+    if (!sidebar || e.button !== 0) return
+    e.preventDefault()
+    const left = sidebar.getBoundingClientRect().left
+    let width = 0
+    const move = (ev: PointerEvent) => {
+      width = Math.round(Math.min(Math.max(ev.clientX - left, 200), window.innerWidth - 400))
+      setSidebarWidth(width)
+    }
+    const up = () => {
+      window.removeEventListener("pointermove", move)
+      window.removeEventListener("pointerup", up)
+      document.body.classList.remove("sidebar-resizing")
+      if (width) localStorage.setItem(SIDEBAR_W_KEY, String(width))
+    }
+    window.addEventListener("pointermove", move)
+    window.addEventListener("pointerup", up)
+    document.body.classList.add("sidebar-resizing")
+  }
+  const reset = () => {
+    localStorage.removeItem(SIDEBAR_W_KEY)
+    setSidebarWidth(null)
+  }
+  return <div className="sidebar-resize" onPointerDown={drag} onDoubleClick={reset} />
+}
 
 // The right-hand side shows one thing at a time: the terminals or the canvas.
 type Side = "terminal" | "canvas" | "browser" | null
@@ -361,13 +402,17 @@ function App() {
   }
 
   // A moon: the scope's sleep session, made on first use, on its report.
+  // Asked of the server each time: it moves a session a safety classifier
+  // stopped to a fresh one. Offline, the one known.
   const [sleepTab, setSleepTab] = useState<SleepTab>("report")
   const openSleep = async (scope: string) => {
     let id = dreams.find((d) => scopeOf(d) === scope)?.id
-    if (!id) {
+    try {
       const made = await openDream(scope)
       upsert(made)
       id = made.id
+    } catch (e) {
+      if (!id) throw e
     }
     setSleepTab("report")
     select(id)
@@ -628,7 +673,8 @@ function App() {
   const active = everything.find((s) => s.id === activeId) ?? null
   const shownProject = projects.find((p) => p.id === projectPage) ?? null
   const activeProject = active?.project_id ? projects.find((p) => p.id === active.project_id) : undefined
-  const bellChat = everything.find((s) => s.kind === "bell")
+  // The newest: it starts afresh each day.
+  const bellChat = everything.filter((s) => s.kind === "bell").sort((a, b) => b.created_at - a.created_at)[0]
   // By its sessions rather than `employee_id`: a summary from an older
   // server, or an older route, may not carry it.
   const activeEmployee =
@@ -744,7 +790,13 @@ function App() {
           {sidebar}
         </div>
       ) : (
-        sidebarOpen && !maximized && sidebar
+        sidebarOpen &&
+        !maximized && (
+          <>
+            {sidebar}
+            <SidebarResize />
+          </>
+        )
       )}
 
       <main className="main">
