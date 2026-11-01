@@ -152,27 +152,13 @@ export function Switcher({
 }
 
 /**
- * The line under the phone's composer: dragged up (or tapped), it opens the
- * switcher. Faint on purpose; it sits above the home indicator, whose own
- * swipe from the very bottom edge is the system's.
+ * The line under the phone's composer: a tap opens the switcher. Only a tap —
+ * a drag there is the system's, to the home screen. Faint, and kept clear of
+ * the composer so a tap meant for the box does not land on it.
  */
 export function Grabber({ onOpen }: { onOpen: () => void }) {
-  const from = useRef<number | null>(null)
   return (
-    <div
-      className="grabber"
-      role="button"
-      aria-label="Switch between the sessions in Working"
-      onClick={onOpen}
-      onTouchStart={(e) => (from.current = e.touches[0].clientY)}
-      onTouchMove={(e) => {
-        if (from.current != null && from.current - e.touches[0].clientY > 24) {
-          from.current = null
-          onOpen()
-        }
-      }}
-      onTouchEnd={() => (from.current = null)}
-    >
+    <div className="grabber" role="button" aria-label="Switch between the sessions in Working" onClick={onOpen}>
       <span />
     </div>
   )

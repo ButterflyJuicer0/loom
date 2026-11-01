@@ -257,14 +257,21 @@ export function Sidebar({
       // Outside its project, which one it is in: on hover here, and in its menu.
       title={projectName(s) ? `in ${projectName(s)}` : undefined}
     >
-      <span className={"dot " + s.status} title={s.status} />
+      {/* A two-line Working row keeps its dot on the right, so the title and
+          the line under it start at the same edge. */}
+      {!(working && !narrow) && <span className={"dot " + s.status} title={s.status} />}
       {s.kind === "incognito" && <HatGlasses className="session-incognito" aria-label="Incognito" />}
       {s.id === renamingId ? (
         <RenameInput value={s.title ?? s.id} stem={false} onDone={(title) => onRenamed(s.id, title)} />
+      ) : working && !narrow ? (
+        <span className="session-text">
+          <span className="session-label">{s.title ?? s.id}</span>
+          <span className="session-gist">{gist(s)}</span>
+        </span>
       ) : (
         <span className="session-label">{s.title ?? s.id}</span>
       )}
-      {working && !narrow && <span className="session-gist">{gist(s)}</span>}
+      {working && !narrow && <span className={"dot " + s.status} title={s.status} />}
       {s.queued > 0 && (
         <span className="session-queued" title="queued messages">
           {s.queued}

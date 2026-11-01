@@ -348,12 +348,14 @@ samp,
 .grabber {
   position: absolute;
   left: 50%;
-  bottom: calc(max(16px, env(safe-area-inset-bottom)) - 18px);
+  /* A 16px strip under the box: on an iPhone 8px up from the bottom, with the
+     line at its top, clear of the system's own home bar below it. */
+  bottom: max(0px, calc(env(safe-area-inset-bottom) - 26px));
   transform: translateX(-50%);
-  width: 140px;
-  height: 18px;
+  width: 96px;
+  height: 16px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   pointer-events: auto;
 }
@@ -404,21 +406,32 @@ samp,
   cursor: pointer;
 }
 
-/* Working on a desktop: a second line under the title, where it got to. */
-.sidebar .session.working .session-label {
-  font-size: calc(1em * var(--card-title-scale, 1));
-}
-
+/* Working on a desktop: the title and, under it, where it got to, each one
+   line cut short with an ellipsis, both from the row's left edge. */
 .sidebar .session.working {
-  flex-wrap: wrap;
-  row-gap: 0;
   padding-block: 6px;
 }
 
-.sidebar .session.working .session-gist {
-  order: 10;
-  flex: 1 0 100%;
+.sidebar .session.working + .session.working {
+  margin-top: 2px;
+}
+
+.session-text {
+  flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sidebar .session.working .session-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: calc(1em * var(--card-title-scale, 1));
+}
+
+.sidebar .session.working .session-gist {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
