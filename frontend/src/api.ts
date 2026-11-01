@@ -610,6 +610,8 @@ export async function putLayout(layout: Layout): Promise<Layout> {
 export type Device = {
   id: string
   name: string
+  // Picked in Devices; null follows `os` (see DeviceIcon).
+  icon: "windows" | "mac" | "android" | "linux" | "bot" | null
   online: boolean
   os: string | null
   arch: string | null
@@ -643,12 +645,16 @@ export async function searchSessions(q: string, signal?: AbortSignal): Promise<S
 }
 
 /** Register a device: it comes back with its one-time install code. */
-export function createDevice(name: string): Promise<{ node: Device; code: string }> {
-  return apiCall("/api/devices", { method: "POST", body: JSON.stringify({ name }) })
+export function createDevice(name: string, icon: Device["icon"]): Promise<{ node: Device; code: string }> {
+  return apiCall("/api/devices", { method: "POST", body: JSON.stringify({ name, icon }) })
 }
 
 export function renameDevice(id: string, name: string): Promise<{ node: Device }> {
   return apiCall(`/api/devices/${id}`, { method: "PATCH", body: JSON.stringify({ name }) })
+}
+
+export function setDeviceIcon(id: string, icon: Device["icon"]): Promise<{ node: Device }> {
+  return apiCall(`/api/devices/${id}`, { method: "PATCH", body: JSON.stringify({ icon }) })
 }
 
 export function deleteDevice(id: string): Promise<void> {

@@ -15,14 +15,22 @@ defmodule LoomWeb.DevicesController do
   def index(conn, _params), do: json(conn, %{nodes: Nodes.list()})
 
   def create(conn, params) do
-    case Nodes.create(params["name"]) do
+    case Nodes.create(params["name"], params["icon"]) do
       {:ok, node, code} -> conn |> put_status(201) |> json(%{node: node, code: code})
       {:error, reason} -> refuse(conn, reason)
     end
   end
 
+  # A rename, or a new icon: `"name"` and `"icon"` each change only if sent.
   def update(conn, %{"id" => id} = params) do
-    case Nodes.rename(id, params["name"]) do
+    result =
+      with {:ok, node} <-
+             if(Map.has_key?(params, "name"), do: Nodes.rename(id, params["name"]), else: {:ok, nil}) do
+        if Map.has_key?(params, "icon"), do: Nodes.set_icon(id, params["icon"]), else: {:ok, node}
+      end
+
+    case result do
+      {:ok, nil} -> refuse(conn, "nothing to change")
       {:ok, node} -> json(conn, %{node: node})
       {:error, reason} -> refuse(conn, reason)
     end

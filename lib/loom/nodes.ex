@@ -42,7 +42,10 @@ defmodule Loom.Nodes do
   require Logger
 
   @name __MODULE__
-  @persisted ~w(id name token_hash created_at os arch hostname version last_seen_at)a
+  @persisted ~w(id name icon token_hash created_at os arch hostname version last_seen_at)a
+  # The mark the Devices dialog draws before a device's name. Unset, it follows
+  # the os the device reports.
+  @icons ~w(windows mac android linux bot)
   @install_ttl :timer.minutes(2)
   # Six digits are guessable by brute force within @install_ttl, so this many
   # wrong codes inside one @install_ttl voids every live code: making a new
@@ -58,10 +61,14 @@ defmodule Loom.Nodes do
   def list(server \\ @name), do: GenServer.call(server, :list)
 
   @doc "Register a device. `{:ok, summary, install_code}` or `{:error, reason}`."
-  def create(name, server \\ @name), do: GenServer.call(server, {:create, name})
+  def create(name, icon \\ nil, server \\ @name),
+    do: GenServer.call(server, {:create, name, icon})
 
   @doc "Rename a device. Its token, and so the device itself, is unaffected."
   def rename(id, name, server \\ @name), do: GenServer.call(server, {:rename, id, name})
+
+  @doc "Set the icon shown for a device: one of #{inspect(@icons)}, or nil to follow its os."
+  def set_icon(id, icon, server \\ @name), do: GenServer.call(server, {:set_icon, id, icon})
 
   @doc """
   Forget a device: it can no longer be reached, and it uninstalls itself as soon
@@ -174,11 +181,13 @@ defmodule Loom.Nodes do
     {:reply, nodes, state}
   end
 
-  def handle_call({:create, name}, _from, state) do
-    with {:ok, name} <- check_name(name, nil, state) do
+  def handle_call({:create, name, icon}, _from, state) do
+    with {:ok, name} <- check_name(name, nil, state),
+         {:ok, icon} <- check_icon(icon) do
       node = %{
         id: "n_" <> random(6),
         name: name,
+        icon: icon,
         token_hash: nil,
         created_at: now(),
         os: nil,
@@ -201,6 +210,18 @@ defmodule Loom.Nodes do
     with {:ok, node} <- fetch(id, state),
          {:ok, name} <- check_name(name, id, state) do
       node = %{node | name: name}
+      state = save(put_in(state.nodes[id], node))
+      announce(node, state)
+      {:reply, {:ok, summary(node, state)}, state}
+    else
+      error -> {:reply, error, state}
+    end
+  end
+
+  def handle_call({:set_icon, id, icon}, _from, state) do
+    with {:ok, node} <- fetch(id, state),
+         {:ok, icon} <- check_icon(icon) do
+      node = %{node | icon: icon}
       state = save(put_in(state.nodes[id], node))
       announce(node, state)
       {:reply, {:ok, summary(node, state)}, state}
@@ -415,6 +436,10 @@ defmodule Loom.Nodes do
   end
 
   defp check_name(_name, _self_id, _state), do: {:error, "a name is required"}
+
+  defp check_icon(icon) when icon in [nil, ""], do: {:ok, nil}
+  defp check_icon(icon) when icon in @icons, do: {:ok, icon}
+  defp check_icon(_icon), do: {:error, "no such icon"}
 
   defp same_name?(a, b) when is_binary(a) and is_binary(b),
     do: String.downcase(a) == String.downcase(b)

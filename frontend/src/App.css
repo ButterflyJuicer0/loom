@@ -523,6 +523,68 @@
   flex: 1 1 auto;
 }
 
+/* The mark before a device's name, and the row of five to pick one from. */
+.device-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+/* Lucide's line robot reads small beside the filled logos. */
+.device-icon.bot {
+  width: 21px;
+  height: 21px;
+}
+
+.device-icon-btn,
+.device-icon-pick {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.device-icon-pick {
+  color: var(--fg-dim);
+}
+
+.device-icon-btn:hover,
+.device-icon-btn.on,
+.device-icon-pick:hover {
+  background: var(--bg-card);
+  color: var(--fg);
+}
+
+.device-icon-pick.on {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.device-icons {
+  display: flex;
+  gap: 4px;
+}
+
+.device-icon-row {
+  margin: 0 8px 8px 25px;
+}
+
+.device-add {
+  flex-wrap: wrap;
+}
+
+.device-add .device-icons {
+  flex: 1 0 100%;
+}
+
 /* ── Main ────────────────────────────────────────────────────────────── */
 
 /* sidebar | chat | terminals — always three columns, at every width. The

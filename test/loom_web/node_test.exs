@@ -62,7 +62,7 @@ defmodule LoomWeb.NodeTest do
            cli_path: Path.join(dir, "cli.json")}
         )
 
-      {:ok, _node, code} = Nodes.create("guessed", s)
+      {:ok, _node, code} = Nodes.create("guessed", nil, s)
       wrong = if code == "000000", do: "000001", else: "000000"
       for _ <- 1..19, do: assert({:error, :invalid_code} = Nodes.redeem(wrong, s))
       assert Nodes.valid_code?(code, s)
@@ -89,6 +89,15 @@ defmodule LoomWeb.NodeTest do
       {:ok, other, _} = Nodes.create("wsl")
       assert {:error, _} = Nodes.rename(other.id, "MAC")
       assert {:ok, %{name: "box"}} = Nodes.rename(other.id, "box")
+    end
+
+    test "an icon is one of the known marks, set at creation or later" do
+      {:ok, node, _code} = Nodes.create("dog", "bot")
+      assert node.icon == "bot"
+      assert {:error, _} = Nodes.create("toaster", "toaster")
+      assert {:ok, %{icon: "linux"}} = Nodes.set_icon(node.id, "linux")
+      assert {:ok, %{icon: nil}} = Nodes.set_icon(node.id, nil)
+      assert {:error, _} = Nodes.set_icon(node.id, "toaster")
     end
 
     test "a removed device too old to uninstall itself is refused, then for good" do
