@@ -85,6 +85,8 @@ defmodule LoomWeb.Router do
     post "/projects", ProjectController, :create
     patch "/projects/:id", ProjectController, :update
     delete "/projects/:id", ProjectController, :delete
+    get "/projects/:id/tree", ProjectController, :tree
+    get "/projects/:id/files/*path", ProjectController, :file
     post "/agents/:id/canvas", CanvasController, :token
 
     get "/layout", LayoutController, :show

@@ -12,7 +12,8 @@ import { ProjectDialog } from "./Projects"
 import { SettingsDialog } from "./Settings"
 import { useSettings } from "./settings"
 import { Tasks } from "./Tasks"
-import { focused, isOpen, PROJECTS_SECTION, Sidebar, sidebarOrder } from "./Sidebar"
+import { focused, isOpen, PROJECTS_SECTION, Sidebar, sidebarGroups, sidebarOrder } from "./Sidebar"
+import { ProjectPage, type ProjectTab } from "./ProjectPage"
 import { isDream, scopeOf, Sleep, type SleepTab } from "./Sleep"
 import { EmployeePage, HireDialog, isEmployeeSession, type EmployeeTab } from "./Employees"
 import { Terminal } from "./Terminal"
@@ -277,13 +278,9 @@ function App() {
   useEffect(() => {
     if (!narrowAtLoad.current) setToggled(focused)
   }, [])
-  // A project something just happened in: unfolded, and Projects with it.
-  const reveal = (projectId: string) =>
-    setToggled((t) => {
-      const next = new Set(t)
-      for (const key of [PROJECTS_SECTION, projectId]) if (!isOpen(next, key)) next.add(key)
-      return next
-    })
+  // A project something just happened in: Projects unfolded, to show its row.
+  const reveal = () =>
+    setToggled((t) => (isOpen(t, PROJECTS_SECTION) ? t : new Set(t).add(PROJECTS_SECTION)))
   // The project being made (`"new"`) or edited in its dialog.
   const [projectDialog, setProjectDialog] = useState<Project | "new" | null>(null)
 
@@ -294,7 +291,7 @@ function App() {
   // session opens at once, on its handoff summary. See `Loom.Agent.Carry`.
   const carryOn = async (id: string) => {
     const session = await continueAgent(id)
-    if (session.project_id) reveal(session.project_id)
+    if (session.project_id) reveal()
     upsert(session)
     setActiveId(session.id)
     setView("chat")
@@ -303,15 +300,25 @@ function App() {
 
   const create = async (backend: AgentBackend, projectId?: string) => {
     const session = await createAgent(backend, projectId)
-    if (projectId) reveal(projectId)
+    if (projectId) reveal()
     upsert(session)
     setActiveId(session.id)
     setView("chat")
     setDrawerOpen(false)
   }
 
-  // The main column shows the active session, or the Tasks page instead.
-  const [view, setView] = useState<"chat" | "tasks">("chat")
+  // The main column shows the active session, or the Tasks page or a
+  // project's page instead.
+  const [view, setView] = useState<"chat" | "tasks" | "project">("chat")
+  const [projectPage, setProjectPage] = useState<string | null>(null)
+  // Kept across projects and visits: back from a chat, the tab it was on.
+  const [projectTab, setProjectTab] = useState<ProjectTab>("files")
+  const openProject = (id: string) => {
+    reveal()
+    setProjectPage(id)
+    setView("project")
+    setDrawerOpen(false)
+  }
 
   // An employee's page shows one of its sessions, or a page of its own: which
   // one is the tab, null for whichever session is the active one.
@@ -592,6 +599,8 @@ function App() {
   if (!loaded) return <div className="loading">connecting…</div>
 
   const active = everything.find((s) => s.id === activeId) ?? null
+  const shownProject = projects.find((p) => p.id === projectPage) ?? null
+  const activeProject = active?.project_id ? projects.find((p) => p.id === active.project_id) : undefined
   const bellChat = everything.find((s) => s.kind === "bell")
   // By its sessions rather than `employee_id`: a summary from an older
   // server, or an older route, may not carry it.
@@ -605,6 +614,8 @@ function App() {
       toggled={toggled}
       onToggle={toggle}
       onEditProject={(project) => setProjectDialog(project ?? "new")}
+      onOpenProject={openProject}
+      openProjectId={view === "project" ? projectPage : null}
       tasksOpen={view === "tasks"}
       onOpenTasks={() => {
         setView("tasks")
@@ -627,7 +638,7 @@ function App() {
       onArchive={async (id, archived) => upsert(await updateAgent(id, { archived }))}
       onMove={async (id, projectId) => {
         upsert(await updateAgent(id, { project_id: projectId }))
-        if (projectId) reveal(projectId)
+        if (projectId) reveal()
       }}
       onCollapse={() => (narrow ? setDrawerOpen(false) : setSidebarOpen(false))}
       defaultBackend={settings.backend}
@@ -693,7 +704,32 @@ function App() {
 
       <main className="main">
         <div className="main-chat" ref={chatRef}>
-          {view === "tasks" ? (
+          {view === "project" && shownProject ? (
+            <ProjectPage
+              key={shownProject.id}
+              project={shownProject}
+              projects={projects}
+              sessions={sidebarGroups(sessions, projects).groups.find((g) => g.project.id === shownProject.id)?.sessions ?? []}
+              dream={dreams.find((d) => scopeOf(d) === shownProject.id)}
+              activeId={activeId}
+              tab={projectTab}
+              onTab={setProjectTab}
+              showSidebarButton={narrow || !sidebarOpen}
+              onToggleSidebar={() => (narrow ? setDrawerOpen(true) : setSidebarOpen(true))}
+              onOpenSession={select}
+              onCreate={(backend) => create(backend, shownProject.id)}
+              onEdit={() => setProjectDialog(shownProject)}
+              onOpenDream={() => void openSleep(shownProject.id)}
+              renamingId={renaming}
+              onRenamed={renamed}
+              onRename={setRenaming}
+              onPin={async (id, pinned) => upsert(await updateAgent(id, { pinned }))}
+              onContinue={carryOn}
+              onMove={async (id, projectId) => upsert(await updateAgent(id, { project_id: projectId }))}
+              onArchive={async (id, archived) => upsert(await updateAgent(id, { archived }))}
+              onDelete={remove}
+            />
+          ) : view === "tasks" ? (
             <Tasks
               showSidebarButton={narrow || !sidebarOpen}
               onToggleSidebar={() => (narrow ? setDrawerOpen(true) : setSidebarOpen(true))}
@@ -735,6 +771,7 @@ function App() {
               session={active}
               {...chatProps}
               onSeen={(seq) => updateAgent(active.id, { seen_seq: seq }).then(upsert, () => {})}
+              project={activeProject && { name: activeProject.name, onOpen: () => openProject(activeProject.id) }}
               reading={!narrow || (!drawerOpen && side === null)}
             />
           ) : (
@@ -878,7 +915,7 @@ function App() {
           }
           onSaved={(project) => {
             upsertProject(project)
-            if (projectDialog === "new") reveal(project.id)
+            if (projectDialog === "new") openProject(project.id)
           }}
           onClose={() => setProjectDialog(null)}
         />

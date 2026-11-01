@@ -270,6 +270,21 @@ defmodule LoomWeb.ProjectControllerTest do
     assert conn |> get(~p"/api/agents/#{id}/workspace/nope.csv") |> json_response(404)
   end
 
+  test "the project's own tree lists its workspace, and its files download", %{conn: conn} do
+    %{"id" => pid, "workspace" => ws} = create_project(conn, %{name: "Notes"})
+    File.mkdir_p!(Path.join(ws, "drafts"))
+    File.write!(Path.join(ws, "drafts/a.md"), "# a\n")
+    File.write!(Path.join(ws, ".secret"), "x")
+
+    assert %{"files" => [%{"path" => "drafts/a.md"}], "truncated" => false} =
+             conn |> get(~p"/api/projects/#{pid}/tree") |> json_response(200)
+
+    assert conn |> get(~p"/api/projects/#{pid}/files/drafts/a.md") |> response(200) == "# a\n"
+    assert conn |> get(~p"/api/projects/#{pid}/files/.secret") |> json_response(404)
+    assert conn |> get(~p"/api/projects/#{pid}/files/../x") |> json_response(404)
+    assert conn |> get(~p"/api/projects/nope/tree") |> json_response(404)
+  end
+
   test "a session outside a project has no workspace in its tree", %{conn: conn} do
     %{"id" => id} = conn |> post(~p"/api/agents", %{backend: "claude_code"}) |> json_response(201)
 

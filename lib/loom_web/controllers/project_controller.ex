@@ -48,6 +48,30 @@ defmodule LoomWeb.ProjectController do
     end
   end
 
+  # GET /api/projects/:id/tree — the workspace's files, for the project's
+  # page. Listed, not read; each comes down by the route below.
+  def tree(conn, %{"id" => id}) do
+    case Projects.get(id) do
+      {:ok, project} ->
+        {files, truncated} = Projects.list_files(project)
+        json(conn, %{files: files, truncated: truncated})
+
+      :error ->
+        refuse(conn, :not_found)
+    end
+  end
+
+  # GET /api/projects/:id/files/*path — one workspace file, by the same rules
+  # as the listing.
+  def file(conn, %{"id" => id, "path" => parts}) do
+    with {:ok, project} <- Projects.get(id),
+         {:ok, path} <- Projects.resolve_file(project, Path.join(parts)) do
+      send_download(conn, {:file, path}, filename: Path.basename(path))
+    else
+      _ -> conn |> put_status(:not_found) |> json(%{error: "no such workspace file"})
+    end
+  end
+
   defp refuse(conn, :not_found),
     do: conn |> put_status(:not_found) |> json(%{error: "no such project"})
 

@@ -457,6 +457,19 @@ export async function downloadWorkspaceFile(id: string, path: string): Promise<v
   await download(url, path.split("/").pop() ?? path)
 }
 
+/** A project's workspace, for its page; past the cap, `truncated`. */
+export async function projectTree(id: string): Promise<{ files: TreeFile[]; truncated: boolean }> {
+  const res = await fetch(`/api/projects/${id}/tree`, { headers: authHeaders() })
+  if (res.status === 401) throw unauthorized()
+  if (!res.ok) throw new Error(`could not list the files: ${res.status}`)
+  return res.json()
+}
+
+export async function downloadProjectFile(id: string, path: string): Promise<void> {
+  const url = `/api/projects/${id}/files/${path.split("/").map(encodeURIComponent).join("/")}`
+  await download(url, path.split("/").pop() ?? path)
+}
+
 /** One attachment, by its stored name, handed to the browser as a download. */
 export async function downloadAttachment(id: string, name: string): Promise<void> {
   await download(attachmentUrl(id, name), name)

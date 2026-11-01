@@ -6,7 +6,6 @@ import {
   ChevronUp,
   Clock,
   Folder,
-  FolderOpen,
   FolderPlus,
   Globe,
   Keyboard,
@@ -14,8 +13,6 @@ import {
   MonitorSmartphone,
   MoreHorizontal,
   PanelLeft,
-  Pin,
-  Plus,
   Settings,
   SquarePen,
   UserPlus,
@@ -36,7 +33,7 @@ import { useNarrow } from "./useNarrow"
 
 /**
  * Which parts of the sidebar are not as they start, by key: `toggled` in App.
- * Sessions and Pinned start open, Projects and each project start folded, so
+ * Sessions and Pinned start open, Projects starts folded, so
  * a key in the set means the opposite of that.
  */
 export const PROJECTS_SECTION = "section:projects"
@@ -86,13 +83,10 @@ export function sidebarGroups(sessions: AgentInfo[], projects: Project[]) {
   return { groups, pinned: sessions.filter((s) => s.pinned), recent: sessions.filter((s) => !s.pinned) }
 }
 
-/** What j/k walks: every session row that is showing, each once, top to bottom. */
+/** What j/k walks: every session row that is showing, each once, top to bottom. Projects list theirs on their own pages. */
 export function sidebarOrder(sessions: AgentInfo[], projects: Project[], toggled: Set<string>): AgentInfo[] {
-  const { groups, pinned, recent } = sidebarGroups(sessions, projects)
+  const { pinned, recent } = sidebarGroups(sessions, projects)
   const rows = [
-    ...(isOpen(toggled, PROJECTS_SECTION)
-      ? groups.flatMap((g) => (isOpen(toggled, g.project.id) ? g.sessions : []))
-      : []),
     ...(isOpen(toggled, PINNED_SECTION) ? pinned : []),
     ...(isOpen(toggled, SESSIONS_SECTION) ? recent : []),
   ]
@@ -107,6 +101,9 @@ type Props = {
   onToggle: (key: string) => void
   // A project to edit, or null to make one.
   onEditProject: (project: Project | null) => void
+  // A project's page, and the one showing, if any.
+  onOpenProject: (id: string) => void
+  openProjectId: string | null
   // The Tasks page, and whether it is the one showing.
   tasksOpen: boolean
   onOpenTasks: () => void
@@ -155,6 +152,8 @@ export function Sidebar({
   toggled,
   onToggle,
   onEditProject,
+  onOpenProject,
+  openProjectId,
   tasksOpen,
   onOpenTasks,
   devices,
@@ -208,13 +207,12 @@ export function Sidebar({
   const dreamOf = (scope: string) => dreams.find((d) => scopeOf(d) === scope)
   const homeDream = dreamOf("home")
 
-  const row = (s: AgentInfo, nested: boolean) => (
+  const row = (s: AgentInfo) => (
     <div
       key={s.id}
       ref={s.id === cursorId ? (el) => el?.scrollIntoView({ block: "nearest" }) : undefined}
       className={
         "session" +
-        (nested ? " nested" : "") +
         (menu?.id === s.id ? " menu-open" : "") +
         (s.id === activeId ? " active" : "") +
         (s.id === cursorId ? " cursor" : "") +
@@ -222,7 +220,7 @@ export function Sidebar({
       }
       onClick={() => onSelect(s.id)}
       // Outside its project, which one it is in: on hover here, and in its menu.
-      title={!nested && projectName(s) ? `in ${projectName(s)}` : undefined}
+      title={projectName(s) ? `in ${projectName(s)}` : undefined}
     >
       <span className={"dot " + s.status} title={s.status} />
       {s.id === renamingId ? (
@@ -239,7 +237,6 @@ export function Sidebar({
       <span className="session-when" title={"last active " + new Date(lastActive(s)).toLocaleString()}>
         {when(lastActive(s))}
       </span>
-      {nested && s.pinned && <Pin className="session-pin" />}
       <button
         className="session-del session-more"
         title="Rename, pin, move to a project, delete"
@@ -290,57 +287,34 @@ export function Sidebar({
         </div>
         {open(PROJECTS_SECTION) && (
           <div className="nav-children">
-            {groups.map(({ project, sessions: inside }) => {
-              const unfolded = open(project.id)
-              return (
-                <div key={project.id} className={"project-group" + (unfolded ? " open" : "")}>
-                  <div
-                    className={"project-row" + (inside.some((s) => s.id === activeId) ? " holds-active" : "")}
-                    onClick={() => onToggle(project.id)}
-                    title={project.workspace}
-                  >
-                    {unfolded ? <FolderOpen className="project-icon" /> : <Folder className="project-icon" />}
-                    <span className="session-label">{project.name}</span>
-                    <span className="project-actions" onClick={(e) => e.stopPropagation()}>
-                      <NewSessionButton
-                        backend={defaultBackend}
-                        small
-                        title={`New session in ${project.name}`}
-                        onCreate={(backend) => onCreate(backend, project.id)}
-                      />
-                      <button
-                        className="session-del project-edit"
-                        title="Project settings"
-                        onClick={() => onEditProject(project)}
-                      >
-                        <Settings />
-                      </button>
-                    </span>
-                    {/* Nothing to sleep on until something has happened here. */}
-                    {(inside.length > 0 || dreamOf(project.id)) && (
-                      <MoonButton
-                        dream={dreamOf(project.id)}
-                        active={dreamOf(project.id)?.id === activeId}
-                        what={` — ${project.name}`}
-                        onOpen={() => onOpenDream(project.id)}
-                      />
-                    )}
-                    {/* Folded, its unread show on the row. */}
-                    {!unfolded && inside.some(unread) && <span className="session-unread" title="Unread replies" />}
-                    {inside.length > 0 && <span className="nav-count">{inside.length}</span>}
-                  </div>
-                  {unfolded && (
-                    <div className="project-sessions">
-                      {inside.length ? (
-                        inside.map((s) => row(s, true))
-                      ) : (
-                        <div className="project-empty">No sessions yet.</div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+            {/* Each opens the project's page, its files and sessions: the
+                row itself does not unfold. */}
+            {groups.map(({ project, sessions: inside }) => (
+              <div
+                key={project.id}
+                className={
+                  "project-row" +
+                  (project.id === openProjectId ? " current" : "") +
+                  (inside.some((s) => s.id === activeId) ? " holds-active" : "")
+                }
+                onClick={() => onOpenProject(project.id)}
+                title={project.workspace}
+              >
+                <Folder className="project-icon" />
+                <span className="session-label">{project.name}</span>
+                {/* Nothing to sleep on until something has happened here. */}
+                {(inside.length > 0 || dreamOf(project.id)) && (
+                  <MoonButton
+                    dream={dreamOf(project.id)}
+                    active={dreamOf(project.id)?.id === activeId}
+                    what={` — ${project.name}`}
+                    onOpen={() => onOpenDream(project.id)}
+                  />
+                )}
+                {inside.some(unread) && <span className="session-unread" title="Unread replies" />}
+                {inside.length > 0 && <span className="nav-count">{inside.length}</span>}
+              </div>
+            ))}
             {/* New goes last, inside: the heading carries nothing but its name. */}
             <button className="project-row project-new-row" onClick={() => onEditProject(null)}>
               <FolderPlus className="project-icon" />
@@ -397,14 +371,14 @@ export function Sidebar({
         {pinned.length > 0 && (
           <>
             <Heading label="Pinned" open={open(PINNED_SECTION)} onToggle={() => onToggle(PINNED_SECTION)} />
-            {open(PINNED_SECTION) && pinned.map((s) => row(s, false))}
+            {open(PINNED_SECTION) && pinned.map((s) => row(s))}
           </>
         )}
 
         <Heading label="Recents" open={open(SESSIONS_SECTION)} onToggle={() => onToggle(SESSIONS_SECTION)} />
         {open(SESSIONS_SECTION) &&
           (recent.length ? (
-            recent.map((s) => row(s, false))
+            recent.map((s) => row(s))
           ) : (
             <div className="session-empty">{pinned.length ? "Nothing else yet." : "No sessions yet."}</div>
           ))}
@@ -565,42 +539,14 @@ function PushButton({ push }: { push: Push }) {
 }
 
 /**
- * "+": a new session on the default agent, at once. The agent is a setting
- * (Claude Code unless changed) rather than a question asked every time; a
- * session keeps the one it started on.
- */
-function NewSessionButton({
-  backend,
-  onCreate,
-  small = false,
-  title = "New session",
-}: {
-  backend: AgentBackend
-  onCreate: (backend: AgentBackend) => void
-  // The one on a project's row, the size of the row's other buttons.
-  small?: boolean
-  title?: string
-}) {
-  return (
-    <button
-      className={small ? "session-del project-new" : "icon-btn"}
-      onClick={() => onCreate(backend)}
-      title={title}
-    >
-      <Plus />
-    </button>
-  )
-}
-
-/**
  * A reply that no device has read yet: `Chat` marks it read once it is on a
  * screen, scrolled to. Not while the turn is still going; the dot says that.
  */
-function unread(s: AgentInfo): boolean {
+export function unread(s: AgentInfo): boolean {
   return s.status === "idle" && (s.reply_seq ?? 0) > (s.seen_seq ?? 0)
 }
 
-function when(ms: number): string {
+export function when(ms: number): string {
   const mins = Math.floor((Date.now() - ms) / 60000)
   if (mins < 1) return "now"
   if (mins < 60) return `${mins}m`

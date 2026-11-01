@@ -51,7 +51,7 @@ export type TreeNav = {
   rename: () => void
 }
 
-type Node = {
+export type Node = {
   name: string
   path: string
   size: number
@@ -369,7 +369,7 @@ export function FileBrowser({
 }
 
 /** Flat paths into a tree, each level newest first. */
-function build(list: TreeFile[]): Node[] {
+export function build(list: TreeFile[]): Node[] {
   const root: Node = { name: "", path: "", size: 0, mtime: 0, children: [] }
   for (const file of list) {
     const parts = file.path.split("/")
@@ -408,7 +408,7 @@ const ICONS: Record<Viewer, LucideIcon> = {
   frame: AppWindow,
 }
 
-function iconFor(name: string): LucideIcon {
+export function iconFor(name: string): LucideIcon {
   if (/\.(xlsx?|numbers)$/i.test(name)) return FileSpreadsheet
   if (/\.(docx?|pdf|pptx?|key)$/i.test(name)) return FileText
   const viewer = viewerFor(name)
@@ -416,7 +416,7 @@ function iconFor(name: string): LucideIcon {
 }
 
 // Time of day for today, the date otherwise, with the year only when it is not this one.
-function formatTime(seconds: number): string {
+export function formatTime(seconds: number): string {
   const d = new Date(seconds * 1000)
   const now = new Date()
   if (d.toDateString() === now.toDateString()) {

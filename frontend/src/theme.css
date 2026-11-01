@@ -143,7 +143,8 @@ samp,
 }
 
 .sidebar .session.active,
-.nav-item.current {
+.nav-item.current,
+.project-row.current {
   background: color-mix(in srgb, var(--fg) 9%, transparent);
 }
 

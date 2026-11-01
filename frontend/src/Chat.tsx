@@ -4,6 +4,7 @@ import {
   ArrowUp,
   Check,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Cpu,
   Clock as ClockIcon,
@@ -116,6 +117,8 @@ type Props = {
   // Carry it on in a new session ("Continue in a new chat"), offered under a
   // turn that ended in an error. Only for a plain conversation.
   onContinue?: () => Promise<void>
+  // The project it is in: "‹ name" before the title goes back to its page.
+  project?: { name: string; onOpen: () => void }
 }
 
 // How a card or link deep in the transcript opens something in the canvas.
@@ -146,6 +149,7 @@ export function Chat({
   reading = true,
   focus,
   onContinue,
+  project,
 }: Props) {
   const { transcript, joinError, submit, resend, discard, interrupt, dropQueued, rename, draft: remoteDraft } = useAgent(
     session.id,
@@ -265,6 +269,12 @@ export function Chat({
           </button>
         )}
 
+        {project && (
+          <button className="chat-project" onClick={project.onOpen} title={`Back to ${project.name}`}>
+            <ChevronLeft />
+            <span>{project.name}</span>
+          </button>
+        )}
         <Title
           title={session.title ?? session.id}
           backend={session.backend}

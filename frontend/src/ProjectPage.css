@@ -1,0 +1,231 @@
+/* ── A project's page ──────────────────────────────────────────────────────
+   Laid out as the Tasks page is: a plain head, then one centred column.
+   The tabs are the employee page's pills. */
+
+.proj-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--ui);
+}
+
+.proj-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--head-h);
+  padding: 0 14px;
+  box-sizing: border-box;
+}
+
+.proj-head h1 {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0 0 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.proj-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 2px;
+}
+
+.proj-round {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.proj-round:hover {
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  color: var(--fg);
+}
+
+.proj-round svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+/* The moon at the size of its neighbours, not quieted as on a row. */
+.moon-btn.proj-moon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  opacity: 1;
+}
+
+.moon-btn.proj-moon svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.proj-tabs {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4px 16px 8px;
+  box-sizing: border-box;
+}
+
+.proj-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.proj-tab svg {
+  width: 15px;
+  height: 15px;
+}
+
+.proj-tab:hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 5%, var(--bg));
+}
+
+.proj-tab.on {
+  border-color: transparent;
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.proj-tab-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.proj-tab-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+.proj-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.proj-column {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4px 12px 40px;
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
+}
+
+.proj-note {
+  padding: 16px 8px;
+  color: var(--fg-dim);
+}
+
+.proj-note.failed {
+  color: var(--red);
+}
+
+/* Files: the canvas's tree rows, a size up and with room for a date. */
+.tree-row.proj-file {
+  min-height: 2.4rem;
+  gap: 0.5rem;
+  padding-right: 8px;
+  border-radius: 8px;
+}
+
+.proj-file-when {
+  flex: 0 0 auto;
+  color: var(--fg-dim);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.proj-file-dl {
+  flex: 0 0 auto;
+  display: inline-flex;
+  width: 1rem;
+  color: var(--fg-dim);
+}
+
+.proj-file-dl svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+/* Sessions: the sidebar's rows, a size up; age and menu always shown. */
+.proj-session {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 2.75rem;
+  padding: 0 6px 0 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.proj-session:hover,
+.proj-session.menu-open,
+.proj-session.active {
+  background: var(--bg-card);
+}
+
+.proj-session-when {
+  flex: 0 0 auto;
+  color: var(--fg-dim);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.proj-session-more {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.proj-session-more:hover {
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  color: var(--fg);
+}
+
+.proj-session-more svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
