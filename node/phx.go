@@ -108,7 +108,9 @@ func dial(ctx context.Context, origin, token string, info map[string]string) (*c
 		if resp != nil && resp.StatusCode == http.StatusForbidden {
 			return nil, errRevoked
 		}
-		return nil, err
+		// The dial error quotes the URL, token included, and it gets logged.
+		msg := strings.ReplaceAll(err.Error(), url.QueryEscape(token), "REDACTED")
+		return nil, errors.New(strings.ReplaceAll(msg, token, "REDACTED"))
 	}
 	// Files travel as 256 KiB chunks, base64'd; leave room.
 	ws.SetReadLimit(8 << 20)
