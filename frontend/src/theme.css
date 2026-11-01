@@ -1106,7 +1106,8 @@ pre.code,
    width and the conversation its column, so only the text changes size. */
 .sidebar {
   zoom: var(--sidebar-scale, 1);
-  flex-basis: calc(var(--sidebar-w, min(16.25rem, 80vw)) / var(--sidebar-scale, 1));
+  /* A dragged width leaves the chat at least 400px, the window resized or not. */
+  flex-basis: calc(min(var(--sidebar-w, 16.25rem), 80vw, 100vw - 400px) / var(--sidebar-scale, 1));
 }
 
 /* The desktop sidebar's drag edge (App.tsx): no line, only the cursor. */

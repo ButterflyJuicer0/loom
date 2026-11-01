@@ -76,7 +76,7 @@ function SidebarResize() {
     const left = sidebar.getBoundingClientRect().left
     let width = 0
     const move = (ev: PointerEvent) => {
-      width = Math.round(Math.min(Math.max(ev.clientX - left, 200), 560, window.innerWidth / 2))
+      width = Math.round(Math.min(Math.max(ev.clientX - left, 200), window.innerWidth - 400))
       setSidebarWidth(width)
     }
     const up = () => {
