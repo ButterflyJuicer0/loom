@@ -65,6 +65,7 @@ defmodule Loom.Employees do
   @past_kept 60
   @fresh_tokens 60_000
   @fresh_turns 12
+  @chat_quiet_ms :timer.minutes(30)
   @write_handoff "Loom starts your work session afresh from your next wake-up. Before this turn ends, write HANDOFF.md as the rules say, so the new session can carry on."
   @spend_days_kept 60
 
@@ -347,7 +348,10 @@ defmodule Loom.Employees do
 
   def handle_call({:delete, id}, _from, state) do
     with {:ok, e} <- fetch(state, id) do
-      for s <- [e["chat_session"], e["work_session"] | e["past_work"] || []],
+      for s <- [
+            e["chat_session"],
+            e["work_session"] | (e["past_work"] || []) ++ (e["past_chat"] || [])
+          ],
           is_binary(s),
           do: Agent.delete_session(s)
 
@@ -508,7 +512,7 @@ defmodule Loom.Employees do
   def run(state, id, now) do
     case state.employees[id] do
       nil -> state
-      e -> put(state, step(e, now, state.boss))
+      e -> put(state, e |> turn_over_chat(now) |> step(now, state.boss))
     end
   end
 
@@ -631,19 +635,73 @@ defmodule Loom.Employees do
 
     with true <- is_binary(id),
          {:ok, meta} <- Agent.Store.read_meta(id),
-         true <- stale?(meta, now) do
-      # The first time, there is nothing to carry over yet: it writes one in
-      # the session it has, and moves on at the wake-up after.
-      if File.exists?(Path.join(workspace(e["id"]), "HANDOFF.md")) do
-        e
-        |> Map.put("work_session", nil)
-        |> Map.put("fresh", true)
-        |> Map.update("past_work", [id], &Enum.take([id | &1], @past_kept))
-      else
-        note(e, @write_handoff)
+         flagged = is_integer(meta[:flagged_at]),
+         true <- flagged or stale?(meta, now) do
+      cond do
+        # A safety classifier stopped the model there, and what tripped it
+        # would trip every wake-up after: it goes now, with what its files hold.
+        flagged ->
+          e
+          |> Map.put("work_session", nil)
+          |> Map.put("fresh", "flagged")
+          |> Map.update("past_work", [id], &Enum.take([id | &1], @past_kept))
+
+        # The first time, there is nothing to carry over yet: it writes one in
+        # the session it has, and moves on at the wake-up after.
+        File.exists?(Path.join(workspace(e["id"]), "HANDOFF.md")) ->
+          e
+          |> Map.put("work_session", nil)
+          |> Map.put("fresh", true)
+          |> Map.update("past_work", [id], &Enum.take([id | &1], @past_kept))
+
+        true ->
+          note(e, @write_handoff)
       end
     else
       _ -> e
+    end
+  end
+
+  # The chat goes the same way: afresh each day, between conversations (not
+  # within @chat_quiet_ms of the last word), and as soon as a turn is over when
+  # a safety classifier stopped the model in it. A new day's chat may look back
+  # at yesterday's; one set aside is not read again.
+  defp turn_over_chat(e, now) do
+    id = e["chat_session"]
+
+    with true <- is_binary(id),
+         {:ok, meta} <- Agent.Store.read_meta(id),
+         flagged = is_integer(meta[:flagged_at]),
+         true <- (meta[:turns] || 0) > 0,
+         true <- flagged or today(meta[:created_at] || now) != today(now),
+         false <- Agent.busy?(id),
+         true <- flagged or quiet?(id, now),
+         {:ok, new} <- start_session(e, "employee_chat", chat_carry(id, flagged)) do
+      e
+      |> Map.put("chat_session", new)
+      |> Map.update("past_chat", [id], &Enum.take([id | &1], @past_kept))
+    else
+      _ -> e
+    end
+  catch
+    :exit, _ -> e
+  end
+
+  defp chat_carry(id, true), do: Agent.set_aside_opts(id, nil)
+
+  defp chat_carry(id, false) do
+    [
+      notice:
+        "[Note from Loom, not written by the user: Loom starts your chat with the boss " <>
+          "afresh each day. Earlier days' chat is session #{id} (`loom-session read #{id}`), " <>
+          "if you need something that was said there and is not in your notes.]"
+    ]
+  end
+
+  defp quiet?(id, now) do
+    case Agent.exists?(id) && Agent.info(id) do
+      %{last_active_at: at} when is_integer(at) -> now - at >= @chat_quiet_ms
+      _ -> true
     end
   end
 
@@ -658,7 +716,7 @@ defmodule Loom.Employees do
 
   defp context(e, boss, now) do
     %{
-      fresh: e["fresh"] == true,
+      fresh: if(e["fresh"] in [true, "flagged"], do: e["fresh"], else: false),
       notices: open_notices(e),
       now: now,
       offset: @offset,
@@ -974,7 +1032,7 @@ defmodule Loom.Employees do
     )
   end
 
-  defp start_session(e, kind) do
+  defp start_session(e, kind, extra \\ []) do
     id = Agent.new_id()
     # Before it starts: its first spawn already has the hook, or not.
     write_guard(e, id)
@@ -985,6 +1043,7 @@ defmodule Loom.Employees do
 
     opts =
       [backend: backend, kind: kind, employee: e["id"], title: title, cwd: workspace(e["id"])] ++
+        extra ++
         case backend do
           :claude_code -> [model: model]
           :kiro -> [kiro_model: model]

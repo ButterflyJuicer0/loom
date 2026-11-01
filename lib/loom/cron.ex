@@ -132,7 +132,7 @@ defmodule Loom.Cron do
   def handle_call({:run, id}, _from, state) do
     case state.jobs do
       %{^id => job} ->
-        fire(job)
+        job = fire(job)
         job = %{job | last_run_at: DateTime.utc_now() |> DateTime.to_iso8601()}
         {:reply, {:ok, public(job)}, save(put_in(state.jobs[id], job))}
 
@@ -161,8 +161,7 @@ defmodule Loom.Cron do
 
     state =
       Enum.reduce(due, state, fn id, state ->
-        job = state.jobs[id]
-        fire(job)
+        job = fire(state.jobs[id])
 
         job = %{schedule(job, now) | last_run_at: DateTime.to_iso8601(now)}
         put_in(state.jobs[id], job)
@@ -312,13 +311,42 @@ defmodule Loom.Cron do
   end
 
   # Off this process: a submit can wait on a session restoring its backend, and
-  # the scheduler must keep time meanwhile.
+  # the scheduler must keep time meanwhile. The job, with the session it went to.
   defp fire(job) do
     server = self()
+    job = next_target(job)
 
     Task.Supervisor.start_child(Loom.Agent.TaskSupervisor, fn ->
       send(server, {:delivered, job.id, deliver(job)})
     end)
+
+    job
+  end
+
+  # A task's own session (`kind: "task"`) is new for every run. The prompt is
+  # the same each time, so the last run's conversation is no help; kept, it
+  # only grows, and once a safety classifier has stopped the model in it, the
+  # same thing stops it on every run after. The runs before show above the
+  # new one as one thread. A session the task was pointed at is the user's
+  # own conversation, and is left alone.
+  defp next_target(job) do
+    alias Loom.Agent
+
+    with {:ok, %{kind: "task"} = meta} <- Agent.Store.read_meta(job.target),
+         true <- (meta[:turns] || 0) > 0 or Agent.busy?(job.target),
+         id = Agent.new_id(),
+         {:ok, _pid} <-
+           Agent.start_session(id, [
+             Agent.earlier_opt(job.target),
+             backend: meta[:backend],
+             kind: "task",
+             title: meta[:title] || job.name,
+             model: meta[:model]
+           ]) do
+      %{job | target: id}
+    else
+      _ -> job
+    end
   end
 
   defp deliver(job) do
