@@ -1631,3 +1631,21 @@ pre.code,
   height: 1rem;
   color: var(--fg-dim);
 }
+
+/* On a desktop the "…" holds the model and the rest, beside the terminal and
+   canvas chips and in their look, not the phone's glass circle. */
+.chat-header .chip.button.pane-more.desk {
+  width: auto;
+  height: auto;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--bg-card);
+  box-shadow: none;
+  color: var(--fg-dim);
+}
+
+.chat-header .chip.button.pane-more.desk svg {
+  width: 1rem;
+  height: 1rem;
+}

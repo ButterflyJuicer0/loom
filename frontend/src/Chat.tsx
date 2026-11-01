@@ -38,7 +38,7 @@ import {
 } from "react"
 import { createPortal } from "react-dom"
 import { EffortButton } from "./Effort"
-import { ModelChip, ModelList, modelLabel } from "./Model"
+import { ModelList, modelLabel } from "./Model"
 import { Card as NoticeCard } from "./Notices"
 import {
   applySnapshot,
@@ -303,7 +303,6 @@ export function Chat({
             />
           ) : (
             <>
-          <ModelChip session={session} />
           <button
             className={"chip button terminal-toggle" + (terminalOpen ? " on" : "")}
             onClick={onToggleTerminal}
@@ -323,16 +322,18 @@ export function Chat({
           >
             <AppWindow />
           </button>
-          {onContinue && (
-            <button className="chip button" onClick={() => onContinue().catch(() => {})} title="Continue in a new chat">
-              <CornerDownRight />
-            </button>
-          )}
-          {incognito && (
-            <button className="chip button" onClick={incognito.onKeep} title="Keep it: into Recents, out of incognito">
-              <Inbox />
-            </button>
-          )}
+          {/* The rest, as on a phone: the model, continuing, keeping. */}
+          <PaneMenu
+            session={session}
+            panes={false}
+            terminalOpen={terminalOpen}
+            terminalCount={terminalCount}
+            onToggleTerminal={onToggleTerminal}
+            canvasOpen={canvasOpen}
+            onToggleCanvas={onToggleCanvas}
+            onContinue={onContinue}
+            onKeep={incognito?.onKeep}
+          />
             </>
           )}
         </div>
@@ -669,8 +670,11 @@ function PaneMenu({
   onToggleCanvas,
   onContinue,
   onKeep,
+  panes = true,
 }: {
   session: AgentInfo
+  /** Terminals and canvas too: a phone's header has no room for their own buttons. */
+  panes?: boolean
   terminalOpen: boolean
   terminalCount: number
   onToggleTerminal: () => void
@@ -702,8 +706,8 @@ function PaneMenu({
   return (
     <>
       <button
-        className={"chip button pane-more" + (terminalOpen || canvasOpen ? " on" : "")}
-        title="Terminals and canvas"
+        className={"chip button pane-more" + (panes ? "" : " desk") + (panes && (terminalOpen || canvasOpen) ? " on" : "")}
+        title={panes ? "Model, terminals, canvas and more" : "Model and more"}
         aria-haspopup="menu"
         aria-expanded={at !== null}
         onClick={(e) => {
@@ -713,7 +717,7 @@ function PaneMenu({
         }}
       >
         <Ellipsis />
-        {terminalCount > 0 && <span className="count">{terminalCount}</span>}
+        {panes && terminalCount > 0 && <span className="count">{terminalCount}</span>}
       </button>
       {at &&
         createPortal(
@@ -729,15 +733,19 @@ function PaneMenu({
               <ChevronRight />
             </button>
             <div className="session-menu-sep" />
-            <button role="menuitem" onClick={() => pick(onToggleTerminal)}>
-              <SquareTerminal />
-              {terminalOpen ? "Hide terminals" : "Terminals"}
-              {terminalCount > 0 && <span className="pane-menu-count">{terminalCount}</span>}
-            </button>
-            <button role="menuitem" onClick={() => pick(onToggleCanvas)}>
-              <AppWindow />
-              {canvasOpen ? "Hide canvas" : "Canvas"}
-            </button>
+            {panes && (
+              <>
+                <button role="menuitem" onClick={() => pick(onToggleTerminal)}>
+                  <SquareTerminal />
+                  {terminalOpen ? "Hide terminals" : "Terminals"}
+                  {terminalCount > 0 && <span className="pane-menu-count">{terminalCount}</span>}
+                </button>
+                <button role="menuitem" onClick={() => pick(onToggleCanvas)}>
+                  <AppWindow />
+                  {canvasOpen ? "Hide canvas" : "Canvas"}
+                </button>
+              </>
+            )}
             {onContinue && (
               <button role="menuitem" onClick={() => pick(() => void onContinue().catch(() => {}))}>
                 <CornerDownRight />

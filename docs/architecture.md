@@ -412,7 +412,7 @@ beside New chat; any engine). Hygiene, not security: nothing is hidden.
 ### 2.13 New sessions
 
 New chat asks: Chat or Incognito chat, each on the default engine and model,
-or any engine's model behind its arrow (`model` on `POST /api/agents`).
+or any engine behind its arrow; the model is picked later in the header.
 
 - **Warmed at once.** A session made there starts its engine before the first
   message (`Backend.warm/2`): Claude Code's process loads and waits on stdin
