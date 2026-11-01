@@ -1516,7 +1516,8 @@ pre.code,
    the status bar, over the first row of whatever is on top — and nothing on
    the page turns it off (an edge strip, a solid fixed header, the status-bar
    style: all tried on the device). So the first row starts below the band:
-   the chat's header, the sidebar's, the panes' and the bell's. */
+   the chat's header, the sidebar's, the panes' and the bell's, and the
+   Tasks and project pages'. */
 @media (max-width: 640px) {
   .ios-app {
     --ios-top: max(100px, calc(env(safe-area-inset-top) + 12px));
@@ -1525,7 +1526,9 @@ pre.code,
   .ios-app .chat-header,
   .ios-app .drawer .sidebar,
   .ios-app .side-column,
-  .ios-app .search-panel {
+  .ios-app .search-panel,
+  .ios-app .proj-page,
+  .ios-app .tasks-page {
     padding-top: var(--ios-top);
   }
 }

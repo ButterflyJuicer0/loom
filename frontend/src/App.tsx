@@ -305,6 +305,7 @@ function App() {
     setActiveId(session.id)
     setView("chat")
     setDrawerOpen(false)
+    return session.id
   }
 
   // The main column shows the active session, or the Tasks page or a
@@ -313,6 +314,9 @@ function App() {
   const [projectPage, setProjectPage] = useState<string | null>(null)
   // Kept across projects and visits: back from a chat, the tab it was on.
   const [projectTab, setProjectTab] = useState<ProjectTab>("files")
+  // The session last opened from a project's page, which alone gets "‹" back
+  // to it: one opened from Recents, search or elsewhere does not.
+  const [fromProject, setFromProject] = useState<string | null>(null)
   const openProject = (id: string) => {
     reveal()
     setProjectPage(id)
@@ -333,6 +337,7 @@ function App() {
   }
 
   const select = (id: string) => {
+    setFromProject(null)
     setFocusId(null)
     setEmployeeTab(null)
     setActiveId(id)
@@ -716,8 +721,11 @@ function App() {
               onTab={setProjectTab}
               showSidebarButton={narrow || !sidebarOpen}
               onToggleSidebar={() => (narrow ? setDrawerOpen(true) : setSidebarOpen(true))}
-              onOpenSession={select}
-              onCreate={(backend) => create(backend, shownProject.id)}
+              onOpenSession={(id) => {
+                select(id)
+                setFromProject(id)
+              }}
+              onCreate={async (backend) => setFromProject(await create(backend, shownProject.id))}
               onEdit={() => setProjectDialog(shownProject)}
               onOpenDream={() => void openSleep(shownProject.id)}
               renamingId={renaming}
@@ -771,7 +779,11 @@ function App() {
               session={active}
               {...chatProps}
               onSeen={(seq) => updateAgent(active.id, { seen_seq: seq }).then(upsert, () => {})}
-              project={activeProject && { name: activeProject.name, onOpen: () => openProject(activeProject.id) }}
+              project={
+                activeProject && fromProject === active.id
+                  ? { name: activeProject.name, onOpen: () => openProject(activeProject.id) }
+                  : undefined
+              }
               reading={!narrow || (!drawerOpen && side === null)}
             />
           ) : (
