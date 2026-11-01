@@ -348,22 +348,22 @@ samp,
 .grabber {
   position: absolute;
   left: 50%;
-  /* A 16px strip under the box: on an iPhone 8px up from the bottom, with the
-     line at its top, clear of the system's own home bar below it. */
-  bottom: max(0px, calc(env(safe-area-inset-bottom) - 26px));
+  /* A strip under the box, on an iPhone 4px up from the bottom: the line in
+     its middle, low and clear of the box. */
+  bottom: max(0px, calc(env(safe-area-inset-bottom) - 30px));
   transform: translateX(-50%);
-  width: 96px;
-  height: 16px;
+  width: 140px;
+  height: 22px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   pointer-events: auto;
 }
 
 .grabber span {
-  width: 36px;
-  height: 4px;
-  border-radius: 2px;
+  width: 56px;
+  height: 5px;
+  border-radius: 3px;
   background: color-mix(in srgb, var(--fg) 15%, transparent);
 }
 

@@ -2090,10 +2090,10 @@ function Composer({
               }
             }
 
-            // Enter is a new line, as in any editor; Ctrl+Enter (⌘+Enter on a
-            // Mac) sends. A phone's keyboard has neither key: there the send
-            // button sends and return is a new line.
-            if (e.key !== "Enter" || !(e.ctrlKey || e.metaKey)) return
+            // Enter sends; Shift+Enter or Ctrl+Enter (⌘+Enter on a Mac) is a
+            // new line. On a touch screen return is a new line and the send
+            // button sends: a phone's keyboard has no other way to break a line.
+            if (e.key !== "Enter" || e.shiftKey) return
 
             // An IME uses Enter to commit the candidate, and that keystroke
             // must not also send the message. Both guards are needed because
@@ -2106,6 +2106,16 @@ function Composer({
             // Either way the commit is swallowed, and the next Enter (with no
             // composition in progress) sends.
             if (e.nativeEvent.isComposing || composingRef.current) return
+
+            const el = e.currentTarget
+            if (e.ctrlKey || e.metaKey) {
+              e.preventDefault()
+              const at = el.selectionStart
+              setText(text.slice(0, at) + "\n" + text.slice(el.selectionEnd))
+              requestAnimationFrame(() => el.setSelectionRange(at + 1, at + 1))
+              return
+            }
+            if (matchMedia("(pointer: coarse)").matches) return
 
             e.preventDefault()
             send()
@@ -2135,8 +2145,8 @@ function Composer({
                   : interrupted
                     ? "Continue"
                     : busy
-                      ? "Send (Ctrl+Enter) — it reaches the agent mid-turn"
-                      : "Send (Ctrl+Enter)"
+                      ? "Send — it reaches the agent mid-turn"
+                      : "Send"
               }
             >
               <ArrowUp />
