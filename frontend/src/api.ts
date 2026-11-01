@@ -300,6 +300,14 @@ export function updateAgent(
   return apiCall(`/api/agents/${id}`, { method: "PATCH", body: JSON.stringify(attrs) })
 }
 
+/**
+ * Carry a session on in a new one, which starts on a handoff summary: a copy
+ * of its conversation when that is healthy, else it reads it. The new session.
+ */
+export function continueAgent(id: string): Promise<AgentInfo> {
+  return apiCall(`/api/agents/${id}/continue`, { method: "POST" })
+}
+
 /** A session's unsent composer text, on the server; "" when there is none. */
 export function getDraft(id: string): Promise<{ text: string }> {
   return apiCall(`/api/agents/${id}/draft`, { method: "GET" })

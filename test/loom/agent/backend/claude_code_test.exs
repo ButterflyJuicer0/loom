@@ -798,6 +798,7 @@ defmodule Loom.Agent.Backend.ClaudeCodeTest do
       previous_env = System.get_env("CLAUDE_CONFIG_DIR")
       System.put_env("CLAUDE_CONFIG_DIR", Path.join(dir, "empty"))
       previous = Application.get_env(:loom, Loom.Agent, [])
+
       Application.put_env(
         :loom,
         Loom.Agent,
@@ -824,6 +825,54 @@ defmodule Loom.Agent.Backend.ClaudeCodeTest do
       Enum.find(1..100, fn _ -> File.exists?(got) or (Process.sleep(20) && false) end)
       assert File.read!(got) =~ "hello there"
       assert ClaudeCode.persist(handle).cc_started
+      ClaudeCode.stop(handle)
+    end
+
+    @tag :tmp_dir
+    test "a fork copies the other conversation, and starts empty when it is gone", %{tmp_dir: dir} do
+      # Records each spawn's arguments; a fork exits at once, as the real CLI
+      # does when the conversation to fork is not there.
+      cli = Path.join(dir, "claude")
+
+      File.write!(cli, """
+      #!/bin/sh
+      echo "$*" >> "#{dir}/args"
+      for arg in "$@"; do [ "$arg" = "--fork-session" ] && exit 1; done
+      echo '{"type":"system","subtype":"init","session_id":"#{@session_id}"}'
+      read line
+      echo "$line" > "#{dir}/got"
+      sleep 5
+      """)
+
+      File.chmod!(cli, 0o755)
+      previous = Application.get_env(:loom, Loom.Agent, [])
+
+      Application.put_env(
+        :loom,
+        Loom.Agent,
+        previous |> Keyword.put(:claude_cli, cli) |> Keyword.put(:data_dir, dir)
+      )
+
+      on_exit(fn -> Application.put_env(:loom, Loom.Agent, previous) end)
+
+      from = "11111111-2222-4333-8444-555555555555"
+      {:ok, handle} = ClaudeCode.start("a_1", %{cc_fork_from: from})
+      assert ClaudeCode.persist(handle).cc_fork_from == from
+      id = handle.session_id
+      {:ok, handle} = ClaudeCode.run_turn(handle, "hello there")
+
+      handle = pump(handle, fn h -> h.booting == nil end)
+      got = Path.join(dir, "got")
+      Enum.find(1..100, fn _ -> File.exists?(got) or (Process.sleep(20) && false) end)
+      assert File.read!(got) =~ "hello there"
+
+      [first, second | _] =
+        dir |> Path.join("args") |> File.read!() |> String.split("\n", trim: true)
+
+      assert first =~ "--resume #{from} --fork-session --session-id #{id}"
+      assert second =~ "--session-id #{id}"
+      refute second =~ "--resume"
+      assert ClaudeCode.persist(handle).cc_fork_from == nil
       ClaudeCode.stop(handle)
     end
 

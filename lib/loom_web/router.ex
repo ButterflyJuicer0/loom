@@ -31,6 +31,7 @@ defmodule LoomWeb.Router do
     get "/search", SearchController, :index
     post "/agents", AgentSessionController, :create
     patch "/agents/:id", AgentSessionController, :update
+    post "/agents/:id/continue", AgentSessionController, :continue
     delete "/agents/:id", AgentSessionController, :delete
     get "/agents/:id/draft", AgentDraftController, :show
     put "/agents/:id/draft", AgentDraftController, :update
@@ -149,6 +150,7 @@ defmodule LoomWeb.Router do
 
     get "/list", TidyController, :list
     get "/read", TidyController, :read
+    get "/search", TidyController, :search
     post "/archive", TidyController, :archive
     post "/merge", TidyController, :merge
     post "/retitle", TidyController, :retitle

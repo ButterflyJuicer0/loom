@@ -22,6 +22,7 @@ import { useLobby } from "./useLobby"
 import { useNarrow } from "./useNarrow"
 import { useSwipe } from "./useSwipe"
 import {
+  continueAgent,
   createAgent,
   createSession,
   deleteAgent,
@@ -289,6 +290,17 @@ function App() {
   // The backend is chosen here and never again: the conversation lives in that
   // engine's own store, so there is nothing to migrate if it changes. The
   // project too: its workspace is the session's working directory for good.
+  // "Continue in a new chat", from a row's menu or under an error: the new
+  // session opens at once, on its handoff summary. See `Loom.Agent.Carry`.
+  const carryOn = async (id: string) => {
+    const session = await continueAgent(id)
+    if (session.project_id) reveal(session.project_id)
+    upsert(session)
+    setActiveId(session.id)
+    setView("chat")
+    setDrawerOpen(false)
+  }
+
   const create = async (backend: AgentBackend, projectId?: string) => {
     const session = await createAgent(backend, projectId)
     if (projectId) reveal(projectId)
@@ -611,6 +623,7 @@ function App() {
       onDelete={remove}
       onRename={setRenaming}
       onPin={async (id, pinned) => upsert(await updateAgent(id, { pinned }))}
+      onContinue={carryOn}
       onArchive={async (id, archived) => upsert(await updateAgent(id, { archived }))}
       onMove={async (id, projectId) => {
         upsert(await updateAgent(id, { project_id: projectId }))
@@ -658,6 +671,7 @@ function App() {
       refreshCanvas(active.id, outputs)
     },
     focus: focusNotice ? { notice: focusNotice, onAnswered: upsertNotice } : null,
+    onContinue: active.kind == null && !active.employee_id ? () => carryOn(active.id) : undefined,
   }
 
   return (

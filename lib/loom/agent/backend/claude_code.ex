@@ -175,6 +175,10 @@ defmodule Loom.Agent.Backend.ClaudeCode do
       # has nothing to resume, and `--resume` then exits with "No conversation
       # found" on every turn after.
       started?: false,
+      # A conversation of another session's to start from (`--fork-session`):
+      # the first spawn copies it under this session's own id, and every later
+      # one resumes that copy. See `Loom.Agent.Carry`.
+      fork_from: Backend.meta_get(meta, :cc_fork_from),
       # Set while a spawn has not yet said `system/init`: how it was started and
       # what has been written to it since, newest first. Enough to start over
       # once if `--resume` turns out to have nothing to resume. See decode/2.
@@ -280,6 +284,9 @@ defmodule Loom.Agent.Backend.ClaudeCode do
 
   # The very first turn names the conversation; every later one reattaches to
   # it. Passing both is rejected by the CLI.
+  defp session_args(%{started?: false, fork_from: from, session_id: id}) when is_binary(from),
+    do: ["--resume", from, "--fork-session", "--session-id", id]
+
   defp session_args(%{started?: false, session_id: id}), do: ["--session-id", id]
   defp session_args(%{session_id: id}), do: ["--resume", id]
 
@@ -382,6 +389,7 @@ defmodule Loom.Agent.Backend.ClaudeCode do
       cc_session_id: handle.session_id,
       cc_cwd: handle.cwd,
       cc_started: handle.started?,
+      cc_fork_from: Map.get(handle, :fork_from),
       cc_model: Map.get(handle, :model),
       cc_effort: Map.get(handle, :effort)
     }
@@ -505,6 +513,25 @@ defmodule Loom.Agent.Backend.ClaudeCode do
     end
   end
 
+  # A fork whose source Claude Code no longer has starts empty instead: the
+  # first message says where the conversation was, so it can be read.
+  def died(%{booting: %{}, started?: false, fork_from: from} = handle, status)
+      when is_binary(from) do
+    Logger.warning(
+      "ClaudeCode: no conversation #{from} to fork; starting #{handle.session_id} empty"
+    )
+
+    restart = %{handle | proc: nil, buffer: "", fork_from: nil}
+
+    case spawn_process(restart) do
+      {:ok, fresh} ->
+        {:ok, handle.booting.lines |> Enum.reverse() |> Enum.reduce(fresh, &write(&2, &1)), []}
+
+      {:error, _reason} ->
+        exited(handle, status)
+    end
+  end
+
   def died(handle, status), do: exited(handle, status)
 
   defp exited(handle, status) do
@@ -534,12 +561,17 @@ defmodule Loom.Agent.Backend.ClaudeCode do
   defp translate(handle, %{"type" => "system", "subtype" => "init"} = message) do
     # Authoritative session id. We minted it, but taking it from here means a
     # future CLI that reassigns ids cannot silently orphan the conversation.
-    handle = %{
-      handle
-      | session_id: message["session_id"] || handle.session_id,
-        started?: true,
-        booting: nil
-    }
+    handle =
+      Map.put(
+        %{
+          handle
+          | session_id: message["session_id"] || handle.session_id,
+            started?: true,
+            booting: nil
+        },
+        :fork_from,
+        nil
+      )
 
     handle = Map.put(handle, :asked_model, message["model"])
 

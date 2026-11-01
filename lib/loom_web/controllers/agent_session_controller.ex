@@ -52,6 +52,15 @@ defmodule LoomWeb.AgentSessionController do
     })
   end
 
+  # POST /api/agents/:id/continue — carry it on in a new session, which
+  # starts on a handoff summary; see `Loom.Agent.Carry`.
+  def continue(conn, %{"id" => id}) do
+    case Agent.Carry.continue(id) do
+      {:ok, new} -> conn |> put_status(:created) |> json(view(Agent.info(new)))
+      {:error, reason} -> conn |> put_status(:unprocessable_entity) |> json(%{error: reason})
+    end
+  end
+
   # PATCH /api/agents/:id — any of `title` (rename), `pinned`, `archived`, `seen_seq` (read
   # up to there), `effort` (the thinking level, null for the default), `model` (likewise) and `project_id` (move into that project, or out of any with
   # null). All but the last are local to loom and never pushed to the backend;

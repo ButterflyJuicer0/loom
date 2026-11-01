@@ -345,6 +345,7 @@ defmodule Loom.Agent.Session do
   # no root: the backend falls back to `:workspace` (or the user's home).
   # `:cwd` is a test or operator override.
   # `:model` pins Claude Code's model; a virtual employee's is chosen for it.
+  # `:fork_from` starts Claude Code on a copy of another conversation.
   defp backend_meta(id, opts, project, employee) do
     cwd = Keyword.get(opts, :cwd) || (project && Loom.Projects.workspace(project))
     if cwd, do: File.mkdir_p!(cwd)
@@ -353,6 +354,7 @@ defmodule Loom.Agent.Session do
       cc_cwd: cwd,
       codex_cwd: cwd,
       cc_model: Keyword.get(opts, :model),
+      cc_fork_from: Keyword.get(opts, :fork_from),
       kiro_cwd: cwd,
       kiro_model: Keyword.get(opts, :kiro_model),
       instructions: instructions(id, project, employee)

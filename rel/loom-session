@@ -2,7 +2,8 @@
 """loom-session: tidy the user's Loom sessions, from a Loom session.
 
   loom-session list [--project ID|home | --all] [--archived] [--fresh]
-  loom-session read ID [--full]
+  loom-session read ID [--full] [--files]
+  loom-session search WORDS... [--archived]
   loom-session archive ID...
   loom-session unarchive ID...
   loom-session merge --title T --summary-file F ID...
@@ -13,7 +14,8 @@
 Only the sidebar's Recents can be tidied; nothing is deleted. Archiving hides
 a session from the lists and nothing else. See the loom-tidy skill. A handoff
 is a new session in Recents that begins with a brief, for the user to carry a
-matter on in, once they agreed; see the loom-handoff skill.
+matter on in, once they agreed; see the loom-handoff skill. Search finds the
+session the user means by "that earlier session about X"; see loom-sessions.
 """
 import argparse, json, os, sys, time, urllib.error, urllib.parse, urllib.request
 
@@ -71,6 +73,11 @@ def main():
     rd = sub.add_parser("read", help="a session's conversation, without tool calls")
     rd.add_argument("id")
     rd.add_argument("--full", action="store_true", help="every reply, not only each turn's last")
+    rd.add_argument("--files", action="store_true",
+                    help="also what its tool calls left behind: files, device paths, commits, shares")
+    se = sub.add_parser("search", help="the user's sessions that mention WORDS, in the title or what was said")
+    se.add_argument("words", nargs="+")
+    se.add_argument("--archived", action="store_true", help="the archived ones too")
     sub.add_parser("keep", help="looked at, left as it is: not new at the next tidying").add_argument("ids", nargs="+")
     for name in ("archive", "unarchive"):
         sub.add_parser(name).add_argument("ids", nargs="+")
@@ -106,10 +113,24 @@ def main():
                   f"{s['kb']}KB  active {age(s['last_active_at'])} ago  made {age(s['created_at'])} ago{marks}")
             print(f"    first: {first}")
     elif a.cmd == "read":
-        r = call("GET", "read", query={"id": a.id, **({"full": "1"} if a.full else {})})
+        q = {"id": a.id, **({"full": "1"} if a.full else {}), **({"files": "1"} if a.files else {})}
+        r = call("GET", "read", query=q)
         print(f"# {r['title']} ({r['id']})\n")
         for m in r["messages"]:
             print(f"## {m['role']}\n{m['text']}\n")
+        if a.files:
+            print("## files it left behind (from its tool calls; paths only)")
+            print("\n".join(r.get("files") or ["none found"]))
+    elif a.cmd == "search":
+        q = {"q": " ".join(a.words), **({"archived": "1"} if a.archived else {})}
+        rows = call("GET", "search", query=q)["sessions"]
+        if not rows:
+            print("none")
+        for s in rows:
+            print(f"{s['id']}  {s['title']!r}  project={s['project_id'] or 'home'}  "
+                  f"active {age(s['last_active_at'])} ago{' [archived]' if s['archived'] else ''}")
+            if s.get("snippet"):
+                print(f"    {s['snippet']}")
     elif a.cmd == "keep":
         call("POST", "keep", {"ids": a.ids})
         print(f"kept: {' '.join(a.ids)}")

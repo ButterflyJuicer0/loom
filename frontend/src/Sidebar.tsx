@@ -127,6 +127,7 @@ type Props = {
   // From a row's menu: put its name up for editing, pin it, move it.
   onRename: (id: string) => void
   onPin: (id: string, pinned: boolean) => Promise<void>
+  onContinue: (id: string) => Promise<void>
   onMove: (id: string, projectId: string | null) => Promise<void>
   onArchive: (id: string, archived: boolean) => Promise<void>
   onCollapse: () => void
@@ -169,6 +170,7 @@ export function Sidebar({
   onDelete,
   onRename,
   onPin,
+  onContinue,
   onMove,
   onArchive,
   onCollapse,
@@ -415,6 +417,7 @@ export function Sidebar({
           anchor={menu.anchor}
           onRename={() => onRename(menuFor.id)}
           onPin={(on) => onPin(menuFor.id, on)}
+          onContinue={menuFor.kind == null && !menuFor.employee_id ? () => onContinue(menuFor.id) : undefined}
           onMove={(projectId) => onMove(menuFor.id, projectId)}
           onArchive={(on) => onArchive(menuFor.id, on)}
           onDelete={() => onDelete(menuFor.id)}

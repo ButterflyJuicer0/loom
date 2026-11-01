@@ -2,7 +2,7 @@ defmodule LoomWeb.TidyController do
   @moduledoc """
   `loom-session`, which an agent runs to tidy the user's sessions (the
   `loom-tidy` skill): list, read, archive, unarchive, merge, retitle, and
-  keep. Each but unarchive records that the session was tidied (`tidied_at`),
+  keep; and to find one the user means (`search`, the `loom-sessions` skill). Each but unarchive records that the session was tidied (`tidied_at`),
   and `list` puts the ones new since — never tidied, or active since — first. Behind
   `LoomWeb.Plugs.NodeCliAuth`, like `loom-notice`; the caller is the
   `x-loom-session` header.
@@ -62,19 +62,67 @@ defmodule LoomWeb.TidyController do
   end
 
   # GET /api/tidy/read — `id`, and `full` for every reply rather than each
-  # turn's last. Tool calls and thinking are left out.
+  # turn's last. Tool calls and thinking are left out; `files` adds what the
+  # tool calls left behind, as paths (`Loom.Agent.Manifest`).
   def read(conn, %{"id" => id} = params) do
     with {:ok, _caller} <- caller(conn),
          {:ok, info} <- tidyable(id) do
       json(conn, %{
         id: id,
         title: info.title,
-        messages: transcript(id, params["full"] in ["1", "true"])
+        messages: transcript(id, params["full"] in ["1", "true"]),
+        files: if(params["files"] in ["1", "true"], do: Loom.Agent.Manifest.lines(id))
       })
     else
       error -> reply(conn, error)
     end
   end
+
+  # GET /api/tidy/search — `q`, and `archived` to look in the archived ones
+  # too. The user's own sessions that mention it, in the title or in what was
+  # said, newest first; never the caller.
+  def search(conn, %{"q" => q} = params) when is_binary(q) do
+    with {:ok, caller} <- caller(conn) do
+      archived? = params["archived"] in ["1", "true"]
+      q = String.trim(q)
+
+      infos =
+        Agent.list_sessions()
+        |> Enum.filter(&tidyable?/1)
+        |> Enum.reject(&(&1.id == caller.id))
+        |> Enum.filter(&(archived? or not archived?(&1)))
+        |> Map.new(&{&1.id, &1})
+
+      said = Loom.Agent.Search.run(Map.keys(infos), q) |> Map.new(&{&1.id, &1})
+      down = String.downcase(q)
+
+      rows =
+        infos
+        |> Map.values()
+        |> Enum.filter(
+          &(Map.has_key?(said, &1.id) or
+              (q != "" and String.contains?(String.downcase(&1.title || ""), down)))
+        )
+        |> Enum.sort_by(&(-(&1.last_active_at || &1.created_at || 0)))
+        |> Enum.take(20)
+        |> Enum.map(fn info ->
+          %{
+            id: info.id,
+            title: info.title,
+            project_id: info.project_id,
+            last_active_at: info.last_active_at,
+            archived: archived?(info),
+            snippet: said[info.id][:snippet]
+          }
+        end)
+
+      json(conn, %{sessions: rows})
+    else
+      error -> reply(conn, error)
+    end
+  end
+
+  def search(conn, _params), do: reply(conn, {:error, "search takes q"})
 
   # POST /api/tidy/archive — `ids`, and `archived` (default true).
   def archive(conn, %{"ids" => ids} = params) when is_list(ids) do

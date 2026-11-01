@@ -87,6 +87,24 @@ defmodule LoomWeb.AgentSessionControllerTest do
     end
   end
 
+  describe "POST /api/agents/:id/continue" do
+    test "opens a new session carrying it on", %{conn: conn} do
+      {:ok, _} = Agent.start_session("a_src", backend: :claude_code, title: "Notes")
+      conn = post(conn, ~p"/api/agents/a_src/continue")
+      assert %{"id" => id, "title" => "Notes"} = json_response(conn, 201)
+      assert id != "a_src"
+    end
+
+    test "refuses an employee's session", %{conn: conn} do
+      {:ok, _} =
+        Agent.start_session("a_emp", backend: :claude_code, employee: "e_1", kind: "work")
+
+      conn = post(conn, ~p"/api/agents/a_emp/continue")
+      assert %{"error" => error} = json_response(conn, 422)
+      assert error =~ "not a chat of yours"
+    end
+  end
+
   describe "PATCH /api/agents/:id" do
     test "renames without touching the backend", %{conn: conn} do
       %{"id" => id} = post(conn, ~p"/api/agents", %{backend: "codex"}) |> json_response(201)

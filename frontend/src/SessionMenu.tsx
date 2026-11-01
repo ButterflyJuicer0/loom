@@ -1,11 +1,11 @@
-import { Archive, ArchiveRestore, Check, ChevronLeft, ChevronRight, Folder, FolderInput, FolderMinus, Pencil, Pin, PinOff, Trash2 } from "lucide-react"
+import { Archive, ArchiveRestore, Check, ChevronLeft, ChevronRight, CornerDownRight, Folder, FolderInput, FolderMinus, Pencil, Pin, PinOff, Trash2 } from "lucide-react"
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom"
 import { isArchived, type AgentInfo, type Project } from "./api"
 
 /**
  * What can be done to one session, from the `…` on its row: rename, pin,
- * move into a project (or out of one), archive, delete. ChatGPT's menu, minus what
+ * continue it in a new chat, move into a project (or out of one), archive, delete. ChatGPT's menu, minus what
  * Loom has no use for.
  *
  * In a portal, placed by the button it opened from: the session list scrolls
@@ -21,6 +21,7 @@ export function SessionMenu({
   anchor,
   onRename,
   onPin,
+  onContinue,
   onMove,
   onArchive,
   onDelete,
@@ -31,6 +32,8 @@ export function SessionMenu({
   anchor: DOMRect
   onRename: () => void
   onPin: (pinned: boolean) => Promise<void>
+  // Only for the user's own chats; an employee's or Dream's carry on by themselves.
+  onContinue?: () => Promise<void>
   onMove: (projectId: string | null) => Promise<void>
   onArchive: (archived: boolean) => Promise<void>
   onDelete: () => void
@@ -106,6 +109,11 @@ export function SessionMenu({
           <button role="menuitem" onClick={() => run(() => onPin(!session.pinned))}>
             {session.pinned ? <PinOff /> : <Pin />} {session.pinned ? "Unpin" : "Pin"}
           </button>
+          {onContinue && (
+            <button role="menuitem" onClick={() => run(onContinue)}>
+              <CornerDownRight /> Continue in new chat
+            </button>
+          )}
           <div className="session-menu-sep" />
           <button
             role="menuitem"

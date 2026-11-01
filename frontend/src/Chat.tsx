@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Cpu,
   Clock as ClockIcon,
+  CornerDownRight,
   Ellipsis,
   Forward,
   Merge,
@@ -112,6 +113,9 @@ type Props = {
   // A notice from the bell that was opened here: the conversation goes to the
   // turn it came from, and shows it under that turn to be answered.
   focus?: { notice: Notice; onAnswered: (n: Notice) => void } | null
+  // Carry it on in a new session ("Continue in a new chat"), offered under a
+  // turn that ended in an error. Only for a plain conversation.
+  onContinue?: () => Promise<void>
 }
 
 // How a card or link deep in the transcript opens something in the canvas.
@@ -141,6 +145,7 @@ export function Chat({
   onSeen,
   reading = true,
   focus,
+  onContinue,
 }: Props) {
   const { transcript, joinError, submit, resend, discard, interrupt, dropQueued, rename, draft: remoteDraft } = useAgent(
     session.id,
@@ -333,7 +338,10 @@ export function Chat({
                 : null
             }
             after={
-              replies && {
+              (!replies && onContinue && !busy && items[items.length - 1]?.kind === "error"
+                ? { key: "continue", node: <ContinueButton onContinue={onContinue} /> }
+                : null) ||
+              (replies && {
                 key: replies.key,
                 node: replies.questions ? (
                   <QuestionCard
@@ -350,7 +358,7 @@ export function Chat({
                     onSend={() => send(draft.trim())}
                   />
                 ),
-              }
+              })
             }
           />
         </OutputLink.Provider>
@@ -377,6 +385,26 @@ export function Chat({
         />
         </div>
       </OpenCanvas.Provider>
+    </div>
+  )
+}
+
+/** Under a turn that ended in an error: carry the session on in a new one. */
+function ContinueButton({ onContinue }: { onContinue: () => Promise<void> }) {
+  const [state, setState] = useState<"idle" | "going" | string>("idle")
+  return (
+    <div className="continue-row">
+      <button
+        className="text-btn"
+        disabled={state === "going"}
+        onClick={() => {
+          setState("going")
+          onContinue().catch((e) => setState((e as Error).message))
+        }}
+      >
+        <CornerDownRight /> Continue in a new chat
+      </button>
+      {state !== "idle" && state !== "going" && <span className="failed">{state}</span>}
     </div>
   )
 }

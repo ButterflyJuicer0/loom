@@ -509,6 +509,27 @@
   white-space: pre-wrap;
 }
 
+/* Under a turn that ended in an error: carry it on in a new chat. */
+.continue-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.continue-row .text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.continue-row svg {
+  width: 15px;
+  height: 15px;
+}
+.continue-row .failed {
+  color: var(--red);
+  font-size: 0.9em;
+}
+
 code {
   padding: 1px 4px;
   border-radius: 4px;
