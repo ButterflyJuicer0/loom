@@ -282,6 +282,7 @@ export function Chat({
               onToggleTerminal={onToggleTerminal}
               canvasOpen={canvasOpen}
               onToggleCanvas={onToggleCanvas}
+              onContinue={onContinue}
             />
           ) : (
             <>
@@ -305,6 +306,11 @@ export function Chat({
           >
             <AppWindow />
           </button>
+          {onContinue && (
+            <button className="chip button" onClick={() => onContinue().catch(() => {})} title="Continue in a new chat">
+              <CornerDownRight />
+            </button>
+          )}
             </>
           )}
         </div>
@@ -617,6 +623,7 @@ function PaneMenu({
   onToggleTerminal,
   canvasOpen,
   onToggleCanvas,
+  onContinue,
 }: {
   session: AgentInfo
   terminalOpen: boolean
@@ -624,6 +631,7 @@ function PaneMenu({
   onToggleTerminal: () => void
   canvasOpen: boolean
   onToggleCanvas: () => void
+  onContinue?: () => Promise<void>
 }) {
   const [at, setAt] = useState<{ top: number; right: number } | null>(null)
   const [view, setView] = useState<"main" | "model">("main")
@@ -684,6 +692,12 @@ function PaneMenu({
               <AppWindow />
               {canvasOpen ? "Hide canvas" : "Canvas"}
             </button>
+            {onContinue && (
+              <button role="menuitem" onClick={() => pick(() => void onContinue().catch(() => {}))}>
+                <CornerDownRight />
+                Continue in new chat
+              </button>
+            )}
             <div className="session-menu-sep" />
             {/* A home-screen app has no reload of its own. */}
             <button role="menuitem" onClick={() => location.reload()}>
