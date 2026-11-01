@@ -1,15 +1,16 @@
-import { ArchiveRestore, ChevronDown, ChevronLeft, ChevronRight, Moon, Sun, X } from "lucide-react"
+import { ArchiveRestore, ChevronDown, ChevronLeft, ChevronRight, Moon, Sun, Trash2, X } from "lucide-react"
 import { useEffect, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import type { AgentBackend, AgentInfo, Project } from "./api"
 import type { Appearance, Settings } from "./settings"
 import { Slider } from "./Slider"
 import { BossPage, BossRow } from "./Boss"
+import { lastActive } from "./useLobby"
 
 /**
  * The gear at the foot of the sidebar: this device's appearance and text sizes, the
  * engine "+" starts a session on, the boss profile the employees share, and
- * the archived sessions. Each choice takes
+ * the archived and the incognito sessions. Each choice takes
  * effect as it is made; there is nothing to save.
  */
 export function SettingsDialog({
@@ -20,6 +21,9 @@ export function SettingsDialog({
   projects,
   onOpen,
   onUnarchive,
+  incognito,
+  onKeep,
+  onDelete,
 }: {
   settings: Settings
   onChange: (patch: Partial<Settings>) => void
@@ -28,6 +32,9 @@ export function SettingsDialog({
   projects: Project[]
   onOpen: (id: string) => void
   onUnarchive: (id: string) => Promise<void>
+  incognito: AgentInfo[]
+  onKeep: (id: string) => Promise<void>
+  onDelete: (id: string) => void
 }) {
   // A page opened from a row, in place of the list, with a way back.
   const [page, setPage] = useState<"boss" | null>(null)
@@ -88,6 +95,8 @@ export function SettingsDialog({
             <BossRow onOpen={() => setPage("boss")} />
 
             <Archived sessions={archived} projects={projects} onOpen={onOpen} onUnarchive={onUnarchive} />
+
+            <Incognito sessions={incognito} onOpen={onOpen} onKeep={onKeep} onDelete={onDelete} />
           </div>
         )}
       </div>
@@ -209,6 +218,60 @@ function Archived({
               </button>
               <button className="icon-btn" title="Unarchive" onClick={() => void onUnarchive(s.id)}>
                 <ArchiveRestore />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/**
+ * The incognito sessions, listed nowhere else: each deleted 30 days after its
+ * last message (`Loom.Agent.Incognito`), unless kept — into Recents, out of
+ * its sandbox. Folded like Archived.
+ */
+function Incognito({
+  sessions,
+  onOpen,
+  onKeep,
+  onDelete,
+}: {
+  sessions: AgentInfo[]
+  onOpen: (id: string) => void
+  onKeep: (id: string) => Promise<void>
+  onDelete: (id: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const left = (s: AgentInfo) => Math.max(0, 30 - Math.floor((Date.now() - lastActive(s)) / DAY_MS))
+  return (
+    <div className="settings-row archived">
+      <button className="settings-text archived-head" onClick={() => setOpen((o) => !o)} disabled={!sessions.length}>
+        <span className="settings-label">Incognito</span>
+        <span className="settings-hint">
+          {sessions.length
+            ? `${sessions.length}, no memory, out of Recents. Each goes 30 days after its last message.`
+            : "None. The arrow beside New chat starts one."}
+        </span>
+        {sessions.length > 0 &&
+          (open ? <ChevronDown className="archived-fold" /> : <ChevronRight className="archived-fold" />)}
+      </button>
+      {open && sessions.length > 0 && (
+        <div className="archived-list">
+          {sessions.map((s) => (
+            <div className="archived-item" key={s.id}>
+              <button className="archived-open" onClick={() => onOpen(s.id)}>
+                <span className="archived-title">{s.title || "Untitled"}</span>
+                <span className="archived-project">{left(s)}d left</span>
+              </button>
+              <button className="keep-btn" title="Keep it: into Recents" onClick={() => void onKeep(s.id)}>
+                Keep
+              </button>
+              <button className="icon-btn" title="Delete" onClick={() => onDelete(s.id)}>
+                <Trash2 />
               </button>
             </div>
           ))}

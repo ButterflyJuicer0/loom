@@ -161,6 +161,8 @@ defmodule Loom.Agent.Backend.ClaudeCode do
       # Appended to Claude Code's own system prompt on every spawn — it is a
       # flag, not something the conversation remembers across `--resume`.
       instructions: Backend.meta_get(meta, :instructions),
+      # An incognito session's: spawned under `Loom.Agent.Sandbox`.
+      sandbox: Backend.meta_get(meta, :sandbox) == true,
       # `--model`, when the session pins one; Claude Code's default otherwise.
       model: Backend.meta_get(meta, :cc_model),
       # `--effort`, which a running process cannot change: nil for the model's
@@ -256,6 +258,7 @@ defmodule Loom.Agent.Backend.ClaudeCode do
         session_args(handle) ++ instruction_args(handle) ++ guard_args(handle)
 
     with {:ok, exe} <- executable(),
+         {exe, args} = sandboxed(handle, exe, args),
          {:ok, proc} <- Proc.spawn(handle.loom_id, exe, args, handle.cwd) do
       {:ok,
        %{
@@ -269,6 +272,20 @@ defmodule Loom.Agent.Backend.ClaudeCode do
            booting: %{resumed?: handle.started?, lines: []}
        }}
     end
+  end
+
+  # Its conversation is kept where Claude Code keeps any started in its cwd.
+  defp sandboxed(handle, exe, args) do
+    Loom.Agent.Sandbox.wrap(
+      Map.get(handle, :sandbox),
+      exe,
+      args,
+      [
+        handle.cwd,
+        Loom.Agent.Store.output_dir(handle.loom_id),
+        Loom.Agent.Sandbox.claude_project_dir(handle.cwd)
+      ] ++ Loom.Agent.Sandbox.caches()
+    )
   end
 
   defp write(handle, line) do

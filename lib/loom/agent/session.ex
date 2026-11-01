@@ -235,6 +235,13 @@ defmodule Loom.Agent.Session do
   def move(id, project_id), do: GenServer.call(via(id), {:move, project_id})
 
   @doc """
+  Keep an incognito session: it joins Recents as an ordinary one in the home
+  directory, out of its sandbox, with its conversation and files. Refused
+  mid-turn.
+  """
+  def promote(id), do: GenServer.call(via(id), :promote)
+
+  @doc """
   Attach for replay. Returns the session's metadata plus every event after
   `since_seq` (pass 0 for the whole retained transcript).
   """
@@ -346,11 +353,18 @@ defmodule Loom.Agent.Session do
   # `:cwd` is a test or operator override.
   # `:model` pins Claude Code's model; a virtual employee's is chosen for it.
   # `:fork_from` starts Claude Code on a copy of another conversation.
+  # An incognito session works in a directory of its own, sandboxed.
   defp backend_meta(id, opts, project, employee) do
-    cwd = Keyword.get(opts, :cwd) || (project && Loom.Projects.workspace(project))
+    incognito? = Keyword.get(opts, :kind) == "incognito"
+
+    cwd =
+      Keyword.get(opts, :cwd) || (project && Loom.Projects.workspace(project)) ||
+        (incognito? && Loom.Agent.Sandbox.workspace(id)) || nil
+
     if cwd, do: File.mkdir_p!(cwd)
 
     %{
+      sandbox: incognito?,
       cc_cwd: cwd,
       codex_cwd: cwd,
       cc_model: Keyword.get(opts, :model),
@@ -366,6 +380,9 @@ defmodule Loom.Agent.Session do
   # renamed project or edited instructions are what the backend is told next.
   defp instructions(id, project, {_, "bell"}),
     do: instructions(id, project, nil) <> "\n" <> Loom.Notices.Prompt.system()
+
+  defp instructions(id, project, {_, "incognito"}),
+    do: instructions(id, project, nil) <> "\n" <> Loom.Agent.Sandbox.instructions()
 
   defp instructions(id, project, {employee_id, kind}) when is_binary(employee_id),
     do: instructions(id, project, nil) <> "\n" <> Loom.Employees.Prompt.system(employee_id, kind)
@@ -403,11 +420,9 @@ defmodule Loom.Agent.Session do
            reattach(
              backend,
              id,
-             Map.put(
-               meta,
-               :instructions,
-               instructions(id, project, {meta[:employee_id], meta[:kind]})
-             ),
+             meta
+             |> Map.put(:instructions, instructions(id, project, {meta[:employee_id], meta[:kind]}))
+             |> Map.put(:sandbox, meta[:kind] == "incognito"),
              logs
            ) do
       transcript = Store.read_events(id, @transcript_limit)
@@ -747,6 +762,35 @@ defmodule Loom.Agent.Session do
       when status in [:starting, :running] do
     {:reply, {:error, :busy}, state}
   end
+
+  def handle_call(:promote, _from, %{kind: kind} = state) when kind != "incognito",
+    do: {:reply, :ok, state}
+
+  def handle_call(:promote, _from, %{status: status} = state)
+      when status in [:starting, :running] do
+    {:reply, {:error, :busy}, state}
+  end
+
+  def handle_call(:promote, _from, state) do
+    state = cancel_release(state)
+    handle = Map.put(state.handle, :sandbox, false)
+    {:ok, handle} = Backend.impl(state.backend).relocate(handle, nil, instructions(state.id, nil))
+
+    state =
+      %{
+        state
+        | kind: nil,
+          handle: handle,
+          notice: promoted_notice(Map.get(handle, :cwd), Loom.Agent.Sandbox.workspace(state.id))
+      }
+      |> emit(:loom_note, %{text: "Saved to Recents"})
+
+    persist_meta(state)
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:move, _project_id}, _from, %{kind: "incognito"} = state),
+    do: {:reply, {:error, :incognito}, state}
 
   def handle_call({:move, project_id}, _from, state) do
     case requested_project(project: project_id) do
@@ -1407,6 +1451,12 @@ defmodule Loom.Agent.Session do
   # started with across `--resume` and ignores a new `--append-system-prompt`
   # (measured, 2.1.312). So it goes ahead of the next message the backend
   # gets, marked as Loom's, and is not shown in the transcript.
+  defp promoted_notice(cwd, old) do
+    "[Note from Loom, not written by the user: the user kept this incognito chat. " <>
+      "It is an ordinary session now, with no sandbox and no incognito rules; your " <>
+      "working directory is now #{cwd}. Files made so far stay in #{old}.]"
+  end
+
   defp moved_notice(nil, cwd) do
     "[Note from Loom, not written by the user: this conversation is no longer in a " <>
       "Loom project. Your working directory is now #{cwd}. Earlier project " <>

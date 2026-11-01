@@ -153,7 +153,7 @@ export type AgentInfo = {
   // virtual employee's, opened from its page; see `Employees.tsx`. "bell" for
   // the bell's chat; "task" for a task's own session, opened from the task.
   // Older servers do not send it.
-  kind?: "dream" | "employee_chat" | "employee_work" | "bell" | "task" | null
+  kind?: "dream" | "employee_chat" | "employee_work" | "bell" | "task" | "incognito" | null
   employee_id?: string | null
   // How far the user has read; with `seq`, the moon's unread mark.
   seen_seq?: number
@@ -196,11 +196,18 @@ export async function listAgents(): Promise<AgentInfo[]> {
 // `backend` is required and permanent: the conversation lives in that engine's
 // own store, so there is nothing to migrate if it changes later. So is the
 // project: its workspace becomes the session's working directory.
-export async function createAgent(backend: AgentBackend, projectId?: string | null): Promise<AgentInfo> {
+// Incognito: out of Recents, in a sandbox of its own (see `Loom.Agent.Sandbox`).
+export async function createAgent(
+  backend: AgentBackend,
+  projectId?: string | null,
+  incognito?: boolean,
+): Promise<AgentInfo> {
   const res = await fetch("/api/agents", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(projectId ? { backend, project_id: projectId } : { backend }),
+    body: JSON.stringify(
+      projectId ? { backend, project_id: projectId } : incognito ? { backend, incognito: true } : { backend },
+    ),
   })
   if (res.status === 401) throw unauthorized()
   if (!res.ok) throw new Error(`createAgent failed: ${res.status}`)
@@ -295,6 +302,8 @@ export function updateAgent(
     seen_seq?: number
     effort?: string | null
     model?: string | null
+    /** false keeps an incognito session: into Recents, out of its sandbox. */
+    incognito?: false
   },
 ): Promise<AgentInfo> {
   return apiCall(`/api/agents/${id}`, { method: "PATCH", body: JSON.stringify(attrs) })

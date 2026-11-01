@@ -1532,3 +1532,128 @@ pre.code,
     padding-top: var(--ios-top);
   }
 }
+
+/* ── Incognito ──────────────────────────────────────────────────────────
+   The arrow beside New chat opens NewMenu: each engine, then each again
+   incognito. On a desktop it is the row's end; on a phone, the pill's. */
+.nav-new-more {
+  display: grid;
+  place-items: center;
+  margin-left: auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.nav-new-more:hover {
+  background: var(--bg-card);
+  color: var(--fg);
+}
+
+.nav-new-more svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.new-chat-split {
+  display: flex;
+  pointer-events: auto;
+}
+
+.new-chat-split .new-chat {
+  border-radius: 999px 0 0 999px;
+  padding-right: 12px;
+}
+
+.new-chat-more {
+  display: grid;
+  place-items: center;
+  height: 3rem;
+  padding: 0 14px 0 10px;
+  border: 0;
+  border-left: 1px solid color-mix(in srgb, var(--bg) 30%, transparent);
+  border-radius: 0 999px 999px 0;
+  background: var(--fg);
+  color: var(--bg);
+  cursor: pointer;
+}
+
+.new-chat-more svg {
+  width: 18px;
+  height: 18px;
+}
+
+.session-menu .menu-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--line);
+}
+
+.session-menu .menu-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 2px;
+  color: var(--fg-dim);
+  font-size: 0.8125rem;
+}
+
+.session-menu .menu-heading svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* By an incognito chat's title: what it is, and the way to keep it. */
+.keep-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.keep-chip svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.keep-chip.failed {
+  color: var(--red);
+}
+
+.keep-btn {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+/* On a phone, a glass capsule like the title's. */
+@media (max-width: 640px) {
+  .chat-header .keep-chip {
+    align-self: center;
+    height: 2.5rem;
+    box-sizing: border-box;
+    padding: 0 14px 0 12px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--composer) 78%, transparent);
+    border: 1px solid color-mix(in srgb, var(--fg) 24%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 14%, transparent);
+    color: var(--fg);
+    font-size: 0.9375rem;
+  }
+
+  .chat-header .keep-chip svg {
+    width: 18px;
+    height: 18px;
+  }
+}

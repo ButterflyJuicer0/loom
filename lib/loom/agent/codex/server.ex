@@ -238,6 +238,24 @@ defmodule Loom.Agent.Codex.Server do
   # resumes every session, so leaving these off resume quietly sandboxed them.
   @access %{"sandbox" => "danger-full-access", "approvalPolicy" => "never"}
 
+  # An incognito thread (`Loom.Agent.Sandbox`) writes only its cwd, /tmp and
+  # `writable_roots`, with the network open as usual.
+  defp access(opts) do
+    case opts[:writable_roots] do
+      roots when is_list(roots) ->
+        %{
+          "sandbox" => "workspace-write",
+          "approvalPolicy" => "never",
+          "config" => %{
+            "sandbox_workspace_write" => %{"writable_roots" => roots, "network_access" => true}
+          }
+        }
+
+      _ ->
+        @access
+    end
+  end
+
   @impl GenServer
   def handle_call(:available?, _from, state), do: {:reply, state.port != nil, state}
 
@@ -255,7 +273,7 @@ defmodule Loom.Agent.Codex.Server do
   def handle_call({:start_thread, owner, opts}, from, state) do
     params =
       %{"cwd" => opts[:cwd] || System.user_home!()}
-      |> Map.merge(@access)
+      |> Map.merge(access(opts))
       |> maybe_put("developerInstructions", opts[:developer_instructions])
       |> maybe_put("model", opts[:model])
 
@@ -265,14 +283,14 @@ defmodule Loom.Agent.Codex.Server do
   def handle_call({:resume_thread, owner, thread_id, opts}, from, state) do
     params =
       %{"threadId" => thread_id, "excludeTurns" => true}
-      |> Map.merge(@access)
+      |> Map.merge(access(opts))
       |> maybe_put("developerInstructions", opts[:developer_instructions])
       # Like the access above, an override: a session moved into a project
       # carries on in its workspace.
       |> maybe_put("cwd", opts[:cwd])
 
     {:noreply,
-     send_request(state, "thread/resume", params, {:claim_resume, from, owner, thread_id})}
+     send_request(state, "thread/resume", params, {:claim_resume, from, owner, thread_id, params})}
   end
 
   # Not claimed here: the app-server was restarted since this thread was
@@ -454,7 +472,7 @@ defmodule Loom.Agent.Codex.Server do
   defp fail({:turn, from, _thread_id}, reason), do: GenServer.reply(from, {:error, reason})
   defp fail({:claim, from, _owner}, reason), do: GenServer.reply(from, {:error, reason})
 
-  defp fail({:claim_resume, from, _owner, _id}, reason),
+  defp fail({:claim_resume, from, _owner, _id, _params}, reason),
     do: GenServer.reply(from, {:error, reason})
 
   defp fail({:claim_retry, from, _owner, _id}, reason),
@@ -500,12 +518,12 @@ defmodule Loom.Agent.Codex.Server do
     state
   end
 
-  defp resolve({:claim_resume, from, owner, thread_id}, {:ok, _result}, state) do
+  defp resolve({:claim_resume, from, owner, thread_id, _params}, {:ok, _result}, state) do
     GenServer.reply(from, {:ok, thread_id})
     claim(state, thread_id, owner)
   end
 
-  defp resolve({:claim_resume, from, owner, thread_id}, {:error, error}, state) do
+  defp resolve({:claim_resume, from, owner, thread_id, params}, {:error, error}, state) do
     reason = message_of(error)
 
     if locked?(reason) do
@@ -515,7 +533,6 @@ defmodule Loom.Agent.Codex.Server do
       Logger.warning("Codex.Server: clearing stale writer lock for #{thread_id}")
       release_lock(state, thread_id)
 
-      params = Map.merge(%{"threadId" => thread_id, "excludeTurns" => true}, @access)
       send_request(state, "thread/resume", params, {:claim_retry, from, owner, thread_id})
     else
       GenServer.reply(from, {:error, reason})

@@ -58,8 +58,15 @@ defmodule Loom.Agent do
 
   @doc "Stop a session and delete its persisted history."
   def delete_session(id) do
+    incognito? = match?({:ok, %{kind: "incognito"}}, Loom.Agent.Store.read_meta(id))
     stop_session(id)
     Loom.Notices.forget_session(id)
+
+    # Claude Code kept an incognito conversation under its own directory's
+    # name, which nothing else uses: it goes too.
+    if incognito?,
+      do: File.rm_rf(Loom.Agent.Sandbox.claude_project_dir(Loom.Agent.Sandbox.workspace(id)))
+
     Loom.Agent.Store.delete_session(id)
   end
 
@@ -103,6 +110,7 @@ defmodule Loom.Agent do
   defdelegate rename(id, title), to: Session
   defdelegate retitle(id, title), to: Session
   defdelegate pin(id, pinned?), to: Session
+  defdelegate promote(id), to: Session
   defdelegate archive(id, archived?), to: Session
   defdelegate seed(id, display, prompt, origin \\ "tidy"), to: Session
   defdelegate tell(id, text), to: Session

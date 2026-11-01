@@ -19,7 +19,7 @@ import { EmployeePage, HireDialog, isEmployeeSession, type EmployeeTab } from ".
 import { Terminal } from "./Terminal"
 // noVNC is only for the browser pane, so it loads when that is first opened.
 const Browser = lazy(() => import("./Browser").then((m) => ({ default: m.Browser })))
-import { useLobby } from "./useLobby"
+import { lastActive, useLobby } from "./useLobby"
 import { useNarrow } from "./useNarrow"
 import { useSwipe } from "./useSwipe"
 import {
@@ -111,11 +111,21 @@ function App() {
   const ordinary = useMemo(
     () =>
       everything.filter(
-        (s) => !isDream(s) && !isEmployeeSession(s) && s.kind !== "bell" && s.kind !== "task",
+        (s) =>
+          !isDream(s) &&
+          !isEmployeeSession(s) &&
+          s.kind !== "bell" &&
+          s.kind !== "task" &&
+          s.kind !== "incognito",
       ),
     [everything],
   )
   const sessions = useMemo(() => ordinary.filter((s) => !isArchived(s)), [ordinary])
+  // Incognito sessions are listed in Settings only, newest first.
+  const incognito = useMemo(
+    () => everything.filter((s) => s.kind === "incognito").sort((a, b) => lastActive(b) - lastActive(a)),
+    [everything],
+  )
   const archived = useMemo(
     () => ordinary.filter(isArchived).sort((a, b) => (b.archived_at ?? 0) - (a.archived_at ?? 0)),
     [ordinary],
@@ -298,8 +308,8 @@ function App() {
     setDrawerOpen(false)
   }
 
-  const create = async (backend: AgentBackend, projectId?: string) => {
-    const session = await createAgent(backend, projectId)
+  const create = async (backend: AgentBackend, projectId?: string, incognito?: boolean) => {
+    const session = await createAgent(backend, projectId, incognito)
     if (projectId) reveal()
     upsert(session)
     setActiveId(session.id)
@@ -779,6 +789,11 @@ function App() {
               session={active}
               {...chatProps}
               onSeen={(seq) => updateAgent(active.id, { seen_seq: seq }).then(upsert, () => {})}
+              onKeep={
+                active.kind === "incognito"
+                  ? async () => upsert(await updateAgent(active.id, { incognito: false }))
+                  : undefined
+              }
               project={
                 activeProject && fromProject === active.id
                   ? { name: activeProject.name, onOpen: () => openProject(activeProject.id) }
@@ -907,7 +922,7 @@ function App() {
 
       {deleting && (
         <Confirm
-          title={`Delete ${sessions.find((s) => s.id === deleting)?.title ?? deleting}?`}
+          title={`Delete ${everything.find((s) => s.id === deleting)?.title ?? deleting}?`}
           detail="The session and its whole history, with what it made. This cannot be undone."
           onYes={async () => {
             const id = deleting
@@ -982,6 +997,9 @@ function App() {
             select(id)
           }}
           onUnarchive={async (id) => upsert(await updateAgent(id, { archived: false }))}
+          incognito={incognito}
+          onKeep={async (id) => upsert(await updateAgent(id, { incognito: false }))}
+          onDelete={remove}
         />
       )}
       <WhichKey pending={pending} keymap={keymap} groups={{ "Space n": "new session" }} />

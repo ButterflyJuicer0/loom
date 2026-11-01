@@ -75,6 +75,8 @@ defmodule Loom.Agent.Backend.Kiro do
       cwd: Backend.meta_get(meta, :kiro_cwd) || Backend.meta_get(meta, :cc_cwd) || default_cwd(),
       instructions: Backend.meta_get(meta, :instructions),
       model: Backend.meta_get(meta, :kiro_model),
+      # An incognito session's: spawned under `Loom.Agent.Sandbox`.
+      sandbox: Backend.meta_get(meta, :sandbox) == true,
       # The running process, a `Loom.Agent.Proc`; nil when there is none.
       proc: nil,
       saved: nil,
@@ -209,11 +211,33 @@ defmodule Loom.Agent.Backend.Kiro do
       File.mkdir_p!(handle.cwd)
       args = ["acp", "--trust-all-tools", "--agent", agent_name(handle)]
 
+      {exe, args} = sandboxed(handle, exe, args)
+
       with {:ok, proc} <- Proc.spawn(handle.loom_id, exe, args, handle.cwd) do
         handle = %{handle | proc: proc, buffer: "", pending: %{}, phase: :init}
         init(handle)
       end
     end
+  end
+
+  # Kiro keeps ACP conversations in ~/.kiro/sessions and its login in
+  # ~/.local/share/kiro-cli, both written as it goes; the knowledge bases
+  # beside the login are memory, so they stay read-only.
+  defp sandboxed(handle, exe, args) do
+    data = Path.expand("~/.local/share/kiro-cli")
+
+    Loom.Agent.Sandbox.wrap(
+      Map.get(handle, :sandbox),
+      exe,
+      args,
+      [
+        handle.cwd,
+        Loom.Agent.Store.output_dir(handle.loom_id),
+        Path.expand("~/.kiro/sessions"),
+        data
+      ] ++ Loom.Agent.Sandbox.caches(),
+      [Path.join(data, "knowledge_bases")]
+    )
   end
 
   defp init(handle) do

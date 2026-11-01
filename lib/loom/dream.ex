@@ -285,6 +285,8 @@ defmodule Loom.Dream do
   # A virtual employee's sessions are in a workspace, and a memory, of their
   # own (`Loom.Employees`): no scope's.
   defp scope_of(%{kind: "employee_" <> _}), do: :employee
+  # An incognito session must leave no memory behind: no scope's either.
+  defp scope_of(%{kind: "incognito"}), do: :incognito
   defp scope_of(%{project_id: id}) when is_binary(id), do: id
   defp scope_of(_session), do: "home"
 

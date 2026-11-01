@@ -11,6 +11,7 @@ import {
   CornerDownRight,
   Ellipsis,
   Forward,
+  HatGlasses,
   Merge,
   Moon,
   PanelLeft,
@@ -117,6 +118,8 @@ type Props = {
   // Carry it on in a new session ("Continue in a new chat"), offered under a
   // turn that ended in an error. Only for a plain conversation.
   onContinue?: () => Promise<void>
+  /** Set only for an incognito session: keep it, into Recents. */
+  onKeep?: () => Promise<void>
   // The project it is in: "‹ name" before the title goes back to its page.
   project?: { name: string; onOpen: () => void }
 }
@@ -149,6 +152,7 @@ export function Chat({
   reading = true,
   focus,
   onContinue,
+  onKeep,
   project,
 }: Props) {
   const { transcript, joinError, submit, resend, discard, interrupt, dropQueued, rename, draft: remoteDraft } = useAgent(
@@ -282,6 +286,7 @@ export function Chat({
           onRename={rename}
         />
         {tabs}
+        {onKeep && <KeepChip onKeep={onKeep} />}
 
         <div className="chat-meta">
           {narrow ? (
@@ -406,6 +411,28 @@ export function Chat({
 }
 
 /** Under a turn that ended in an error: carry the session on in a new one. */
+/**
+ * An incognito session says so beside its title; tapping it keeps the
+ * session — into Recents, out of its sandbox. Refused mid-turn, which it
+ * says in its title.
+ */
+function KeepChip({ onKeep }: { onKeep: () => Promise<void> }) {
+  const [error, setError] = useState<string | null>(null)
+  return (
+    <button
+      className={"chip button keep-chip" + (error ? " failed" : "")}
+      onClick={() => {
+        setError(null)
+        onKeep().catch((e) => setError((e as Error).message))
+      }}
+      title={error ?? "Incognito: no memory, not in Recents, deleted after 30 days. Tap to keep it."}
+    >
+      <HatGlasses />
+      <span>Keep</span>
+    </button>
+  )
+}
+
 function ContinueButton({ onContinue }: { onContinue: () => Promise<void> }) {
   const [state, setState] = useState<"idle" | "going" | string>("idle")
   return (

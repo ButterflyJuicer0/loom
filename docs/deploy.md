@@ -49,6 +49,24 @@ Loom makes no model requests itself. Before starting it, log in on the server:
 Both must be on the service's `PATH`. Loom passes that `PATH` on to agents and
 terminal shells.
 
+Incognito sessions (architecture §2.12) run Claude Code and Kiro under
+`bwrap` (`apt install bubblewrap`). Ubuntu 24.04 blocks the unprivileged user
+namespace it needs unless bwrap has an AppArmor profile:
+
+```
+# /etc/apparmor.d/bwrap
+abi <abi/4.0>,
+include <tunables/global>
+profile bwrap /usr/bin/bwrap flags=(unconfined) {
+  userns,
+  include if exists <local/bwrap>
+}
+```
+
+then `sudo apparmor_parser -r /etc/apparmor.d/bwrap`. Without it an incognito
+Claude Code or Kiro session fails to start ("setting up uid map: Permission
+denied"); everything else is unaffected.
+
 ## 4. Build
 
 The frontend is served by `Plug.Static` from `priv/static`, so build it before

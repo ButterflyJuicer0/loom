@@ -19,7 +19,7 @@ import {
   Users,
   X,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, type MouseEvent } from "react"
 import type { AgentBackend, AgentInfo, Device, Employee, Notice, Project } from "./api"
 import { Avatar, BudgetRing, short, STATUS, StatusIcon } from "./Employees"
 import { BellButton } from "./Notices"
@@ -27,6 +27,7 @@ import { RenameInput } from "./Confirm"
 import { DevicesDialog } from "./Devices"
 import { SessionMenu } from "./SessionMenu"
 import { MoonButton, scopeOf } from "./Sleep"
+import { NewMenu } from "./NewMenu"
 import type { Push } from "./push"
 import { lastActive } from "./useLobby"
 import { useNarrow } from "./useNarrow"
@@ -119,7 +120,7 @@ type Props = {
   renamingId: string | null
   onRenamed: (id: string, title: string | null) => Promise<void>
   onSelect: (id: string) => void
-  onCreate: (backend: AgentBackend, projectId?: string) => void
+  onCreate: (backend: AgentBackend, projectId?: string, incognito?: boolean) => void
   onDelete: (id: string) => void
   // From a row's menu: put its name up for editing, pin it, move it.
   onRename: (id: string) => void
@@ -197,6 +198,13 @@ export function Sidebar({
     return () => clearInterval(timer)
   }, [])
   const [devicesOpen, setDevicesOpen] = useState(false)
+  // The arrow beside New chat: another engine, or incognito.
+  const [newMenu, setNewMenu] = useState<DOMRect | null>(null)
+  const toggleNewMenu = (e: MouseEvent) => {
+    e.stopPropagation()
+    const anchor = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    setNewMenu((m) => (m ? null : anchor))
+  }
   const online = devices.filter((d) => d.online).length
   const { groups, pinned, recent } = sidebarGroups(sessions, projects)
   const open = (key: string) => isOpen(toggled, key)
@@ -272,6 +280,9 @@ export function Sidebar({
           <div className="nav-item nav-new" role="button" onClick={() => onCreate(defaultBackend)}>
             <SquarePen className="nav-icon" />
             <span className="nav-label">New chat</span>
+            <button className="nav-new-more" onClick={toggleNewMenu} title="Another engine, or incognito">
+              <ChevronDown />
+            </button>
           </div>
         )}
         {/* A top-level entry, like the sidebar's others: folded until asked. */}
@@ -475,10 +486,15 @@ export function Sidebar({
       </div>
       {narrow && (
         <div className="sidebar-float">
-          <button className="new-chat" onClick={() => onCreate(defaultBackend)}>
-            <SquarePen />
-            New chat
-          </button>
+          <div className="new-chat-split">
+            <button className="new-chat" onClick={() => onCreate(defaultBackend)}>
+              <SquarePen />
+              New chat
+            </button>
+            <button className="new-chat-more" onClick={toggleNewMenu} title="Another engine, or incognito">
+              <ChevronDown />
+            </button>
+          </div>
           <button
             className="dial-btn"
             onClick={() => onToggle(FOOT_SECTION)}
@@ -488,6 +504,18 @@ export function Sidebar({
             {open(FOOT_SECTION) ? <X /> : <ChevronUp />}
           </button>
         </div>
+      )}
+      {newMenu && (
+        <NewMenu
+          owner=".nav-new-more, .new-chat-more"
+          anchor={newMenu}
+          incognito
+          onPick={(backend, incognito) => {
+            setNewMenu(null)
+            onCreate(backend, undefined, incognito)
+          }}
+          onClose={() => setNewMenu(null)}
+        />
       )}
       {devicesOpen && (
         <DevicesDialog

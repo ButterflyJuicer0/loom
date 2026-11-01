@@ -11,8 +11,7 @@ import {
   Plus,
   Settings,
 } from "lucide-react"
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { createPortal } from "react-dom"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import {
   downloadProjectFile,
   projectTree,
@@ -21,13 +20,13 @@ import {
   type Project,
   type TreeFile,
 } from "./api"
-import { BackendIcon } from "./BackendIcon"
 import { RenameInput } from "./Confirm"
 import { build, formatTime, iconFor, type Node as TreeNode } from "./FileBrowser"
 import { formatBytes } from "./format"
 import { SessionMenu } from "./SessionMenu"
 import { unread, when } from "./Sidebar"
 import { MoonButton } from "./Sleep"
+import { NewMenu } from "./NewMenu"
 import { lastActive } from "./useLobby"
 import "./ProjectPage.css"
 
@@ -157,6 +156,7 @@ export function ProjectPage({
 
       {newMenu && (
         <NewMenu
+          owner=".proj-new"
           anchor={newMenu}
           onPick={(backend) => {
             setNewMenu(null)
@@ -341,67 +341,5 @@ function Sessions({
         />
       )}
     </div>
-  )
-}
-
-const BACKENDS: { id: AgentBackend; label: string }[] = [
-  { id: "claude_code", label: "Claude Code" },
-  { id: "codex", label: "Codex" },
-  { id: "kiro", label: "Kiro" },
-]
-
-/** "+": which engine the new session runs on, in the session menu's look. */
-function NewMenu({
-  anchor,
-  onPick,
-  onClose,
-}: {
-  anchor: DOMRect
-  onPick: (backend: AgentBackend) => void
-  onClose: () => void
-}) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [place, setPlace] = useState<{ top: number; left: number } | null>(null)
-
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const { width } = el.getBoundingClientRect()
-    setPlace({
-      top: anchor.bottom + 4,
-      left: Math.min(Math.max(8, anchor.right - width), window.innerWidth - width - 8),
-    })
-  }, [anchor])
-
-  useEffect(() => {
-    // Not the "+" it opened from, whose click closes it on its own.
-    const away = (e: MouseEvent) => {
-      if (ref.current?.contains(e.target as Node)) return
-      if ((e.target as Element | null)?.closest?.(".proj-new")) return
-      onClose()
-    }
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose()
-    document.addEventListener("mousedown", away)
-    window.addEventListener("keydown", onKey)
-    return () => {
-      document.removeEventListener("mousedown", away)
-      window.removeEventListener("keydown", onKey)
-    }
-  }, [onClose])
-
-  return createPortal(
-    <div
-      ref={ref}
-      className="session-menu"
-      role="menu"
-      style={place ? { top: place.top, left: place.left } : { visibility: "hidden" }}
-    >
-      {BACKENDS.map((b) => (
-        <button key={b.id} role="menuitem" onClick={() => onPick(b.id)}>
-          <BackendIcon backend={b.id} /> {b.label}
-        </button>
-      ))}
-    </div>,
-    document.body,
   )
 }

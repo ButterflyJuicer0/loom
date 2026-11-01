@@ -62,43 +62,54 @@ defmodule Loom.Agent.Backend.Codex do
   alias Loom.Agent.Codex.Server
 
   @impl Backend
-  def start(_session_id, meta) do
+  def start(session_id, meta) do
     opts = [
       cwd: Backend.meta_get(meta, :codex_cwd) || default_cwd(),
       developer_instructions: Backend.meta_get(meta, :instructions)
     ]
 
-    open_thread(opts[:cwd], opts[:developer_instructions])
+    open_thread(opts[:cwd], opts[:developer_instructions], sandbox(session_id, meta))
   end
 
-  defp open_thread(cwd, instructions) do
-    case Server.start_thread(cwd: cwd, developer_instructions: instructions) do
-      {:ok, thread_id} -> {:ok, new(thread_id, instructions, cwd)}
+  # An incognito session's thread writes its cwd, /tmp and its output only
+  # (`Loom.Agent.Sandbox`): the roots beyond the cwd, or nil for full access.
+  defp sandbox(session_id, meta) do
+    if Backend.meta_get(meta, :sandbox) == true,
+      do: [Loom.Agent.Store.output_dir(session_id)]
+  end
+
+  defp open_thread(cwd, instructions, sandbox) do
+    case Server.start_thread(cwd: cwd, developer_instructions: instructions, writable_roots: sandbox) do
+      {:ok, thread_id} -> {:ok, new(thread_id, instructions, cwd, sandbox)}
       {:error, reason} -> {:error, describe_error(reason)}
     end
   end
 
   @impl Backend
-  def resume(_session_id, meta) do
+  def resume(session_id, meta) do
     case Backend.meta_get(meta, :codex_thread_id) do
-      id when is_binary(id) -> resume_thread(id, meta)
+      id when is_binary(id) -> resume_thread(id, meta, sandbox(session_id, meta))
       _ -> {:error, "no codex_thread_id recorded for this session"}
     end
   end
 
-  defp resume_thread(id, meta) do
+  defp resume_thread(id, meta, sandbox) do
     instructions = Backend.meta_get(meta, :instructions)
     cwd = Backend.meta_get(meta, :codex_cwd) || default_cwd()
 
-    case Server.resume_thread(id, resume_opts(instructions, Backend.meta_get(meta, :codex_cwd))) do
+    case Server.resume_thread(
+           id,
+           resume_opts(instructions, Backend.meta_get(meta, :codex_cwd), sandbox)
+         ) do
       {:ok, ^id} ->
         # A turn id recorded before a restart refers to a turn that is no longer
         # running — the server would reject an interrupt for it anyway.
-        {:ok, %{new(id, instructions, cwd) | turn_id: Backend.meta_get(meta, :codex_turn_id)}}
+        {:ok,
+         %{new(id, instructions, cwd, sandbox) | turn_id: Backend.meta_get(meta, :codex_turn_id)}}
 
       {:error, reason} ->
         if unborn?(reason),
-          do: reopen(id, cwd, instructions),
+          do: reopen(id, cwd, instructions, sandbox),
           else: {:error, describe_error(reason)}
     end
   end
@@ -111,23 +122,30 @@ defmodule Loom.Agent.Backend.Codex do
   defp unborn?(reason) when is_binary(reason), do: reason =~ "no rollout found"
   defp unborn?(_reason), do: false
 
-  defp reopen(id, cwd, instructions) do
+  defp reopen(id, cwd, instructions, sandbox) do
     Logger.warning(
       "Codex: thread #{id} never ran a turn and cannot be resumed; opening a new one"
     )
 
-    open_thread(cwd, instructions)
+    open_thread(cwd, instructions, sandbox)
   end
 
   # Given again on every resume, including the silent one after an app-server
   # respawn, so the thread is never running without them. The cwd only when
   # one is known: a header from before it was kept leaves the thread's own.
-  defp resume_opts(instructions, cwd), do: [developer_instructions: instructions, cwd: cwd]
+  defp resume_opts(instructions, cwd, sandbox),
+    do: [developer_instructions: instructions, cwd: cwd, writable_roots: roots(sandbox)]
 
-  defp new(thread_id, instructions, cwd) do
+  defp roots(sandbox) when is_list(sandbox), do: sandbox
+  defp roots(_sandbox), do: nil
+
+  defp new(thread_id, instructions, cwd, sandbox) do
     %{
       thread_id: thread_id,
       instructions: instructions,
+      # An incognito session's writable roots; false once it is kept, and
+      # given again on every resume, like the instructions.
+      sandbox: sandbox,
       # Kept for `reopen/3`, which needs it long after the header was read.
       cwd: cwd,
       turn_id: nil,
@@ -157,13 +175,18 @@ defmodule Loom.Agent.Backend.Codex do
   # Reattaching before starting the turn is what makes a restart invisible to
   # the user beyond the one turn that died.
   def run_turn(%{stale?: true} = handle, text) do
-    case Server.resume_thread(handle.thread_id, resume_opts(handle.instructions, cwd(handle))) do
+    sandbox = roots(Map.get(handle, :sandbox))
+
+    case Server.resume_thread(
+           handle.thread_id,
+           resume_opts(handle.instructions, cwd(handle), sandbox)
+         ) do
       {:ok, _} ->
         run_turn(%{handle | stale?: false}, text)
 
       {:error, reason} ->
         with true <- unborn?(reason),
-             {:ok, fresh} <- reopen(handle.thread_id, cwd(handle), handle.instructions) do
+             {:ok, fresh} <- reopen(handle.thread_id, cwd(handle), handle.instructions, sandbox) do
           run_turn(fresh, text)
         else
           false -> {:error, describe_error(reason)}

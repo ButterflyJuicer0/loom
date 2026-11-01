@@ -19,7 +19,8 @@ defmodule LoomWeb.AgentSessionController do
   # in a project, whose workspace becomes its cwd for good (`Loom.Projects`).
   # Without one a session has no root, and the model composes absolute paths
   # from the conversation. A channel only ever attaches to an existing session,
-  # so creation goes through here.
+  # so creation goes through here. `incognito: true` starts one in its own
+  # sandboxed directory, out of every list but Settings (`Loom.Agent.Sandbox`).
   def create(conn, params) do
     case Loom.Agent.Backend.parse(params["backend"]) do
       {:ok, backend} -> create_session(conn, backend, params)
@@ -63,8 +64,8 @@ defmodule LoomWeb.AgentSessionController do
 
   # PATCH /api/agents/:id — any of `title` (rename), `pinned`, `archived`, `seen_seq` (read
   # up to there), `effort` (the thinking level, null for the default), `model` (likewise) and `project_id` (move into that project, or out of any with
-  # null). All but the last are local to loom and never pushed to the backend;
-  # a move relocates it.
+  # null), and `incognito: false` (keep an incognito session: into Recents,
+  # out of its sandbox). Only a move and keeping touch the backend.
   def update(conn, %{"id" => id} = params) do
     changes =
       [
@@ -74,7 +75,8 @@ defmodule LoomWeb.AgentSessionController do
         {"seen_seq", &Agent.seen(id, &1)},
         {"effort", &Agent.set_effort(id, &1)},
         {"model", &Agent.set_model(id, &1)},
-        {"project_id", &Agent.move(id, &1)}
+        {"project_id", &Agent.move(id, &1)},
+        {"incognito", &keep(id, &1)}
       ]
       |> Enum.filter(fn {key, _} -> Map.has_key?(params, key) end)
 
@@ -84,9 +86,13 @@ defmodule LoomWeb.AgentSessionController do
     end
   end
 
+  defp keep(id, false), do: Agent.promote(id)
+  defp keep(_id, _), do: {:error, "a session can only be kept, not made incognito"}
+
   defp refused(:ok), do: nil
   defp refused({:error, :busy}), do: {:error, "the session is in the middle of a turn"}
   defp refused({:error, {:unknown_project, _}}), do: {:error, "no such project"}
+  defp refused({:error, :incognito}), do: {:error, "keep the incognito session first"}
   defp refused({:error, reason}), do: {:error, reason}
 
   # DELETE /api/agents/:id — stop the session *and* discard its history.
@@ -103,6 +109,7 @@ defmodule LoomWeb.AgentSessionController do
     []
     |> maybe_put(:title, params["title"])
     |> maybe_put(:project, params["project_id"])
+    |> maybe_put(:kind, if(params["incognito"] == true and params["project_id"] == nil, do: "incognito"))
   end
 
   defp maybe_put(opts, _key, nil), do: opts

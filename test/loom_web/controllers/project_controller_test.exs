@@ -130,6 +130,37 @@ defmodule LoomWeb.ProjectControllerTest do
     refute instructions =~ "Home"
   end
 
+  test "an incognito session starts sandboxed in its own directory, and is kept on request", %{
+    conn: conn
+  } do
+    %{"id" => id, "kind" => "incognito"} =
+      conn
+      |> post(~p"/api/agents", %{backend: "claude_code", incognito: true})
+      |> json_response(201)
+
+    ws = Loom.Agent.Sandbox.workspace(id)
+    assert %{sandbox: true, cc_cwd: ^ws, instructions: instructions} = BackendStub.last_meta()
+    assert instructions =~ "incognito"
+    assert File.dir?(ws)
+
+    # It cannot be moved into a project before it is kept.
+    %{"id" => pid} = create_project(conn, %{name: "Work"})
+    conn |> patch(~p"/api/agents/#{id}", %{project_id: pid}) |> json_response(422)
+
+    # Nor be filed by the classifier, which looks only at sessions of no kind.
+    assert %{"kind" => nil} =
+             conn |> patch(~p"/api/agents/#{id}", %{incognito: false}) |> json_response(200)
+
+    assert_receive {:stub_relocated, nil, instructions}
+    refute instructions =~ "incognito chat"
+    assert {:ok, %{kind: nil}} = Loom.Agent.Store.read_meta(id)
+
+    {:ok, :started} = Agent.submit(id, "hello")
+    text = BackendStub.await_turn()
+    assert text =~ "kept this incognito chat"
+    assert String.ends_with?(text, "hello")
+  end
+
   test "the next turn after a move tells the backend, once, and the transcript nothing", %{
     conn: conn
   } do

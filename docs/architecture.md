@@ -8,7 +8,8 @@ in [deploy.md](deploy.md).
 ## 1. Non-goals
 
 - **Multi-tenancy.** One password, one token for every device. Agents run as
-  the BEAM's uid, with no sandbox.
+  the BEAM's uid, with no sandbox (an incognito session's, §2.12, keeps it
+  tidy, not safe).
 - **Permission prompts.** Everything runs in auto mode. Nobody is around to
   press `y`, so a prompt would only stall the agent.
 - **Our own agent loop.** Tools, context, compaction and memory belong to the
@@ -381,6 +382,30 @@ installed like `loom-notice`), calling `/api/tidy/*` (`TidyController`).
   "handoff"`, "handed off"), or starts on it at once with `--start`. The
   user's agreement first is the skill's rule; the backend is told who handed
   it off.
+
+### 2.12 Incognito sessions
+
+For quick, scattered questions that must not pollute memory or project files:
+`kind: "incognito"` (`POST /api/agents` with `incognito: true`, from the arrow
+beside New chat; any engine). Hygiene, not security: nothing is hidden.
+
+- **Its own directory.** The cwd is `<session>/workspace`, gone with the
+  session; never in a project (a move is refused until it is kept).
+- **Read everything, write little** (`Loom.Agent.Sandbox`). Claude Code and
+  Kiro run under `bwrap`: `/` read-only, writable only the workspace, the
+  output, `/tmp`, `~/.cache` and the engine's own conversation store (CC's
+  `projects/<cwd-slug>`, Kiro's `~/.kiro/sessions` and
+  `~/.local/share/kiro-cli` minus its knowledge bases). Claude Code's auto
+  memory is off (`CLAUDE_CODE_DISABLE_AUTO_MEMORY`). Codex threads get
+  `workspace-write` with the output as a writable root and the network on,
+  on start and every resume. The agent is told in its system prompt.
+- **Out of every list** but Settings → Incognito: not Recents, search, tidy,
+  project filing, or Dream (no scope).
+- **Kept** with `incognito: false` (`Session.promote/1`, refused mid-turn): the
+  sandbox goes, the session relocates to the home directory and joins Recents,
+  and the backend is told ahead of its next message. Files stay where they were.
+- **Deleted 30 days after its last message** (`Loom.Agent.Incognito`, hourly),
+  with Claude Code's directory for it.
 
 ## 3. Client protocol
 
