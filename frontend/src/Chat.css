@@ -290,6 +290,11 @@
   color: var(--red);
   font-size: 0.923rem;
 }
+.chat-banner.flagged {
+  background: none;
+  color: var(--fg-dim);
+  border-bottom: 1px solid var(--line);
+}
 
 /* ── Timeline ────────────────────────────────────────────────────────── */
 

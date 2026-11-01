@@ -32,6 +32,63 @@ defmodule Loom.Agent do
   end
 
   @doc """
+  Whether a safety classifier has stopped the model in this session. What
+  tripped it stays in the conversation and is liable to trip it again on every
+  later turn, so what keeps a session for a fixed job (Dream, an employee, the
+  bell, a task) starts a fresh one instead.
+  """
+  def flagged?(id),
+    do: match?({:ok, %{flagged_at: at}} when is_integer(at), Loom.Agent.Store.read_meta(id))
+
+  @doc "Whether the session is mid-turn. One that is not running is not."
+  def busy?(id) do
+    exists?(id) and info(id).status in [:starting, :running]
+  catch
+    :exit, _ -> false
+  end
+
+  @doc "What the agent last said in the session, or nil."
+  def last_reply(id) do
+    id
+    |> Loom.Agent.Store.read_events(500)
+    |> Enum.find_value(fn
+      %{kind: :assistant_text, payload: %{text: text}} when is_binary(text) -> text
+      _ -> nil
+    end)
+  end
+
+  @doc """
+  The options that start a session carrying on from flagged `id` for the job
+  it did: shown below it as one thread, and told, ahead of its first message,
+  `what` it needs to know. Nothing of the flagged conversation goes with it
+  but what `what` says.
+  """
+  def set_aside_opts(id, what) do
+    [
+      earlier_opt(id),
+      note: "Carried on from a session a safety classifier stopped, shown above.",
+      notice:
+        "[Note from Loom, not written by the user: this session carries on from an " <>
+          "earlier one that a safety classifier stopped, so it starts afresh. Do not " <>
+          "read that earlier session; what you need from it is below.]" <>
+          if(what in [nil, ""], do: "", else: "\n\n" <> what)
+    ]
+  end
+
+  @doc """
+  The option that starts a session carrying on from `id` for the job it did,
+  shown below it as one thread: `{:earlier, ids}`, the 30 newest.
+  """
+  def earlier_opt(id), do: {:earlier, Enum.take([id | earlier_of(id)], 30)}
+
+  defp earlier_of(id) do
+    case Loom.Agent.Store.read_meta(id) do
+      {:ok, %{earlier: list}} when is_list(list) -> Enum.filter(list, &is_binary/1)
+      _ -> []
+    end
+  end
+
+  @doc """
   Restore a persisted session's process from disk.
 
   A session that was mid-turn when the node stopped comes back `:interrupted`

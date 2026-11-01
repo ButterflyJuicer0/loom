@@ -236,6 +236,66 @@ defmodule Loom.EmployeesTest do
     assert e["past_work"] == [first]
   end
 
+  test "a flagged work session is turned over at the next wake-up, handoff or not",
+       %{server: server} do
+    {:ok, e} = Employees.create(%{"name" => "小拦"}, server)
+    first = e["work_session"]
+    {:ok, _} = Employees.wake(e["id"], nil, server)
+    BackendStub.await_turn()
+    [{pid, _}] = Registry.lookup(Loom.Agent.Registry, first)
+    send(pid, {:stub, [{:event, :flagged, %{category: "cyber", fell_back: false}}]})
+    end_turn(first, card(%{}), server)
+
+    {:ok, _} = Employees.wake(e["id"], nil, server)
+    prompt = BackendStub.await_turn()
+    assert prompt =~ "a safety classifier stopped the model"
+    {:ok, e} = Employees.get(e["id"], server)
+    assert e["work_session"] != first
+    assert e["past_work"] == [first]
+  end
+
+  test "the chat is new each day, and at once when flagged; not mid-conversation",
+       %{server: server} do
+    {:ok, e} = Employees.create(%{"name" => "小聊"}, server)
+    # Paused, so no wake-up's turn gets in the way; the chat turns over anyway.
+    {:ok, e} = Employees.pause(e["id"], true, server)
+    first = e["chat_session"]
+    run = fn now -> :sys.replace_state(server, &Employees.run(&1, e["id"], now)) end
+    chat = fn -> elem(Employees.get(e["id"], server), 1)["chat_session"] end
+
+    # Unused: kept, whatever the day.
+    run.(System.system_time(:millisecond) + :timer.hours(48))
+    assert chat.() == first
+
+    {:ok, _} = Agent.submit(first, "hi")
+    BackendStub.await_turn()
+    end_turn(first, "hello boss", server)
+
+    # The same day: kept. The next: a new one, which may look back.
+    run.(System.system_time(:millisecond) + :timer.minutes(40))
+    assert chat.() == first
+    run.(System.system_time(:millisecond) + :timer.hours(24))
+    second = chat.()
+    assert second != first
+    {:ok, e} = Employees.get(e["id"], server)
+    assert e["past_chat"] == [first]
+
+    {:ok, _} = Agent.submit(second, "and now?")
+    prompt = BackendStub.await_turn()
+    assert prompt =~ "loom-session read #{first}"
+    [{pid, _}] = Registry.lookup(Loom.Agent.Registry, second)
+    send(pid, {:stub, [{:event, :flagged, %{category: nil, fell_back: true}}]})
+    end_turn(second, "ok", server)
+
+    # Flagged: new at once, told not to look back.
+    run.(System.system_time(:millisecond))
+    third = chat.()
+    assert third not in [first, second]
+    {:ok, _} = Agent.submit(third, "again")
+    prompt = BackendStub.await_turn()
+    assert prompt =~ "Do not read that earlier session"
+  end
+
   test "a turn's end still in the mailbox is read before waking again", %{server: server} do
     {:ok, e} = Employees.create(%{"name" => "小码"}, server)
     {:ok, _} = Employees.wake(e["id"], nil, server)

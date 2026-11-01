@@ -209,8 +209,13 @@ defmodule Loom.Notices do
   def handle_call(:session, _from, state) do
     id = state.marks["session"]
 
+    carry = if is_binary(id), do: carry_on(id, state.clock.())
+
     result =
       cond do
+        carry != nil ->
+          start_bell(carry)
+
         is_binary(id) and Agent.exists?(id) ->
           {:ok, id}
 
@@ -218,11 +223,7 @@ defmodule Loom.Notices do
           with {:ok, _} <- Agent.restore_session(id), do: {:ok, id}
 
         true ->
-          id = Agent.new_id()
-
-          with {:ok, _} <-
-                 Agent.start_session(id, backend: :claude_code, kind: "bell", title: "Bell"),
-               do: {:ok, id}
+          start_bell([])
       end
 
     case result do
@@ -616,6 +617,40 @@ defmodule Loom.Notices do
     {from, to} = @quiet
     h = hour(now)
     h >= from or h < to
+  end
+
+  # The bell's chat starts afresh each day: what it goes over is in the lists,
+  # not the conversation. And at once when a safety classifier stopped the
+  # model in it. Never mid-turn, nor within half an hour of the last word.
+  # The options of the new one, or nil to keep this one.
+  defp carry_on(id, now) do
+    with {:ok, meta} <- Agent.Store.read_meta(id),
+         true <- (meta[:turns] || 0) > 0,
+         flagged = is_integer(meta[:flagged_at]),
+         true <- flagged or day(meta[:created_at] || 0) != day(now),
+         false <- Agent.busy?(id),
+         true <- flagged or idle_long?(id, now) do
+      if flagged, do: Agent.set_aside_opts(id, nil), else: [Agent.earlier_opt(id)]
+    else
+      _ -> nil
+    end
+  end
+
+  defp idle_long?(id, now) do
+    case Agent.exists?(id) && Agent.info(id) do
+      %{last_active_at: at} when is_integer(at) -> now - at >= :timer.minutes(30)
+      _ -> true
+    end
+  catch
+    :exit, _ -> true
+  end
+
+  defp start_bell(extra) do
+    id = Agent.new_id()
+
+    with {:ok, _} <-
+           Agent.start_session(id, [backend: :claude_code, kind: "bell", title: "Bell"] ++ extra),
+         do: {:ok, id}
   end
 
   defp local(ms), do: DateTime.from_unix!(div(ms, 1000) + @offset * 60)

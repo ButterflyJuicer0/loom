@@ -360,13 +360,17 @@ function App() {
   }
 
   // A moon: the scope's sleep session, made on first use, on its report.
+  // Asked of the server each time: it moves a session a safety classifier
+  // stopped to a fresh one. Offline, the one known.
   const [sleepTab, setSleepTab] = useState<SleepTab>("report")
   const openSleep = async (scope: string) => {
     let id = dreams.find((d) => scopeOf(d) === scope)?.id
-    if (!id) {
+    try {
       const made = await openDream(scope)
       upsert(made)
       id = made.id
+    } catch (e) {
+      if (!id) throw e
     }
     setSleepTab("report")
     select(id)
@@ -622,7 +626,8 @@ function App() {
   const active = everything.find((s) => s.id === activeId) ?? null
   const shownProject = projects.find((p) => p.id === projectPage) ?? null
   const activeProject = active?.project_id ? projects.find((p) => p.id === active.project_id) : undefined
-  const bellChat = everything.find((s) => s.kind === "bell")
+  // The newest: it starts afresh each day.
+  const bellChat = everything.filter((s) => s.kind === "bell").sort((a, b) => b.created_at - a.created_at)[0]
   // By its sessions rather than `employee_id`: a summary from an older
   // server, or an older route, may not carry it.
   const activeEmployee =

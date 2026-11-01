@@ -663,6 +663,25 @@ defmodule Loom.Agent.Backend.ClaudeCode do
      ]}
   end
 
+  # A safety classifier stopped the model. Claude Code says so in one of two
+  # ways (measured, 2.1.312): a notice that it goes on, once, on another model,
+  # or a refusal it cannot get round, which the `result` then reports as an
+  # error. Either way the conversation now holds what tripped it, and every
+  # later turn on that model is liable to trip it again.
+  defp translate(
+         handle,
+         %{"type" => "system", "subtype" => "model_refusal_no_fallback"} = message
+       ) do
+    {handle, [{:event, :flagged, %{category: message["api_refusal_category"], fell_back: false}}]}
+  end
+
+  defp translate(handle, %{"type" => "system", "subtype" => "informational", "content" => text})
+       when is_binary(text) do
+    if text =~ ~r/safeguards/i,
+      do: {handle, [{:event, :flagged, %{category: nil, fell_back: true}}]},
+      else: {handle, []}
+  end
+
   defp translate(handle, %{"type" => "system"}), do: {handle, []}
 
   # The ack for our own interrupt. `still_queued` would list messages that
