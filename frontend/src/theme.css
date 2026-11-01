@@ -211,8 +211,9 @@ samp,
 }
 
 .switcher-card {
-  flex: 0 0 68vw;
-  height: min(40vh, 340px);
+  flex: 0 0 76vw;
+  height: min(52vh, 460px);
+  box-sizing: border-box;
   scroll-snap-align: center;
   display: flex;
   flex-direction: column;
@@ -262,13 +263,30 @@ samp,
   overflow: hidden;
 }
 
-.switcher-gist {
+/* Under the title, the recap: where it got to, what it waits for. */
+.switcher-recap {
+  flex: 0 0 auto;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  padding-bottom: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+  font-size: calc(1rem * var(--card-text-scale, 1));
+  line-height: 1.45;
+}
+
+/* Then the last reply from its start, as much as the card holds. */
+.switcher-body {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
-  font-size: calc(1rem * var(--card-text-scale, 1));
-  line-height: 1.45;
+  white-space: pre-line;
+  font-size: calc(0.875rem * var(--card-body-scale, 1));
+  line-height: 1.5;
   color: var(--fg-dim);
+  -webkit-mask-image: linear-gradient(to bottom, #000 80%, transparent);
+  mask-image: linear-gradient(to bottom, #000 80%, transparent);
 }
 
 /* A crumb per card, coloured by its state like the status dot; the one in
@@ -277,7 +295,7 @@ samp,
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(50% + min(20vh, 170px) + 22px);
+  top: calc(50% + min(26vh, 230px) + 22px);
   z-index: 2;
   display: flex;
   justify-content: center;
@@ -315,7 +333,7 @@ samp,
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(50% - min(20vh, 170px) - 40px);
+  top: calc(50% - min(26vh, 230px) - 40px);
   text-align: center;
   font-size: 0.8125rem;
   color: var(--fg-dim);
@@ -1203,6 +1221,29 @@ pre.code,
   gap: 8px;
 }
 
+.text-sizes-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.text-sizes-toggle svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--fg-dim);
+  transition: transform 0.15s;
+}
+
+.text-sizes-toggle.open svg {
+  transform: rotate(90deg);
+}
+
 .settings-reset {
   margin-left: auto;
   padding: 0;
@@ -1222,7 +1263,7 @@ pre.code,
 
 .size-row {
   display: grid;
-  grid-template-columns: 5.5rem 1fr 3rem;
+  grid-template-columns: 6.75rem 1fr 3rem;
   align-items: center;
   gap: 12px;
 }

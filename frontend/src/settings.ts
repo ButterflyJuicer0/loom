@@ -19,9 +19,11 @@ export type Settings = {
   sidebarScale: number
   chatScale: number
   codeScale: number
-  // The sidebar's Working cards: their titles, and the text under them.
+  // The cards of the phone's switcher (Switcher.tsx): titles, the recap under
+  // them (also a Working row's second line), and the last reply below that.
   cardTitleScale: number
   cardTextScale: number
+  cardBodyScale: number
   // What "+" makes, with nothing to choose. Codex is a setting away.
   backend: AgentBackend
 }
@@ -35,6 +37,7 @@ const DEFAULTS: Settings = {
   codeScale: 1,
   cardTitleScale: 1,
   cardTextScale: 1,
+  cardBodyScale: 1,
   backend: "claude_code",
 }
 
@@ -48,7 +51,7 @@ function load(): Settings {
 
 // The status bar and a home-screen app's chrome follow the page: black on a
 // phone and #212121 on a desktop when dark (see index.html), white when light.
-function apply({ appearance, fontScale, sidebarScale, chatScale, codeScale, cardTitleScale, cardTextScale }: Settings) {
+function apply({ appearance, fontScale, sidebarScale, chatScale, codeScale, cardTitleScale, cardTextScale, cardBodyScale }: Settings) {
   const root = document.documentElement
   root.dataset.theme = appearance
   root.style.setProperty("--font-scale", String(fontScale))
@@ -57,6 +60,7 @@ function apply({ appearance, fontScale, sidebarScale, chatScale, codeScale, card
   root.style.setProperty("--code-scale", String(codeScale))
   root.style.setProperty("--card-title-scale", String(cardTitleScale))
   root.style.setProperty("--card-text-scale", String(cardTextScale))
+  root.style.setProperty("--card-body-scale", String(cardBodyScale))
   for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
     meta.dataset.dark ??= meta.content
     meta.content = appearance === "light" ? "#ffffff" : meta.dataset.dark

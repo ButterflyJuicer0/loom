@@ -123,29 +123,35 @@ export function SettingsDialog({
 
 // The interface in px, as it is set; each area in percent of it.
 const AREAS: {
-  key: "sidebarScale" | "chatScale" | "codeScale" | "cardTitleScale" | "cardTextScale"
+  key: "sidebarScale" | "chatScale" | "codeScale" | "cardTitleScale" | "cardTextScale" | "cardBodyScale"
   label: string
 }[] = [
   { key: "sidebarScale", label: "Sidebar" },
   { key: "chatScale", label: "Messages" },
   { key: "codeScale", label: "Code" },
-  // The sidebar's Working group: cards on a phone, a second line on a desktop.
-  { key: "cardTitleScale", label: "Working titles" },
-  { key: "cardTextScale", label: "Working text" },
+  // The phone's switcher cards; the recap is also a Working row's second line.
+  { key: "cardTitleScale", label: "Card title" },
+  { key: "cardTextScale", label: "Card summary" },
+  { key: "cardBodyScale", label: "Card text" },
 ]
 
 /**
  * Text size: the whole interface, then the sidebar, the conversation and its
  * code each on top of it. Sliders, applied as they move, so the page behind
- * the dialog is the preview.
+ * the dialog is the preview. Folded until asked for: eight sliders are a lot
+ * of dialog for something set once.
  */
 function TextSizes({ settings, onChange }: { settings: Settings; onChange: (patch: Partial<Settings>) => void }) {
   const px = Math.round(16 * settings.fontScale)
   const changed = settings.fontScale !== 1 || AREAS.some(({ key }) => settings[key] !== 1)
+  const [open, setOpen] = useState(false)
   return (
     <div className="settings-row text-sizes">
       <div className="settings-text">
-        <span className="settings-label">Text size</span>
+        <button className={"text-sizes-toggle" + (open ? " open" : "")} onClick={() => setOpen(!open)} aria-expanded={open}>
+          <span className="settings-label">Text size</span>
+          <ChevronRight />
+        </button>
         <span className="settings-hint">On this device.</span>
         {changed && (
           <button
@@ -158,6 +164,7 @@ function TextSizes({ settings, onChange }: { settings: Settings; onChange: (patc
                 codeScale: 1,
                 cardTitleScale: 1,
                 cardTextScale: 1,
+                cardBodyScale: 1,
               })
             }
           >
@@ -165,6 +172,7 @@ function TextSizes({ settings, onChange }: { settings: Settings; onChange: (patc
           </button>
         )}
       </div>
+      {open && (
       <div className="size-rows">
         <div className="size-row">
           <span className="size-name">Interface</span>
@@ -198,6 +206,7 @@ function TextSizes({ settings, onChange }: { settings: Settings; onChange: (patc
           )
         })}
       </div>
+      )}
     </div>
   )
 }

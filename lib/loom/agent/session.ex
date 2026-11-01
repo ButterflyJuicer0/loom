@@ -1534,8 +1534,9 @@ defmodule Loom.Agent.Session do
     )
   end
 
-  # The start of the last reply, as a line of text: what a Working card on the
-  # phone shows, to recall where the session got to.
+  # The start of the last reply as plain text, its paragraphs kept: the end of
+  # a card in the phone's switcher, and a Working row's second line until
+  # there is a recap.
   defp preview(transcript) do
     Enum.find_value(transcript, fn
       %{kind: :assistant_text, payload: %{text: text}} when is_binary(text) ->
@@ -1546,10 +1547,11 @@ defmodule Loom.Agent.Session do
           |> String.replace(~r/\[([^\]]*)\]\([^)]*\)/u, "\\1")
           |> String.replace(~r/[*`~]+/u, "")
           |> String.replace(~r/[#>|]+/u, " ")
-          |> String.replace(~r/\s+/u, " ")
+          |> String.replace(~r/[ \t]+/u, " ")
+          |> String.replace(~r/\s*\n\s*/u, "\n")
           |> String.trim()
 
-        if text != "", do: String.slice(text, 0, 160)
+        if text != "", do: String.slice(text, 0, 600)
 
       _ ->
         nil

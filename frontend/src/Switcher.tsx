@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from "react"
 import { createPortal } from "react-dom"
 import type { AgentInfo } from "./api"
-import { gist, unread } from "./Sidebar"
+import { unread } from "./Sidebar"
 
 // How far up a card has to be thrown, or how fast, to count as Done.
 const THROW_PX = 90
@@ -10,7 +10,8 @@ const THROW_SPEED = 0.6 // px per ms
 /**
  * The phone's switcher for the sessions in Working, opened by dragging up the
  * line under the composer: iOS's app switcher over the blurred chat. A card
- * each, swiped across; crumbs below in the colour of each one's state (as the
+ * each, in three parts: the title, the recap (once there is one; see
+ * `Loom.Agent.Recap`) and the last reply from its start. Swiped across; crumbs below in the colour of each one's state (as the
  * status dot: working, stopped, unread, idle), the one in view drawn long. A
  * tap opens the session, a card thrown up is Done, a tap beside the cards
  * closes it.
@@ -122,7 +123,8 @@ export function Switcher({
                 <span className="switcher-label">{s.title ?? s.id}</span>
                 {unread(s) && <span className="session-unread" />}
               </div>
-              <div className="switcher-gist">{gist(s)}</div>
+              {s.recap && <div className="switcher-recap">{s.recap}</div>}
+              <div className="switcher-body">{s.preview ?? ""}</div>
             </div>
           )
         })}
