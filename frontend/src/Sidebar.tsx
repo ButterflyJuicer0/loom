@@ -199,7 +199,8 @@ export function Sidebar({
     return () => clearInterval(timer)
   }, [])
   const [devicesOpen, setDevicesOpen] = useState(false)
-  // New chat asks first: a chat or an incognito one, and on which model.
+  // A chat or an incognito one, on which engine: the desktop row's arrow
+  // asks; a phone's pill asks on a tap.
   const [newMenu, setNewMenu] = useState<DOMRect | null>(null)
   const toggleNewMenu = (e: MouseEvent) => {
     e.stopPropagation()
@@ -279,9 +280,12 @@ export function Sidebar({
       <div className="session-list">
         {/* ChatGPT's first row on a desktop. A phone has its floating pill. */}
         {!narrow && (
-          <div className="nav-item nav-new" role="button" onClick={toggleNewMenu}>
+          <div className="nav-item nav-new" role="button" onClick={() => onCreate(defaultBackend)}>
             <SquarePen className="nav-icon" />
             <span className="nav-label">New chat</span>
+            <button className="nav-new-more" onClick={toggleNewMenu} title="Incognito, or another engine">
+              <ChevronDown />
+            </button>
           </div>
         )}
         {/* A top-level entry, like the sidebar's others: folded until asked. */}
@@ -501,7 +505,7 @@ export function Sidebar({
       )}
       {newMenu && (
         <NewMenu
-          owner=".nav-new, .new-chat"
+          owner=".nav-new-more, .new-chat"
           anchor={newMenu}
           defaultBackend={defaultBackend}
           onPick={(backend, model, incognito) => {

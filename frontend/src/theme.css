@@ -1668,3 +1668,28 @@ body.sidebar-resizing iframe {
   width: 1rem;
   height: 1rem;
 }
+
+/* The desktop New chat row creates on a click; its arrow opens NewMenu. */
+.nav-new-more {
+  display: grid;
+  place-items: center;
+  margin-left: auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.nav-new-more:hover {
+  background: var(--bg-card);
+  color: var(--fg);
+}
+
+.nav-new-more svg {
+  width: 1rem;
+  height: 1rem;
+}
