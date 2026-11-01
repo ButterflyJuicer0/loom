@@ -115,6 +115,10 @@ defmodule Loom.Agent.Session do
   # a restart restores every session, and must not make them all "just now".
   @activity [:user, :assistant_text, :turn_done]
 
+  # How long a finished turn sits unanswered before its session is recapped
+  # for the sidebar's Working card; see `Loom.Agent.Recap`.
+  @recap_after_ms :timer.minutes(10)
+
   # What the agent says, for `reply_seq`.
   @replies [:assistant_text, :turn_done]
 
@@ -445,6 +449,7 @@ defmodule Loom.Agent.Session do
           pinned: meta[:pinned] == true,
           archived_at: if(is_integer(meta[:archived_at]), do: meta[:archived_at]),
           done_at: if(is_integer(meta[:done_at]), do: meta[:done_at]),
+          recap: if(is_binary(meta[:recap]), do: meta[:recap]),
           tidied_at: if(is_integer(meta[:tidied_at]), do: meta[:tidied_at]),
           kind: if(is_binary(meta[:kind]), do: meta[:kind]),
           employee_id: if(is_binary(meta[:employee_id]), do: meta[:employee_id]),
@@ -574,6 +579,9 @@ defmodule Loom.Agent.Session do
       archived_at: nil,
       # When the user marked it done, or nil. See `done/2`.
       done_at: nil,
+      # Where it got to, in a sentence, once a turn has sat unanswered for a
+      # while; nil once the user writes again. See `Loom.Agent.Recap`.
+      recap: nil,
       # When a tidying last looked at it, or nil. See `tidied/1`.
       tidied_at: nil,
       # nil for a conversation; "dream" for a project's sleep session, which
@@ -983,6 +991,30 @@ defmodule Loom.Agent.Session do
 
   def handle_info({:classified, _token, _project_id}, state), do: {:noreply, state}
 
+  # Recapped only if nothing has happened since the turn ended (`seq` is
+  # where it was) and the user has not set it aside as done.
+  def handle_info({:recap, seq}, %{seq: seq, status: :idle, done_at: nil} = state) do
+    session = self()
+    module = recapper()
+    messages = recap_messages(state.transcript)
+
+    Task.Supervisor.start_child(Loom.Agent.TaskSupervisor, fn ->
+      send(session, {:recapped, seq, module.recap(messages)})
+    end)
+
+    {:noreply, state}
+  end
+
+  def handle_info({:recap, _seq}, state), do: {:noreply, state}
+
+  def handle_info({:recapped, seq, recap}, %{seq: seq} = state) when is_binary(recap) do
+    state = %{state | recap: recap}
+    persist_meta(state)
+    {:noreply, state}
+  end
+
+  def handle_info({:recapped, _seq, _recap}, state), do: {:noreply, state}
+
   def handle_info(message, state) do
     case Backend.impl(state.backend).decode(state.handle, message) do
       {:ok, handle, out} ->
@@ -1080,8 +1112,9 @@ defmodule Loom.Agent.Session do
     state =
       state
       |> maybe_title(if String.trim(text) == "", do: Files.title(files), else: text)
-      # Writing in it again means it is not done after all.
-      |> Map.put(:done_at, nil)
+      # Writing in it again means it is not done after all, and its recap
+      # is out of date.
+      |> Map.merge(%{done_at: nil, recap: nil})
       |> emit(:user, %{
         text: text,
         # Structured rather than folded into `text`, so a bubble can show
@@ -1128,6 +1161,27 @@ defmodule Loom.Agent.Session do
     state.project_id == nil and state.kind == nil and state.turns == 0 and
       String.trim(text) != "" and
       classifier() != nil and Loom.Projects.list() != []
+  end
+
+  # Only the user's own conversations are in Working.
+  defp schedule_recap(%{kind: nil} = state) do
+    if recapper(), do: Process.send_after(self(), {:recap, state.seq}, @recap_after_ms)
+    state
+  end
+
+  defp schedule_recap(state), do: state
+
+  defp recapper, do: Application.get_env(:loom, :recap, Loom.Agent.Recap)
+
+  # The conversation, oldest first, as the recap reads it.
+  defp recap_messages(transcript) do
+    transcript
+    |> Enum.flat_map(fn
+      %{kind: :user, payload: %{text: text}} when is_binary(text) -> [{"user", text}]
+      %{kind: :assistant_text, payload: %{text: text}} when is_binary(text) -> [{"agent", text}]
+      _ -> []
+    end)
+    |> Enum.reverse()
   end
 
   defp classifier,
@@ -1238,7 +1292,7 @@ defmodule Loom.Agent.Session do
     state = %{state | turns: state.turns + 1}
 
     if state.queue == [] do
-      state |> set_status(:idle) |> announce_turn_end() |> schedule_release()
+      state |> set_status(:idle) |> announce_turn_end() |> schedule_release() |> schedule_recap()
     else
       drain(state)
     end
@@ -1510,6 +1564,7 @@ defmodule Loom.Agent.Session do
       pinned: state.pinned,
       archived_at: state.archived_at,
       done_at: state.done_at,
+      recap: state.recap,
       tidied_at: state.tidied_at,
       kind: state.kind,
       employee_id: state.employee_id,
@@ -1634,6 +1689,7 @@ defmodule Loom.Agent.Session do
       pinned: state.pinned,
       archived_at: state.archived_at,
       done_at: state.done_at,
+      recap: state.recap,
       tidied_at: state.tidied_at,
       kind: state.kind,
       employee_id: state.employee_id,

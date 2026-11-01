@@ -152,6 +152,9 @@ export type AgentInfo = {
   done_at?: number | null
   // The start of its last reply, as plain text, for a Working card.
   preview?: string | null
+  // Where it got to, in a sentence, once a turn has sat unanswered for ten
+  // minutes; null once the user writes again.
+  recap?: string | null
   // "dream" for a scope's sleep session, which the lists leave out and the
   // moon opens; see `Sleep.tsx`. "employee_chat" and "employee_work" for a
   // virtual employee's, opened from its page; see `Employees.tsx`. "bell" for

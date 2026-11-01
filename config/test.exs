@@ -57,3 +57,6 @@ config :loom, Loom.Employees,
   path: Path.join(System.tmp_dir!(), "loom-test-#{System.pid()}/employees.json"),
   tick: :timer.hours(24),
   run: false
+
+# No recaps of finished turns either: each would be a real model call.
+config :loom, recap: nil

@@ -254,6 +254,60 @@ samp,
   cursor: pointer;
 }
 
+/* Under the card strip: a crumb per card, coloured by its state like the
+   status dot, the one in view drawn long. */
+.working-crumbs {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 2px 0 6px;
+}
+
+.working-crumb {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 25%, transparent);
+  transition: width 0.2s;
+}
+
+.working-crumb.shown {
+  width: 18px;
+}
+
+.working-crumb.running,
+.working-crumb.starting {
+  background: var(--green);
+}
+
+.working-crumb.interrupted {
+  background: var(--red);
+}
+
+.working-crumb.unread {
+  background: var(--unread);
+}
+
+/* Working on a desktop: a second line under the title, where it got to. */
+.sidebar .session.working {
+  flex-wrap: wrap;
+  row-gap: 0;
+  padding-block: 6px;
+}
+
+.sidebar .session.working .session-gist {
+  order: 10;
+  flex: 1 0 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.8125rem;
+  color: var(--fg-dim);
+}
+
 .working-done svg {
   width: 1rem;
   height: 1rem;

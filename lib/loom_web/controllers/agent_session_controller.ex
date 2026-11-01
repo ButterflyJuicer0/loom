@@ -132,6 +132,7 @@ defmodule LoomWeb.AgentSessionController do
       archived_at: Map.get(info, :archived_at),
       done_at: Map.get(info, :done_at),
       preview: Map.get(info, :preview),
+      recap: Map.get(info, :recap),
       kind: info.kind,
       employee_id: Map.get(info, :employee_id),
       seen_seq: info.seen_seq,
