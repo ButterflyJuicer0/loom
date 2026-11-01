@@ -2068,7 +2068,10 @@ function Composer({
               }
             }
 
-            if (e.key !== "Enter" || e.shiftKey) return
+            // Enter is a new line, as in any editor; Ctrl+Enter (⌘+Enter on a
+            // Mac) sends. A phone's keyboard has neither key: there the send
+            // button sends and return is a new line.
+            if (e.key !== "Enter" || !(e.ctrlKey || e.metaKey)) return
 
             // An IME uses Enter to commit the candidate, and that keystroke
             // must not also send the message. Both guards are needed because
@@ -2110,8 +2113,8 @@ function Composer({
                   : interrupted
                     ? "Continue"
                     : busy
-                      ? "Send — it reaches the agent mid-turn"
-                      : "Send"
+                      ? "Send (Ctrl+Enter) — it reaches the agent mid-turn"
+                      : "Send (Ctrl+Enter)"
               }
             >
               <ArrowUp />
