@@ -96,9 +96,20 @@
   color: var(--fg);
 }
 
+/* A phone has no room for the name: the chevron alone. */
 @media (max-width: 640px) {
   .chat-project {
-    max-width: 5.5rem;
+    flex: 0 0 auto;
+    padding: 6px 2px;
+  }
+
+  .chat-project span {
+    display: none;
+  }
+
+  .chat-project svg {
+    width: 1.35rem;
+    height: 1.35rem;
   }
 }
 
