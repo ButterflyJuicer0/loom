@@ -6,6 +6,11 @@
 #   rel/ship.sh [REV]              full release + restart (rel/deploy.sh)
 #   rel/ship.sh --frontend [REV]   swap the built frontend in, no restart
 #   rel/ship.sh --force ...        allow REV not to contain live (a rollback)
+#   rel/ship.sh --yes ...          ship the commits listed since live
+#
+# Without --yes it only lists the commits between live and REV and stops:
+# dev carries other sessions' work, some of it the user said not to ship
+# yet. Show the list to the user, and re-run with --yes once they agree.
 #
 # REV defaults to dev. Several sessions deploy from this checkout; one that
 # built from an older tree used to undo another's deploy unnoticed.
@@ -13,11 +18,12 @@ set -eu
 cd "$(dirname "$0")/.."
 repo=$(pwd)
 
-mode=full force=
+mode=full force= yes=
 while [ $# -gt 0 ]; do
   case "$1" in
     --frontend) mode=frontend ;;
     --force) force=1 ;;
+    --yes) yes=1 ;;
     *) break ;;
   esac
   shift
@@ -35,6 +41,14 @@ if [ "$mode" = frontend ] && [ -n "$live" ] &&
   echo "ship: changes outside frontend/ since live; a frontend swap would not ship them:" >&2
   git diff --name-only "$live" "$rev" -- . ':!frontend' ':!docs' ':!*.md' | sed 's/^/  /' >&2
   exit 1
+fi
+
+if [ -z "$yes" ]; then
+  echo "ship: these commits would go live ($mode):"
+  if [ -n "$live" ]; then git log --no-merges --format='  %h %ar  %s' "$live..$rev"
+  else git log -1 --format='  %h %s' "$rev"; fi
+  echo "ship: nothing shipped. Check with the user, then re-run with --yes."
+  exit 2
 fi
 
 wt=$(mktemp -d /tmp/loom-ship-XXXXXX)
