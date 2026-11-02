@@ -58,8 +58,10 @@ defmodule Loom.Agent.Guard do
   @doc """
   Claude Code's flags for a session: the hook when it has a workstation, and
   its permissions as Claude Code's own (`--tools`, `--allowedTools`,
-  `--disallowedTools`, `--strict-mcp-config`), under `dontAsk`, where a call
-  no rule allows is refused rather than asked about. Every other session runs
+  `--disallowedTools`), under `dontAsk`, where a call no rule allows is
+  refused rather than asked about. MCP tools are allowed one by one
+  (`mcp__server__tool`, or `mcp__server` for all of one); with none allowed,
+  `--strict-mcp-config` loads no server at all. Every other session runs
   under `bypassPermissions`.
   """
   def claude_args(session_id) do
@@ -73,7 +75,10 @@ defmodule Loom.Agent.Guard do
           flag("--tools", [Enum.join(p["tools"] || [], ",")]) ++
           flag("--allowedTools", (p["allow"] || []) ++ (rules["allow_own"] || [])) ++
           flag("--disallowedTools", p["deny"] || []) ++
-          if(p["mcp"] == true, do: [], else: ["--strict-mcp-config"])
+          if(Enum.any?(p["allow"] || [], &String.starts_with?(&1, "mcp__")),
+            do: [],
+            else: ["--strict-mcp-config"]
+          )
 
       _ ->
         hook ++ ["--permission-mode", "bypassPermissions"]

@@ -485,7 +485,6 @@ defmodule Loom.EmployeesTest do
     "tools" => ["Bash", "Read", "Write", "Skill"],
     "allow" => ["Bash(m365 email_inbox:*)", "Bash(m365 email_read:*)"],
     "deny" => ["Bash(m365 * --confirm*)"],
-    "mcp" => false,
     "summary" => "只能读工作邮件"
   }
 
@@ -515,7 +514,15 @@ defmodule Loom.EmployeesTest do
     [e] = for e <- Employees.list(server), e["name"] == "分拣员", do: e
     assert e["permissions"]["summary"] == "只能读工作邮件"
 
-    for s <- [e["chat_session"], e["work_session"]] do
+    # The chat is the boss talking to it: an ordinary session.
+    refute Loom.Agent.Guard.guarded?(e["chat_session"])
+
+    assert Loom.Agent.Guard.claude_args(e["chat_session"]) == [
+             "--permission-mode",
+             "bypassPermissions"
+           ]
+
+    for s <- [e["work_session"]] do
       args = Loom.Agent.Guard.claude_args(s)
       assert ["--permission-mode", "dontAsk"] = Enum.slice(args, 0, 2)
       assert "Bash,Read,Write,Skill" in args
@@ -531,7 +538,20 @@ defmodule Loom.EmployeesTest do
     end
 
     assert File.read!(Path.join([Employees.workspace(e["id"]), ".employee", "status.md"])) =~
-             "## Your permissions (enforced)\n\n只能读工作邮件"
+             "## Your permissions (enforced in your work session)\n\n只能读工作邮件"
+
+    # MCP tools one by one: with one allowed, the servers load, and the rest
+    # of their tools are refused by dontAsk.
+    say.(%{
+      "id" => e["id"],
+      "permissions" =>
+        Map.update!(@mail_only, "allow", &(&1 ++ ["mcp__aws-docs__search_documentation"]))
+    })
+
+    args = Loom.Agent.Guard.claude_args(e["work_session"])
+    assert "mcp__aws-docs__search_documentation" in args
+    refute "--strict-mcp-config" in args
+    refute Loom.Agent.Guard.guarded?(e["chat_session"])
 
     # The settings page cannot set them.
     {:ok, same} = Employees.update(e["id"], %{"permissions" => nil, "role" => "x"}, server)

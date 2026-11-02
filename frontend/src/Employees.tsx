@@ -877,7 +877,7 @@ function SettingsPane({
       </p>
       <small className="emp-dim">
         {e.permissions
-          ? "Hard: Claude Code itself refuses anything else, and refusals show in Updates. "
+          ? "Hard, for its work: Claude Code itself refuses anything else there, and refusals show in Updates. Its chat with you is not limited. "
           : "Hard limits — only some tools, only some commands — are set in conversation. "}
         <button type="button" className="text-btn emp-inline-btn" onClick={onSetupChat}>
           Change in a chat

@@ -303,13 +303,17 @@ says when it needs the user.
 - **Permissions are soft, unless it is given some.** Soft: the projects and
   their workspaces are named in the prompt, with what to ask first; same Unix
   user as every agent. Hard (`permissions`, Claude Code only):
-  `{tools, allow, deny, mcp, summary}`, carried in the same guard file, and
-  turned by `Guard.claude_args/1` into Claude Code's own flags at each spawn:
+  `{tools, allow, deny, summary}`, for the **work session only** — the chat
+  is the boss talking to it and stays an ordinary session, told never to act
+  on what the work session read. Carried in the work session's guard file,
+  and turned by `Guard.claude_args/1` into Claude Code's own flags at each spawn:
   `--tools` (the only built-ins it has; the rest, `WebFetch` say, don't
   exist), `--allowedTools` (its `allow`, plus what Loom adds: read/write its
   workspace and memory, read its skills and own files,
-  `Bash(loom-notice:*)`), `--disallowedTools`, `--strict-mcp-config` unless
-  `mcp`, under `--permission-mode dontAsk` instead of `bypassPermissions`, so
+  `Bash(loom-notice:*)`), `--disallowedTools`, and `--strict-mcp-config`
+  unless `allow` names an MCP tool (`mcp__server__tool`, or `mcp__server`):
+  MCP is allowed tool by tool, the servers' other tools refused like any
+  call. All under `--permission-mode dontAsk` instead of `bypassPermissions`, so
   a call no rule allows is refused, never asked about. Claude Code splits
   `&&`/`;`/`|` chains and refuses `$(…)`, so a `Bash(prefix:*)` rule holds;
   absolute paths are `Read(//abs/**)`. A refusal comes back as
@@ -317,8 +321,8 @@ says when it needs the user.
   `by: "permissions"` (`Guard.denied/3`), and Updates shows it. They are not
   among the page's settings (`PATCH` ignores them): only a setup chat sets
   them, JSON and summary together; the page shows the summary, and a lock
-  "Restricted" mark on the page and the sidebar row. A change starts both
-  sessions again (`Agent.reload_backend/1`) and tells them. Nothing they are
+  "Restricted" mark on the page and the sidebar row. A change starts the work
+  session again (`Agent.reload_backend/1`) and tells it. Nothing they are
   allowed reaches Loom: no shell, `curl`, `loom rpc` or `node-cli.json`, so a
   restricted employee cannot lift its own; the setup prompt says never to
   allow those. Kiro and Codex employees cannot have them: saving says why.

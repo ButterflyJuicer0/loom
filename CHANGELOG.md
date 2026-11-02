@@ -18,10 +18,11 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 - **Hire in a chat**: "Describe it in a chat" on top of the hiring form opens
   a chat that talks the job through and creates the employee once you agree.
   The form stays.
-- **Hard permissions for an employee** (Claude Code): only the tools and
-  commands it is allowed, enforced by Claude Code itself, so text it reads
-  (mail, web pages) can't talk it into more. Set in a chat; the page shows a
-  summary in words and a "Restricted" mark, refusals show in Updates.
+- **Hard permissions for an employee's work** (Claude Code): only the tools,
+  commands and MCP tools it is allowed, enforced by Claude Code itself, so
+  text it reads (mail, web pages) can't talk it into more. Its chat with you
+  stays unlimited. Set in a chat; the page shows a summary in words and a
+  "Restricted" mark, refusals show in Updates.
 
 ### Fixed
 - An employee's memory directory in its guard rules: Claude Code turns every

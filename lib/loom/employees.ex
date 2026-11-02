@@ -1024,7 +1024,7 @@ defmodule Loom.Employees do
   defp start_session(e, kind, extra \\ []) do
     id = Agent.new_id()
     # Before it starts: its first spawn already has the hook, or not.
-    write_guard(e, id)
+    write_guard(e, id, kind)
     title = if kind == "employee_chat", do: "#{e["name"]} · chat", else: "#{e["name"]} · work"
 
     {:ok, backend} = Agent.Backend.parse(e["backend"] || "claude_code")
@@ -1279,13 +1279,14 @@ defmodule Loom.Employees do
     text =
       case e["permissions"] do
         %{"summary" => summary} ->
-          "[Loom: the boss changed your permissions. From now on: #{summary} Loom enforces them; what they refuse shows in your updates. See .employee/status.md.]"
+          "[Loom: the boss changed your work session's permissions. From now on: #{summary} Loom enforces them there; what they refuse shows in your updates. See .employee/status.md.]"
 
         _ ->
-          "[Loom: the boss lifted your permissions: you may use every tool again.]"
+          "[Loom: the boss lifted your work session's permissions: it may use every tool again.]"
       end
 
-    for s <- [e["chat_session"], e["work_session"]], is_binary(s) do
+    # Only the work session is held to them, so only it starts again.
+    for s <- [e["work_session"]], is_binary(s) do
       try do
         if Agent.exists?(s) do
           Agent.tell(s, text)
@@ -1417,9 +1418,6 @@ defmodule Loom.Employees do
       not (strings?.("allow") and strings?.("deny")) ->
         {:error, "permissions.allow and .deny are lists of rules"}
 
-      not is_boolean(Map.get(p, "mcp", false)) ->
-        {:error, "permissions.mcp is true or false"}
-
       blank?(p["summary"]) ->
         {:error, "permissions need a summary for the boss, in words"}
 
@@ -1429,7 +1427,6 @@ defmodule Loom.Employees do
            "tools" => Enum.uniq(p["tools"]),
            "allow" => p["allow"] || [],
            "deny" => p["deny"] || [],
-           "mcp" => Map.get(p, "mcp", false),
            "summary" => String.trim(p["summary"])
          }}
     end
@@ -1567,11 +1564,16 @@ defmodule Loom.Employees do
   end
 
   # The guard's rules for one of its sessions: none without a workstation or
-  # permissions.
-  defp write_guard(%{"workstation" => nil, "permissions" => nil}, session),
+  # permissions. Permissions hold the work session only, where it reads what
+  # can't be trusted on its own; the chat is the boss talking to it, an
+  # ordinary session (the boss's call, 2026-11-02).
+  defp write_guard(%{"permissions" => %{}} = e, session, "employee_chat"),
+    do: write_guard(Map.put(e, "permissions", nil), session, "employee_chat")
+
+  defp write_guard(%{"workstation" => nil, "permissions" => nil}, session, _kind),
     do: Guard.put(session, nil)
 
-  defp write_guard(e, session) do
+  defp write_guard(e, session, _kind) do
     ws = workspace(e["id"])
     # Claude Code keeps its memory for a directory under ~/.claude/projects.
     memory = Path.expand("~/.claude/projects/" <> String.replace(ws, ~r/[^a-zA-Z0-9]/, "-"))
@@ -1718,7 +1720,8 @@ defmodule Loom.Employees do
   # `Loom.Employees.Prompt.system/2`), and the mirror of where it stands.
   defp write_files(e, boss) do
     File.mkdir_p!(Path.join(workspace(e["id"]), ".employee"))
-    for s <- [e["chat_session"], e["work_session"]], is_binary(s), do: write_guard(e, s)
+    if is_binary(e["chat_session"]), do: write_guard(e, e["chat_session"], "employee_chat")
+    if is_binary(e["work_session"]), do: write_guard(e, e["work_session"], "employee_work")
 
     File.write!(
       Path.join(dir(e["id"]), "system_employee_work.md"),
