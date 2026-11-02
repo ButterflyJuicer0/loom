@@ -19,6 +19,8 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   the session in the background (the first message waits for it, retrying on
   a weak network). Pin, archive, done, move, rename, delete and to-do ticks
   show on the tap and are put back, with a note, if the server refuses.
+  So do the model pick, bell answers, to-dos, employee Wake/Pause/KPI review,
+  Boss lines, file rename/delete, Sleep settings and device rename.
 
 ## [0.4.0] – 2026-11-02
 
