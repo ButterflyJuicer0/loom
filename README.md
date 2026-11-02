@@ -12,6 +12,8 @@ with your own machines one command away.
 [![React](https://img.shields.io/badge/React-Vite-149ECA)](frontend/)
 [![Agents](https://img.shields.io/badge/agents-Claude%20Code%20%7C%20Codex%20%7C%20Kiro-D97757)](docs/backends.md)
 
+**English** · [简体中文](README.zh-CN.md)
+
 [Website](https://quanquan1996.github.io/loom) ·
 [Features](#features) ·
 [What's new vs upstream](#whats-new-in-this-fork) ·
