@@ -8,7 +8,12 @@
 // The model files come from Cache Storage, put there by the page (see
 // meeting.ts), never fetched here: the worker has no login token.
 //
-// In:  {type: "init", cache, files: {js, api, wasm, data}}
+// Hotwords (product names and the like) bias the search towards themselves:
+// modified beam search, with the model's BPE vocabulary written into the
+// wasm file system so English hotwords can be split into its tokens. No
+// vocabulary (an older download): plain greedy search, no hotwords.
+//
+// In:  {type: "init", cache, files: {js, api, wasm, data, vocab?}, hotwords?}
 //      {type: "audio", track, samples}   16 kHz mono Float32Array
 // Out: {type: "ready"} | {type: "error", message}
 //      {type: "partial", track, text}
@@ -31,7 +36,7 @@ async function load(cacheName, url) {
   importScripts(URL.createObjectURL(new Blob([text], { type: "text/javascript" })))
 }
 
-async function init({ cache, files }) {
+async function init({ cache, files, hotwords }) {
   const [wasm, data] = await Promise.all([
     fromCache(cache, files.wasm).then((r) => r.arrayBuffer()),
     fromCache(cache, files.data).then((r) => r.arrayBuffer()),
@@ -51,7 +56,54 @@ async function init({ cache, files }) {
       .then(() => load(cache, files.js))
       .catch(reject)
   })
-  recognizer = createOnlineRecognizer(self.Module)
+  let config
+  if (files.vocab && hotwords && hotwords.trim()) {
+    const vocab = await (await fromCache(cache, files.vocab)).text()
+    self.Module.FS_createDataFile("/", "bpe.vocab", vocab, true, true, true)
+    config = recognizerConfig(hotwords)
+  }
+  recognizer = createOnlineRecognizer(self.Module, config)
+}
+
+// sherpa-onnx-asr.js's own defaults for this bundle, plus hotwords. The model
+// spells English in capitals, so the hotwords are too.
+function recognizerConfig(hotwords) {
+  const lines = hotwords
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith("#"))
+    .map((l) => l.toUpperCase())
+  const empty = { encoder: "", decoder: "" }
+  return {
+    featConfig: { sampleRate: 16000, featureDim: 80 },
+    modelConfig: {
+      transducer: { encoder: "./encoder.onnx", decoder: "./decoder.onnx", joiner: "./joiner.onnx" },
+      paraformer: empty,
+      zipformer2Ctc: { model: "" },
+      nemoCtc: { model: "" },
+      toneCtc: { model: "" },
+      tokens: "./tokens.txt",
+      numThreads: 1,
+      provider: "cpu",
+      debug: 0,
+      modelType: "",
+      modelingUnit: "cjkchar+bpe",
+      bpeVocab: "/bpe.vocab",
+    },
+    decodingMethod: "modified_beam_search",
+    maxActivePaths: 4,
+    enableEndpoint: 1,
+    rule1MinTrailingSilence: 2.4,
+    rule2MinTrailingSilence: 1.2,
+    rule3MinUtteranceLength: 20,
+    hotwordsFile: "",
+    hotwordsScore: 2.0, // a line's own " :score" wins
+    hotwordsBuf: lines.join("\n"),
+    hotwordsBufSize: new TextEncoder().encode(lines.join("\n")).length,
+    ctcFstDecoderConfig: { graph: "", maxActive: 3000 },
+    ruleFsts: "",
+    ruleFars: "",
+  }
 }
 
 function track(name) {

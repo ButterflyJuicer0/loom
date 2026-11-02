@@ -52,7 +52,7 @@ defmodule Loom.Meeting.Models do
       files =
         case File.ls(bundle_dir(bundle)) do
           {:ok, names} ->
-            for n <- Enum.sort(names), String.starts_with?(n, "sherpa-onnx"),
+            for n <- Enum.sort(names), String.starts_with?(n, "sherpa-onnx") or n == "bpe.vocab",
                 into: %{},
                 do: {n, File.stat!(Path.join(bundle_dir(bundle), n)).size}
 
@@ -68,7 +68,13 @@ defmodule Loom.Meeting.Models do
   def init(_), do: {:ok, %{task: nil, got: 0, total: 0, error: nil, unpacking: false}}
 
   @impl true
-  def handle_call(:status, _from, state), do: {:reply, view(state), state}
+  def handle_call(:status, _from, state) do
+    # A download from before hotwords needed the vocabulary: fetch it now.
+    if ready?() and not File.exists?(Path.join(bundle_dir("asr"), "bpe.vocab")),
+      do: Task.start(&ensure_extras/0)
+
+    {:reply, view(state), state}
+  end
 
   def handle_call(:fetch, _from, %{task: nil} = state) do
     if ready?() do
@@ -93,7 +99,7 @@ defmodule Loom.Meeting.Models do
 
   defp view(state) do
     cond do
-      ready?() -> %{state: "ready", files: manifest()}
+      ready?() -> %{state: "ready", files: manifest(), hotwords: Loom.Meeting.hotwords()}
       state.task -> %{state: "downloading", got: state.got, total: state.total, unpacking: state.unpacking}
       true -> %{state: "missing", error: state.error, size: 228_000_000}
     end
@@ -163,6 +169,7 @@ defmodule Loom.Meeting.Models do
         case System.cmd("tar", ["xjf", tar, "-C", tmp, "--strip-components=2"], stderr_to_stdout: true) do
           {_, 0} ->
             File.rm(tar)
+            extras(bundle, tmp)
             File.rm_rf!(bundle_dir(bundle))
             File.rename!(tmp, bundle_dir(bundle))
             File.write!(Path.join(bundle_dir(bundle), ".ok"), @version)
@@ -175,6 +182,24 @@ defmodule Loom.Meeting.Models do
       e ->
         e
     end
+  end
+
+  # The recognizer's BPE vocabulary, which hotwords need to be split into
+  # tokens and the WebAssembly bundle leaves out. 12 KB; without it the page
+  # runs without hotwords.
+  @bpe_vocab "https://huggingface.co/csukuangfj/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/resolve/main/bpe.vocab"
+
+  defp extras("asr", dir) do
+    System.cmd("curl", ["-sfL", "--retry", "3", "-o", Path.join(dir, "bpe.vocab"), @bpe_vocab])
+  end
+
+  defp extras(_bundle, _dir), do: :ok
+
+  @doc "Fetch the hotword vocabulary for a bundle downloaded before it was needed."
+  def ensure_extras do
+    dir = bundle_dir("asr")
+    if File.dir?(dir) and not File.exists?(Path.join(dir, "bpe.vocab")), do: extras("asr", dir)
+    :ok
   end
 
   defp watch(me, port, tar, done, total) do

@@ -14,9 +14,11 @@ defmodule Loom.Meeting do
   share — sends the meeting prompt (`prompt/0`, which the user can replace
   with `~/.loom/meeting/prompt.md`), so the agent loads its skills and looks
   the meeting up while the page gets the models ready; backing out cancels
-  it. Ending it sends what is left and asks for the minutes. Every sentence also goes to a transcript file
-  in the session's directory, so the minutes come from the whole meeting, not
-  from what is left of the conversation after compaction.
+  it. Ending it sends what is left and asks for the minutes; so does ten
+  minutes of silence, which also covers a page that was closed. Every
+  sentence also goes to a transcript file in the session's directory, so the
+  minutes come from the whole meeting, not from what is left of the
+  conversation after compaction.
 
   Works for any backend: it only uses `Loom.Agent.Session.submit/3`.
   """
@@ -25,6 +27,9 @@ defmodule Loom.Meeting do
   alias Loom.Agent.Session
 
   @every 30_000
+  # Nothing heard for this long — the meeting is over, or the page that was
+  # listening is gone: end it as End does, minutes and all.
+  @quiet 10 * 60_000
   @tick 3_000
   @origin "meeting"
 
@@ -49,6 +54,34 @@ defmodule Loom.Meeting do
   - 收到【会议结束】时，读完整转写文件，出会议纪要：参会人、要点、决定、待办（谁/什么/何时）、未决问题。
   如果你能从我的日历或上下文判断这是哪个会、和谁开，先用一两句话告诉我；判断不了就回「·」。
   """
+
+  @default_hotwords ~w(
+    亚马逊云科技 宁夏区域 北京区域 西云数据 光环新网
+  ) ++ [
+    "AWS", "Amazon Bedrock", "Bedrock", "AgentCore", "Strands", "SageMaker", "Amazon Q", "Q Developer",
+    "Amazon Quick", "Quick Suite", "Kiro", "Nova", "Claude", "Anthropic", "EC2", "S3", "Lambda",
+    "DynamoDB", "Aurora", "RDS", "EKS", "ECS", "Fargate", "CloudFront", "Route 53", "Redshift",
+    "Glue", "Athena", "Kinesis", "OpenSearch", "QuickSight", "EMR", "MSK", "ElastiCache",
+    "MemoryDB", "DocumentDB", "Neptune", "VPC", "IAM", "CloudWatch", "CloudTrail", "GuardDuty",
+    "WAF", "Shield", "Graviton", "Inferentia", "Trainium", "Outposts", "Lightsail", "Amplify",
+    "API Gateway", "Step Functions", "EventBridge", "SQS", "SNS", "Amazon Connect", "Transcribe",
+    "Textract", "Rekognition", "Polly", "Savings Plans", "Reserved Instances", "Marketplace",
+    "Well-Architected", "Activate", "MAP", "Landing Zone", "Control Tower", "Direct Connect"
+  ]
+
+  @doc """
+  Words the recogniser should favour — product names, mostly. One per line in
+  `~/.loom/meeting/hotwords.txt` (which replaces the default list), each
+  optionally ending in ` :score` (default 2.0; higher = favoured more).
+  """
+  def hotwords do
+    path = Path.join([Loom.Agent.Store.home(), "meeting", "hotwords.txt"])
+
+    case File.read(path) do
+      {:ok, text} -> text
+      _ -> Enum.join(@default_hotwords, "\n")
+    end
+  end
 
   @doc "The prompt that opens meeting mode: `~/.loom/meeting/prompt.md`, or the default."
   def prompt do
@@ -79,7 +112,7 @@ defmodule Loom.Meeting do
         text = prompt() <> "\n完整转写文件：`#{file}`"
         _ = Session.submit(id, text, origin: @origin)
         name_it(id, title)
-        m = %{file: file, pending: [], last: now(), count: 0, started: now()}
+        m = %{file: file, pending: [], last: now(), heard: now(), count: 0, started: now()}
         {:reply, {:ok, view(m)}, Map.put(state, id, m)}
     end
   end
@@ -130,7 +163,8 @@ defmodule Loom.Meeting do
           end
 
         if text != [], do: File.write!(m.file, Enum.join(text, "\n") <> "\n", [:append])
-        m = %{m | pending: Enum.reverse(text) ++ m.pending, count: m.count + length(text)}
+        heard = if text == [], do: m.heard, else: now()
+        m = %{m | pending: Enum.reverse(text) ++ m.pending, count: m.count + length(text), heard: heard}
         {:reply, {:ok, view(m)}, Map.put(state, id, m)}
     end
   end
@@ -141,12 +175,20 @@ defmodule Loom.Meeting do
 
   @impl true
   def handle_info(:tick, state) do
-    {:noreply, Map.new(state, fn {id, m} -> {id, flush(id, m, false)} end)}
+    {quiet, live} = Enum.split_with(state, fn {_id, m} -> now() - m.heard >= @quiet end)
+    for {id, m} <- quiet do
+      # Opened and never started (the prompt goes out on opening): nothing to sum up.
+      if m.count == 0,
+        do: Session.submit(id, "【会议取消】打开后一直没有开始，不用出纪要。", origin: @origin),
+        else: finish(id, m, "（#{div(@quiet, 60_000)} 分钟没有声音，自动结束）")
+    end
+
+    {:noreply, Map.new(live, fn {id, m} -> {id, flush(id, m, false)} end)}
   end
 
-  defp finish(id, m) do
+  defp finish(id, m, why \\ "") do
     tail = if m.pending == [], do: "", else: (m.pending |> Enum.reverse() |> Enum.sort() |> Enum.join("\n")) <> "\n\n"
-    _ = Session.submit(id, tail <> "【会议结束】完整转写在 `#{m.file}`。", origin: @origin)
+    _ = Session.submit(id, tail <> "【会议结束】#{why}完整转写在 `#{m.file}`。", origin: @origin)
   end
 
   # Send the pending sentences if it is time and the agent is free. `now?`

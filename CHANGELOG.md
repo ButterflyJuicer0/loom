@@ -21,7 +21,11 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   sends the agent a batch about every 30 s for live hints; "End" asks for the
   minutes. Batches and quiet turns are folded. The speech models (~230 MB) load
   only after you agree, through the server, with progress. The opening prompt
-  can be replaced with `~/.loom/meeting/prompt.md`.
+  can be replaced with `~/.loom/meeting/prompt.md`. Opening it already sends
+  the prompt and starts the recognisers, so the agent is ready by Start.
+  Product names are favoured as hotwords (AWS by default; your own list in
+  `~/.loom/meeting/hotwords.txt`). Ten minutes of silence, or a closed page,
+  ends the meeting with minutes as End does.
 - **Hire in a chat**: "Describe it in a chat" on top of the hiring form opens
   a chat that talks the job through and creates the employee once you agree.
   The form stays.

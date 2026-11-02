@@ -82,7 +82,7 @@ function auth(): Record<string, string> {
 }
 
 type ModelStatus =
-  | { state: "ready"; files: Record<string, Record<string, number>> }
+  | { state: "ready"; files: Record<string, Record<string, number>>; hotwords?: string }
   | { state: "downloading"; got: number; total: number; unpacking?: boolean }
   | { state: "missing"; error: string | null; size: number }
 
@@ -112,7 +112,7 @@ const fileUrl = (bundle: string, name: string) => `/api/meeting/models/${bundle}
 
 // --- models -----------------------------------------------------------------
 
-type Files = { js: string; api: string; wasm: string; data: string }
+type Files = { js: string; api: string; wasm: string; data: string; vocab?: string }
 
 function filesOf(manifest: Record<string, Record<string, number>>, bundle: string): Files {
   const names = Object.keys(manifest[bundle] ?? {})
@@ -121,7 +121,9 @@ function filesOf(manifest: Record<string, Record<string, number>>, bundle: strin
     if (!n) throw new Error(`model bundle ${bundle} is incomplete`)
     return fileUrl(bundle, n)
   }
+  const vocab = names.includes("bpe.vocab") ? fileUrl(bundle, "bpe.vocab") : undefined
   return {
+    vocab,
     js: pick((n) => n.startsWith("sherpa-onnx-wasm-main") && n.endsWith(".js")),
     api: pick((n) => !n.startsWith("sherpa-onnx-wasm-main") && n.endsWith(".js")),
     wasm: pick((n) => n.endsWith(".wasm")),
@@ -130,6 +132,7 @@ function filesOf(manifest: Record<string, Record<string, number>>, bundle: strin
 }
 
 let manifest: Record<string, Record<string, number>> | null = null
+let hotwords = ""
 
 async function missingInBrowser(m: Record<string, Record<string, number>>) {
   const cache = await caches.open(CACHE)
@@ -194,6 +197,7 @@ export async function openMeeting(sessionId: string) {
     const status = await modelStatus()
     if (status.state === "ready") {
       manifest = status.files
+      hotwords = status.hotwords ?? ""
       const missing = await missingInBrowser(status.files)
       if (missing.length === 0) {
         warm()
@@ -230,7 +234,7 @@ let diarReady: Promise<Worker> | null = null
 
 function warm() {
   if (!manifest) return
-  asrReady ??= startWorker("/meeting/asr-worker.js", filesOf(manifest, "asr"))
+  asrReady ??= startWorker("/meeting/asr-worker.js", filesOf(manifest, "asr"), hotwords)
   diarReady ??= startWorker("/meeting/diar-worker.js", filesOf(manifest, "diar"))
   // Failures surface at Start (asr) or as no speaker labels (diar).
   asrReady.catch(() => {})
@@ -250,6 +254,7 @@ export async function downloadModels() {
     const status: ModelStatus = await res.json()
     if (status.state === "ready") {
       manifest = status.files
+      hotwords = status.hotwords ?? ""
       await downloadToBrowser(await missingInBrowser(status.files))
       warm()
       return set({ phase: "ready" })
@@ -265,6 +270,7 @@ async function watchServer() {
     const status = await modelStatus()
     if (status.state === "ready") {
       manifest = status.files
+      hotwords = status.hotwords ?? ""
       await downloadToBrowser(await missingInBrowser(status.files))
       warm()
       return set({ phase: "ready" })
@@ -288,7 +294,7 @@ export function closeMeetingDialog() {
   set({ phase: "idle", error: null })
 }
 
-function startWorker(script: string, files: Files): Promise<Worker> {
+function startWorker(script: string, files: Files, words = ""): Promise<Worker> {
   return new Promise((resolve, reject) => {
     const w = new Worker(script)
     w.onmessage = (e) => {
@@ -296,7 +302,7 @@ function startWorker(script: string, files: Files): Promise<Worker> {
       else if (e.data.type === "error") reject(new Error(e.data.message))
     }
     w.onerror = (e) => reject(new Error(e.message || "worker failed"))
-    w.postMessage({ type: "init", cache: CACHE, files })
+    w.postMessage({ type: "init", cache: CACHE, files, hotwords: words })
   })
 }
 
@@ -332,6 +338,7 @@ export async function startMeeting(sessionId: string, resume = false) {
       const status = await modelStatus()
       if (status.state !== "ready") throw new Error("the speech models are not downloaded")
       manifest = status.files
+      hotwords = status.hotwords ?? ""
     }
     warm()
     const asrP = asrReady!
