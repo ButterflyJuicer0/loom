@@ -28,12 +28,17 @@ export function BossPage() {
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
 
-  const act = async (call: Promise<BossLine[]>) => {
+  // `shown`, the list as the tap will leave it, is on screen at once; the
+  // server's list replaces it, a refusal puts the old one back.
+  const act = async (call: Promise<BossLine[]>, shown?: BossLine[]) => {
+    const before = lines
+    if (shown) setLines(shown)
     try {
       setLines(await call)
       setError(null)
       return true
     } catch (e) {
+      if (shown) setLines(before)
       setError((e as Error).message)
       return false
     }
@@ -56,10 +61,14 @@ export function BossPage() {
             key={line.id}
             line={line}
             onSave={async (text) => {
-              if (text === line.text || (await act(updateBossLine(line.id, text)))) setEditing(null)
+              setEditing(null)
+              if (text === line.text) return
+              const shown = (lines ?? []).map((l) => (l.id === line.id ? { ...l, text } : l))
+              if (!(await act(updateBossLine(line.id, text), shown))) setEditing(line.id)
             }}
             onDelete={async () => {
-              if (await act(deleteBossLine(line.id))) setEditing(null)
+              setEditing(null)
+              await act(deleteBossLine(line.id), (lines ?? []).filter((l) => l.id !== line.id))
             }}
             onCancel={() => setEditing(null)}
           />
@@ -132,8 +141,10 @@ function AddLine({ onAdd }: { onAdd: (text: string) => Promise<boolean> }) {
   const send = async () => {
     const value = text.trim()
     if (!value || busy) return
+    // Cleared on the tap; back if it did not go.
     setBusy(true)
-    if (await onAdd(value)) setText("")
+    setText("")
+    if (!(await onAdd(value))) setText(value)
     setBusy(false)
   }
 

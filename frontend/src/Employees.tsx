@@ -263,11 +263,16 @@ function EmployeeBar({
   onUpsert: (employee: Employee) => void
 }) {
   const [error, setError] = useState<string | null>(null)
-  const act = async (call: Promise<Employee>) => {
+  // `shown`, what the tap will make of it, is on screen at once; the server's
+  // answer replaces it, a refusal puts it back.
+  const act = async (call: Promise<Employee>, shown?: Employee) => {
+    const before = e
+    if (shown) onUpsert(shown)
     try {
       onUpsert(await call)
       setError(null)
     } catch (err) {
+      if (shown) onUpsert(before)
       setError((err as Error).message)
     }
   }
@@ -307,13 +312,13 @@ function EmployeeBar({
         </span>
         <span className="emp-state-actions">
           {!e.paused && e.status !== "working" && e.status !== "approval" && (
-            <button className="emp-pill" onClick={() => act(wakeEmployee(e.id))} title="Wake it now">
+            <button className="emp-pill" onClick={() => act(wakeEmployee(e.id), { ...e, status: "working" })} title="Wake it now">
               <Play /> Wake
             </button>
           )}
           <button
             className="emp-pill"
-            onClick={() => act(pauseEmployee(e.id, !e.paused))}
+            onClick={() => act(pauseEmployee(e.id, !e.paused), { ...e, paused: !e.paused })}
             title={e.paused ? "Let it carry on" : "Stop it, now and until resumed"}
           >
             {e.paused ? <Play /> : <Pause />} {e.paused ? "Resume" : "Pause"}
@@ -381,11 +386,16 @@ function KpiPane({ employee: e, onUpsert }: { employee: Employee; onUpsert: (e: 
   const [editing, setEditing] = useState<Kpi | "new" | null>(null)
   const [sending, setSending] = useState<Kpi | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const act = async (call: Promise<Employee>) => {
+  // `shown`, what the tap will make of it, is on screen at once; the server's
+  // answer replaces it, a refusal puts it back.
+  const act = async (call: Promise<Employee>, shown?: Employee) => {
+    const before = e
+    if (shown) onUpsert(shown)
     try {
       onUpsert(await call)
       setError(null)
     } catch (err) {
+      if (shown) onUpsert(before)
       setError((err as Error).message)
     }
   }
@@ -434,7 +444,7 @@ function KpiPane({ employee: e, onUpsert }: { employee: Employee; onUpsert: (e: 
           {k.note && <div className="kpi-note">{k.note}</div>}
           {k.status === "review" && (
             <div className="kpi-review" onClick={(ev) => ev.stopPropagation()}>
-              <button className="emp-pill strong" onClick={() => act(reviewKpi(e.id, k.id, true))}>
+              <button className="emp-pill strong" onClick={() => act(reviewKpi(e.id, k.id, true), withKpi(e, k.id, "done"))}>
                 <Check /> Accept
               </button>
               <button className="emp-pill" onClick={() => setSending(k)}>
@@ -458,13 +468,19 @@ function KpiPane({ employee: e, onUpsert }: { employee: Employee; onUpsert: (e: 
       {sending && (
         <SendBack
           kpi={sending}
-          onSend={async (note) => onUpsert(await reviewKpi(e.id, sending.id, false, note))}
+          onSend={(note) => act(reviewKpi(e.id, sending.id, false, note), withKpi(e, sending.id, "doing"))}
           onClose={() => setSending(null)}
         />
       )}
     </>
   )
 }
+
+// The employee with one KPI moved on, as a review is about to make it.
+const withKpi = (e: Employee, id: string, status: Kpi["status"]): Employee => ({
+  ...e,
+  kpis: e.kpis.map((k) => (k.id === id ? { ...k, status } : k)),
+})
 
 const prio = (k: Kpi) => ({ high: 0, normal: 1, low: 2 })[k.priority]
 
@@ -589,9 +605,10 @@ function SendBack({ kpi, onSend, onClose }: { kpi: Kpi; onSend: (note: string) =
     <Modal title="Send back" onClose={onClose}>
       <form
         className="project-form"
-        onSubmit={async (ev) => {
+        onSubmit={(ev) => {
           ev.preventDefault()
-          await onSend(note)
+          // Closes on the tap; a refusal shows on the employee's page.
+          void onSend(note)
           onClose()
         }}
       >

@@ -252,11 +252,15 @@ function SettingsPane({ scope, scopeName, session }: { scope: string; scopeName:
   const { dream, setDream, error, setError } = useDream(scope, session)
   if (!dream) return error ? <div className="sleep-error">{error}</div> : <div className="sleep-dim">loading…</div>
 
+  // The box or the hour moves on the tap; back, with why, if the server says no.
   const save = async (attrs: Parameters<typeof updateDream>[1]) => {
+    const before = dream
+    setDream({ ...dream, ...attrs })
     try {
       setDream(await updateDream(scope, attrs))
       setError(null)
     } catch (e) {
+      setDream(before)
       setError((e as Error).message)
     }
   }

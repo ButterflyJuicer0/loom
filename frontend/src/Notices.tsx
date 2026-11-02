@@ -177,8 +177,13 @@ function TodoList({ todos: given }: { todos: Todo[] }) {
   // A tick or a removal shows on the tap, before the server's list comes back
   // with it; the next list from the server replaces these guesses.
   const [guess, setGuess] = useState<Record<string, boolean | "gone">>({})
-  useEffect(() => setGuess({}), [given])
-  const todos = given
+  // Added here and not yet in the server's list.
+  const [adding, setAdding] = useState<Todo[]>([])
+  useEffect(() => {
+    setGuess({})
+    setAdding((a) => a.filter((t) => !given.some((g) => g.text === t.text && g.due === t.due)))
+  }, [given])
+  const todos = [...given, ...adding]
     .filter((t) => guess[t.id] !== "gone")
     .map((t) => (typeof guess[t.id] === "boolean" ? { ...t, done: guess[t.id] as boolean } : t))
   const open = todos.filter((t) => !t.done)
@@ -204,7 +209,10 @@ function TodoList({ todos: given }: { todos: Todo[] }) {
     setText("")
     setDue("")
     setError(null)
+    const row: Todo = { id: `adding-${Date.now()}`, text: what, due: when || null, session: null, by: "you", done: false, created_at: Date.now() }
+    setAdding((a) => [...a, row])
     addTodo(what, when || null).catch((err) => {
+      setAdding((a) => a.filter((t) => t !== row))
       setText(what)
       setDue(when)
       setError((err as Error).message)
@@ -277,20 +285,43 @@ export function Card({
   const [more, setMore] = useState(false)
   const [text, setText] = useState("")
   const [error, setError] = useState<string | null>(null)
+  // What a tap will make of it, shown at once; the server's answer replaces
+  // it, a refusal puts the card back as it was, with why.
+  const [guess, setGuess] = useState<Partial<Notice> | null>(null)
+  const given = n
+  n = guess ? { ...n, ...guess } : n
   const tone = n.priority <= 2 ? "urgent" : n.priority <= 5 ? "important" : "other"
   const options = n.status === "open" && n.session ? (n.options ?? []) : []
-  const act = async (call: () => Promise<Notice>) => {
+  const act = async (call: () => Promise<Notice>, shown: Partial<Notice> = {}) => {
     setBusy(true)
     setError(null)
+    setGuess(shown)
+    setReplying(false)
+    setChoosingLater(false)
     try {
       onAnswered(await call())
+      return true
     } catch (err) {
       setError((err as Error).message)
+      return false
     } finally {
+      setGuess(null)
       setBusy(false)
     }
   }
-  const send = () => text.trim() && act(() => replyNotice(n.id, text.trim()))
+  const settled = (answer: string, note: string): Partial<Notice> => ({ status: "done", answer, note })
+  const send = () => {
+    const what = text.trim()
+    if (!what) return
+    setText("")
+    void act(() => replyNotice(given.id, what), settled(what, "Answered in the bell")).then((ok) => {
+      // What was typed comes back, to send again.
+      if (!ok) {
+        setText(what)
+        setReplying(true)
+      }
+    })
+  }
   // What the user wrote back from here, beside "Answered in the bell".
   const said = n.answer && n.answer !== "approve" && n.answer !== "reject" ? `: ${n.answer}` : ""
   const canReply = n.session && (n.needs === "reply" || options.length > 0)
@@ -331,7 +362,7 @@ export function Card({
       {options.length > 0 && !replying && (
         <div className="bell-options" onClick={(e) => e.stopPropagation()}>
           {options.map((o) => (
-            <button key={o} className="bell-option" disabled={busy} onClick={() => act(() => replyNotice(n.id, o))}>
+            <button key={o} className="bell-option" disabled={busy} onClick={() => act(() => replyNotice(n.id, o), settled(o, "Answered in the bell"))}>
               {o}
             </button>
           ))}
@@ -347,7 +378,7 @@ export function Card({
                   key={label}
                   className="bell-btn"
                   disabled={busy}
-                  onClick={() => act(() => laterNotice(n.id, at)).then(() => setChoosingLater(false))}
+                  onClick={() => act(() => laterNotice(n.id, at), { later_until: at })}
                 >
                   {label}
                 </button>
@@ -380,10 +411,10 @@ export function Card({
             <>
               {n.needs === "approve" && (
                 <>
-                  <button className="bell-btn pri" disabled={busy} onClick={() => act(() => answerNotice(n.id, true))}>
+                  <button className="bell-btn pri" disabled={busy} onClick={() => act(() => answerNotice(n.id, true), settled("approve", "Approved in the bell"))}>
                     <Check /> Approve
                   </button>
-                  <button className="bell-btn" disabled={busy} onClick={() => act(() => answerNotice(n.id, false))}>
+                  <button className="bell-btn" disabled={busy} onClick={() => act(() => answerNotice(n.id, false), settled("reject", "Rejected in the bell"))}>
                     Reject
                   </button>
                 </>
@@ -402,7 +433,7 @@ export function Card({
                   <Clock /> Later
                 </button>
               )}
-              <button className="bell-btn" disabled={busy} onClick={() => act(() => dismissNotice(n.id))}>
+              <button className="bell-btn" disabled={busy} onClick={() => act(() => dismissNotice(n.id), { status: "done", note: "Dismissed" })}>
                 Done
               </button>
             </>

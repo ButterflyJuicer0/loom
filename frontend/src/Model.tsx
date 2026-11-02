@@ -1,7 +1,7 @@
 import { Check, ChevronDown, ChevronLeft } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { MODELS, modelName, updateAgent, type AgentInfo } from "./api"
+import { MODELS, changeAgent, modelName, type AgentInfo } from "./api"
 
 /** The session's model as the menu names it: its own pick, or the agent's default. */
 export const modelLabel = (model: string | null | undefined) => (model ? modelName(model) : "Default")
@@ -20,16 +20,14 @@ export function ModelList({
   onBack?: () => void
   onDone: () => void
 }) {
-  const [error, setError] = useState<string | null>(null)
   const current = session.model ?? null
   const choices: (string | null)[] = [null, ...(MODELS[session.backend] ?? [])]
   if (current && !choices.includes(current)) choices.push(current)
 
+  // Shown at once, the menu closed; see `changeAgent`.
   const pick = (model: string | null) => {
-    if (model === current) return onDone()
-    updateAgent(session.id, { model })
-      .then(onDone)
-      .catch((e) => setError((e as Error).message))
+    if (model !== current) changeAgent(session, { model })
+    onDone()
   }
 
   return (
@@ -49,7 +47,6 @@ export function ModelList({
         </button>
       ))}
       <div className="session-menu-note">From the next message on.</div>
-      {error && <div className="session-menu-note failed">{error}</div>}
     </>
   )
 }

@@ -377,9 +377,14 @@ function TaskEditor({
                 className="text-btn"
                 onClick={() =>
                   act(async () => {
-                    const ran = await runTask(existing.id)
+                    // Said on the tap; taken back if it did not start.
                     setNote("Running now; the reply lands in its conversation.")
-                    return ran
+                    try {
+                      return await runTask(existing.id)
+                    } catch (e) {
+                      setNote(null)
+                      throw e
+                    }
                   }, false)
                 }
               >

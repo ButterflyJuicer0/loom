@@ -110,6 +110,16 @@ export function FileBrowser({
   const [asking, setAsking] = useState<{ key: string; section: Section; node: Node } | null>(
     null,
   )
+  // A rename (the new name) or a delete (null) shown on the tap, as
+  // `section:path`, until the next listing has it or the server refuses.
+  const [pending, setPending] = useState<Map<string, string | null>>(() => new Map())
+  const expect = (key: string, name: string | null | undefined) =>
+    setPending((m) => {
+      const next = new Map(m)
+      if (name === undefined) next.delete(key)
+      else next.set(key, name)
+      return next
+    })
 
   useEffect(() => {
     let live = true
@@ -117,6 +127,7 @@ export function FileBrowser({
       (t) => {
         if (!live) return
         setTree(t)
+        setPending(new Map())
         setError(null)
       },
       (e: Error) => live && setError(e.message),
@@ -228,7 +239,13 @@ export function FileBrowser({
 
   const remove = async (section: Editable, node: Node) => {
     const key = `${section}:${node.path}`
-    await deleteAgentOutputOrAttachment(sessionId, section, node.path)
+    expect(key, null)
+    try {
+      await deleteAgentOutputOrAttachment(sessionId, section, node.path)
+    } catch (e) {
+      expect(key, undefined)
+      return fail(e as Error)
+    }
     // The cursor goes to the next row that is not inside what went, else the
     // one before.
     const i = showing.findIndex((r) => r.key === key)
@@ -240,20 +257,30 @@ export function FileBrowser({
   }
 
   const rename = async (section: Editable, node: Node, name: string | null) => {
-    if (name === null) return setRenaming(null)
-    const { path } = await renameAgentOutputOrAttachment(sessionId, section, node.path, name)
+    setRenaming(null)
+    if (name === null || name === node.name) return
     const from = `${section}:${node.path}`
+    expect(from, name)
+    let path: string
+    try {
+      ;({ path } = await renameAgentOutputOrAttachment(sessionId, section, node.path, name))
+    } catch (e) {
+      expect(from, undefined)
+      return fail(e as Error)
+    }
     const to = `${section}:${path}`
     const move = (k: string) => (k === from || k.startsWith(from + "/") ? to + k.slice(from.length) : k)
     setUnfolded((s) => new Set([...s].map(move)))
     setCursor((c) => (c === null ? c : move(c)))
-    setRenaming(null)
     onMoved(section, node.path, path)
     setChanges((n) => n + 1)
   }
 
   const rows = (section: Section, nodes: Node[], depth: number): ReactNode[] =>
     nodes.flatMap((node) => {
+      const later = pending.get(`${section}:${node.path}`)
+      if (later === null) return []
+      const name = later ?? node.name
       const isDir = !!node.children
       const unfoldedHere = isDir && unfolded.has(`${section}:${node.path}`)
       const page = isDir && node.children!.some((c) => c.name === "index.html" && !c.children)
@@ -280,7 +307,7 @@ export function FileBrowser({
           {renaming === key ? (
             <RenameInput value={node.name} onDone={(name) => rename(section as Editable, node, name)} />
           ) : (
-            <span className="tree-name">{node.name}</span>
+            <span className="tree-name">{name}</span>
           )}
           <span className="tree-actions">
             {page && (
@@ -327,7 +354,7 @@ export function FileBrowser({
               ? `The folder ${asking.node.path} and everything in it. This cannot be undone.`
               : `${asking.node.path} — this cannot be undone.`
           }
-          onYes={() => remove(asking.section as Editable, asking.node)}
+          onYes={() => void remove(asking.section as Editable, asking.node)}
           onClose={() => setAsking(null)}
         />
       )}

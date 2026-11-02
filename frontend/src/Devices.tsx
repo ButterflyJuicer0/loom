@@ -48,9 +48,13 @@ export function DevicesDialog({
     return () => document.removeEventListener("keydown", onKey)
   }, [onClose])
 
+  // Its install code has to come from the server, so this one waits — but
+  // says so, and cannot be sent twice.
+  const [adding, setAdding] = useState(false)
   const add = async () => {
     const value = name.trim()
-    if (value === "") return
+    if (value === "" || adding) return
+    setAdding(true)
     try {
       const { node, code } = await createDevice(value, icon)
       onUpsert(node)
@@ -60,6 +64,8 @@ export function DevicesDialog({
       setInstall({ id: node.id, code })
     } catch (e) {
       setError((e as Error).message)
+    } finally {
+      setAdding(false)
     }
   }
 
@@ -88,12 +94,15 @@ export function DevicesDialog({
     }
   }
 
+  // The new name shows on the tap; the old one comes back if refused.
   const rename = async (device: Device, value: string) => {
+    onUpsert({ ...device, name: value })
     try {
       const { node } = await renameDevice(device.id, value)
       onUpsert(node)
       setError(null)
     } catch (e) {
+      onUpsert(device)
       setError((e as Error).message)
     }
   }
@@ -148,8 +157,8 @@ export function DevicesDialog({
             autoCorrect="off"
             spellCheck={false}
           />
-          <button type="submit" className="text-btn" disabled={name.trim() === ""}>
-            Add
+          <button type="submit" className="text-btn" disabled={name.trim() === "" || adding}>
+            {adding ? "Adding…" : "Add"}
           </button>
         </form>
       </div>

@@ -339,6 +339,40 @@ export function stillCreating(): AgentInfo[] {
   return [...creating.values()].filter((c) => !c.done).map((c) => c.info)
 }
 
+// ── A change shown before the server has it ─────────────────────────────────
+//
+// The app registers how to show a session and how to say a change failed;
+// `changeAgent` shows its guess through it at once, then the server's answer,
+// or puts the session back and says why.
+
+type Shown = { upsert: (s: AgentInfo) => void; oops: (message: string) => void }
+let shown: Shown | null = null
+export function showChangesWith(to: Shown): () => void {
+  shown = to
+  return () => {
+    if (shown === to) shown = null
+  }
+}
+
+export function changeAgent(before: AgentInfo, attrs: Parameters<typeof updateAgent>[1]): void {
+  const guess: AgentInfo = { ...before }
+  if (attrs.pinned !== undefined) guess.pinned = attrs.pinned
+  if (attrs.archived !== undefined) guess.archived_at = attrs.archived ? Date.now() : null
+  if (attrs.done) guess.done_at = Date.now()
+  if (attrs.project_id !== undefined) guess.project_id = attrs.project_id
+  if (attrs.seen_seq !== undefined) guess.seen_seq = attrs.seen_seq
+  if (attrs.model !== undefined) guess.model = attrs.model
+  if (attrs.effort !== undefined) guess.effort = attrs.effort
+  shown?.upsert(guess)
+  updateAgent(before.id, attrs).then(
+    (s) => shown?.upsert(s),
+    (e: Error) => {
+      shown?.upsert(before)
+      shown?.oops(`Couldn't save that — ${e.message}`)
+    },
+  )
+}
+
 // Local to loom — a sidebar label, never pushed to the backend.
 export async function renameAgent(
   id: string,

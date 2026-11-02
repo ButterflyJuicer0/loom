@@ -24,7 +24,9 @@ import { lastActive, useLobby } from "./useLobby"
 import { useNarrow } from "./useNarrow"
 import { useSwipe } from "./useSwipe"
 import {
+  changeAgent,
   continueAgent,
+  showChangesWith,
   createAgentLater,
   createSession,
   deleteAgent,
@@ -40,7 +42,6 @@ import {
   readNotice,
   bellSession,
   type AgentBackend,
-  type AgentInfo,
   type Employee,
   type Notice,
   type Project,
@@ -469,6 +470,7 @@ function App() {
   // One line at the foot of the window for a change the server refused after
   // the screen already showed it.
   const [oops, setOops] = useState<string | null>(null)
+  useEffect(() => showChangesWith({ upsert, oops: setOops }), [upsert])
   useEffect(() => {
     if (!oops) return
     const t = setTimeout(() => setOops(null), 5000)
@@ -703,19 +705,7 @@ function App() {
   // says why. Returns at once, so a menu closes on the tap.
   const change = async (id: string, attrs: Parameters<typeof updateAgent>[1]) => {
     const before = everything.find((s) => s.id === id)
-    if (before) {
-      const guess: AgentInfo = { ...before }
-      if (attrs.pinned !== undefined) guess.pinned = attrs.pinned
-      if (attrs.archived !== undefined) guess.archived_at = attrs.archived ? Date.now() : null
-      if (attrs.done) guess.done_at = Date.now()
-      if (attrs.project_id !== undefined) guess.project_id = attrs.project_id
-      if (attrs.seen_seq !== undefined) guess.seen_seq = attrs.seen_seq
-      upsert(guess)
-    }
-    updateAgent(id, attrs).then(upsert, (e: Error) => {
-      if (before) upsert(before)
-      setOops(`Couldn't save that — ${e.message}`)
-    })
+    if (before) changeAgent(before, attrs)
   }
   const markDone = (id: string) => change(id, { done: true })
   const working = sidebarGroups(sessions, projects).working
