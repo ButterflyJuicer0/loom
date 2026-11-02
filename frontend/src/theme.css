@@ -39,12 +39,32 @@
   --send-off-fg: #2f2f2f;
   --shadow: rgb(0 0 0 / 45%);
   --scrim: rgb(0 0 0 / 60%);
+  --desktop-inset: 0px;
 }
 
 html,
 body,
 #root {
   background: var(--bg);
+}
+
+/* Leave room around desktop controls, including in a full-screen app. */
+@media (min-width: 641px) {
+  :root {
+    --desktop-inset: 12px;
+  }
+
+  .app {
+    box-sizing: border-box;
+    padding: var(--desktop-inset);
+    background: var(--bg-raised);
+  }
+
+  .main {
+    background: var(--bg);
+    border-radius: 16px;
+    overflow: clip;
+  }
 }
 
 /* The interface in sans… */
@@ -1371,7 +1391,7 @@ pre.code,
 .sidebar {
   zoom: var(--sidebar-scale, 1);
   /* A dragged width leaves the chat at least 400px, the window resized or not. */
-  flex-basis: calc(min(var(--sidebar-w, 16.25rem), 80vw, 100vw - 400px) / var(--sidebar-scale, 1));
+  flex-basis: calc(min(var(--sidebar-w, 16.25rem), 80vw, 100vw - 400px - 2 * var(--desktop-inset)) / var(--sidebar-scale, 1));
 }
 
 /* The desktop sidebar's drag edge (App.tsx): no line, only the cursor. */

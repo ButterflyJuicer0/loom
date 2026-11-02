@@ -78,9 +78,12 @@ function SidebarResize() {
     if (!sidebar || e.button !== 0) return
     e.preventDefault()
     const left = sidebar.getBoundingClientRect().left
+    const appStyle = getComputedStyle(sidebar.parentElement!)
+    const available = sidebar.parentElement!.clientWidth
+      - parseFloat(appStyle.paddingLeft) - parseFloat(appStyle.paddingRight)
     let width = 0
     const move = (ev: PointerEvent) => {
-      width = Math.round(Math.min(Math.max(ev.clientX - left, 200), window.innerWidth - 400))
+      width = Math.round(Math.min(Math.max(ev.clientX - left, 200), available - 400))
       setSidebarWidth(width)
     }
     const up = () => {

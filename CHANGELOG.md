@@ -43,6 +43,9 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   character but letters and digits into a dash, `_` included.
 
 ### Changed
+- **Desktop spacing**: a 12px inset keeps controls away from the window edges,
+  with rounded content corners, including in full screen. Sidebar resizing and
+  installed-app window controls account for the inset.
 - **Only the bell rings the phone.** A turn ending no longer sends a
   notification; only bell notices 0–5 do, at once, one each. The 20:00
   digest is gone. Between 00:00 and 07:00 only a 0 rings; the rest go out
