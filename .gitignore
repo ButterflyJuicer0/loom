@@ -55,6 +55,7 @@ npm-debug.log
 /priv/static/manifest.webmanifest
 /priv/static/sw.js
 /priv/static/vendor/
+/priv/static/meeting/
 
 # loom-node binaries, built by `make -C node` (rel/deploy.sh).
 /priv/node/

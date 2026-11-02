@@ -14,6 +14,8 @@ import {
   HatGlasses,
   Inbox,
   Merge,
+  Mic,
+  AudioLines,
   Moon,
   PanelLeft,
   Plus,
@@ -37,6 +39,8 @@ import {
   type ReactNode,
 } from "react"
 import { Grabber } from "./Switcher"
+import { MeetingBar, MeetingDialog, useMeeting } from "./Meeting"
+import { openMeeting, stopMeeting } from "./meeting"
 import { createPortal } from "react-dom"
 import { EffortButton } from "./Effort"
 import { ModelList, modelLabel } from "./Model"
@@ -425,6 +429,8 @@ export function Chat({
           />
         )}
 
+        <MeetingBar sessionId={session.id} />
+        <MeetingDialog />
         <Composer
           busy={busy}
           interrupted={transcript.status === "interrupted"}
@@ -685,6 +691,49 @@ function readAnswers(
  * room for the title or for four buttons, not both. And the model, which swaps
  * the list in place, and a reload.
  */
+/** What meeting mode sent the agent, one line until opened. */
+function MeetingFold({ text, at }: { text: string; at?: number }) {
+  const [open, setOpen] = useState(false)
+  const lines = text.split("\n").filter((l) => /^\[[^\]]*\] /.test(l))
+  const summary = text.startsWith("【会议模式开始】")
+    ? "Meeting started"
+    : text.includes("【会议结束】")
+      ? `Meeting ended${lines.length ? ` · ${lines.length} lines` : ""}`
+      : `Transcript · ${lines.length} line${lines.length === 1 ? "" : "s"}`
+  return (
+    <div className={"meeting-fold" + (open ? " open" : "")}>
+      <button className="meeting-fold-head" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <AudioLines />
+        <span>{summary}</span>
+        {typeof at === "number" && <Clock at={at} />}
+        <ChevronDown />
+      </button>
+      {open && <pre className="meeting-fold-body">{text}</pre>}
+    </div>
+  )
+}
+
+/** The menu's "Meeting mode", or "End meeting" while this chat's meeting runs. */
+function MeetingItem({ sessionId, onPick }: { sessionId: string; onPick: () => void }) {
+  const m = useMeeting()
+  const here = m.sessionId === sessionId && m.phase === "running"
+  const elsewhere = m.phase === "running" && !here
+  return (
+    <button
+      role="menuitem"
+      disabled={elsewhere}
+      title={elsewhere ? "A meeting is running in another chat" : undefined}
+      onClick={() => {
+        onPick()
+        void (here ? stopMeeting() : openMeeting(sessionId))
+      }}
+    >
+      {here ? <Square /> : <Mic />}
+      {here ? "End meeting" : "Meeting mode"}
+    </button>
+  )
+}
+
 function PaneMenu({
   session,
   terminalOpen,
@@ -782,6 +831,8 @@ function PaneMenu({
                 Keep chat
               </button>
             )}
+            <div className="session-menu-sep" />
+            <MeetingItem sessionId={session.id} onPick={() => setAt(null)} />
             <div className="session-menu-sep" />
             {/* A home-screen app has no reload of its own. */}
             <button role="menuitem" onClick={() => location.reload()}>
@@ -1108,6 +1159,8 @@ function same(a: unknown, b: unknown): boolean {
 function ItemView({ item, sessionId, onAnswer }: ItemProps) {
   switch (item.kind) {
     case "user":
+      // Meeting mode's prompt and transcript batches: folded, on every screen.
+      if (item.origin === "meeting") return <MeetingFold text={item.text} at={item.at} />
       return (
         // The copy button sits under the bubble rather than in it, where it
         // would push the time onto a line of its own on a phone.
@@ -1132,6 +1185,8 @@ function ItemView({ item, sessionId, onAnswer }: ItemProps) {
       )
 
     case "assistant":
+      // A meeting turn with nothing worth saying: a dot, not a bubble.
+      if (!item.streaming && item.text.trim() === "·") return <div className="meeting-quiet">·</div>
       // Where markdown is rendered (and a merge's summary, above). Tool output
       // and the user's own words are shown verbatim — see `markdown.tsx`.
       return (

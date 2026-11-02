@@ -57,6 +57,9 @@ defmodule Loom.Application do
       # The bell: what the agents want the user to see, by priority. After the
       # push service it notifies through, before the employees that post to it.
       Loom.Notices,
+      # Meeting mode: the speech-model download, and sentences batched to agents.
+      Loom.Meeting.Models,
+      Loom.Meeting,
       # Sleep: each scope's memory gone over by night. See its doc.
       Loom.Dream,
       # Virtual employees: agents at work on a heartbeat, within a budget.

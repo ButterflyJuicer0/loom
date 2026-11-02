@@ -33,6 +33,11 @@ defmodule LoomWeb.Router do
     patch "/agents/:id", AgentSessionController, :update
     post "/agents/:id/continue", AgentSessionController, :continue
     delete "/agents/:id", AgentSessionController, :delete
+    get "/agents/:id/meeting", MeetingController, :show
+    post "/agents/:id/meeting", MeetingController, :update
+    get "/meeting/models", MeetingController, :models
+    post "/meeting/models", MeetingController, :fetch
+    get "/meeting/models/:bundle/:name", MeetingController, :file
     get "/agents/:id/draft", AgentDraftController, :show
     put "/agents/:id/draft", AgentDraftController, :update
 
