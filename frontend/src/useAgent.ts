@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { Channel } from "phoenix"
 import { getSocket } from "./socket"
-import { attachmentUrl, seedBlobUrl, uploadAgentFiles } from "./api"
+import { attachmentUrl, seedBlobUrl, uploadAgentFiles, whenCreated, whenMade } from "./api"
 import type { LocalFile } from "./useAttachments"
 import {
   addPending,
@@ -151,73 +151,96 @@ export function useAgent(
     // Set if the effect is torn down before the join resolves; see the cleanup.
     let leaveWhenJoined = false
 
-    const channel = getSocket().channel(`agent:${sessionId}`, () => ({
-      since_seq: lastSeqRef.current,
-      device: DEVICE,
-    }))
-    channelRef.current = channel
-
-    // Two joins overlap whenever an effect is torn down before its join
-    // resolves — StrictMode does this on every mount — and phoenix.js dispatches
-    // an incoming message to *every* channel object matching the topic. So a
-    // handler belonging to a channel we have already replaced must do nothing;
-    // `delta_seq` would catch the duplicate anyway, but not touching state at
-    // all is cheaper and keeps the reducer honest.
-    const current = () => channelRef.current === channel
-
-    channel.on("event", (event: AgentEvent) => {
-      if (!current()) return
-      const fresh = event.seq > lastSeqRef.current
-      lastSeqRef.current = Math.max(lastSeqRef.current, event.seq)
-      setTranscript((t) => applyEvent(t, event))
-      if (fresh) onLiveRef.current?.(event)
-    })
-
-    channel.on("delta", (delta: AgentDelta) => {
-      if (!current()) return
-      setTranscript((t) => applyDelta(t, delta))
-    })
-
-    channel.on("draft", ({ text }: { text: string }) => {
-      if (current()) setDraft({ id: sessionId, text })
-    })
-
-    channel
-      .join()
-      .receive("ok", (snapshot: Snapshot) => {
-        const wasJoined = joined
-        joined = true
-        if (leaveWhenJoined || channelRef.current !== channel) {
-          channel.leave()
-          return
-        }
-        // Behind what we hold: not a gap but a different history (the session
-        // was replaced under the same id). The cache is no use; start over.
-        if (snapshot.last_seq < lastSeqRef.current) {
-          cache.delete(sessionId)
-          channelRef.current = null
-          channel.leave()
-          setEpoch((e) => e + 1)
-          return
-        }
-        // A gap like a rejoin's, from the cache too — unless the server has
-        // since dropped events we never saw. Then the reply is everything it
-        // still keeps, and merging would hide the hole.
-        const hole =
-          snapshot.truncated_before !== null && lastSeqRef.current < snapshot.truncated_before
-        const merge = (wasJoined || !!cached) && !hole
-        lastSeqRef.current = snapshot.last_seq
-        // Not merging still keeps what is waiting to be sent: those bubbles are
-        // ours, not the server's, and its events clear the ones that arrived.
-        setTranscript((t) => applySnapshot(snapshot, merge ? t : { ...emptyTranscript, pending: t.pending }))
-        setJoinError(null)
-      })
-      .receive("error", (resp: { reason?: string }) =>
-        setJoinError(resp?.reason ?? "join failed"),
+    // A chat only just made here may not be on the server yet: the channel
+    // waits for it, trying again while this is open. See `whenCreated`.
+    let channel: Channel | null = null
+    let torn = false
+    let retry: ReturnType<typeof setTimeout> | undefined
+    const wait = () =>
+      whenCreated(sessionId).then(
+        () => {
+          if (!torn) channel = open()
+        },
+        () => {
+          if (torn) return
+          setJoinError("Can't reach the server to start this chat — trying again…")
+          retry = setTimeout(wait, 3000)
+        },
       )
-      .receive("timeout", () => setJoinError("join timed out"))
+    const open = (): Channel => {
+      const channel = getSocket().channel(`agent:${sessionId}`, () => ({
+        since_seq: lastSeqRef.current,
+        device: DEVICE,
+      }))
+      channelRef.current = channel
+
+      // Two joins overlap whenever an effect is torn down before its join
+      // resolves — StrictMode does this on every mount — and phoenix.js dispatches
+      // an incoming message to *every* channel object matching the topic. So a
+      // handler belonging to a channel we have already replaced must do nothing;
+      // `delta_seq` would catch the duplicate anyway, but not touching state at
+      // all is cheaper and keeps the reducer honest.
+      const current = () => channelRef.current === channel
+
+      channel.on("event", (event: AgentEvent) => {
+        if (!current()) return
+        const fresh = event.seq > lastSeqRef.current
+        lastSeqRef.current = Math.max(lastSeqRef.current, event.seq)
+        setTranscript((t) => applyEvent(t, event))
+        if (fresh) onLiveRef.current?.(event)
+      })
+
+      channel.on("delta", (delta: AgentDelta) => {
+        if (!current()) return
+        setTranscript((t) => applyDelta(t, delta))
+      })
+
+      channel.on("draft", ({ text }: { text: string }) => {
+        if (current()) setDraft({ id: sessionId, text })
+      })
+
+      channel
+        .join()
+        .receive("ok", (snapshot: Snapshot) => {
+          const wasJoined = joined
+          joined = true
+          if (leaveWhenJoined || channelRef.current !== channel) {
+            channel.leave()
+            return
+          }
+          // Behind what we hold: not a gap but a different history (the session
+          // was replaced under the same id). The cache is no use; start over.
+          if (snapshot.last_seq < lastSeqRef.current) {
+            cache.delete(sessionId)
+            channelRef.current = null
+            channel.leave()
+            setEpoch((e) => e + 1)
+            return
+          }
+          // A gap like a rejoin's, from the cache too — unless the server has
+          // since dropped events we never saw. Then the reply is everything it
+          // still keeps, and merging would hide the hole.
+          const hole =
+            snapshot.truncated_before !== null && lastSeqRef.current < snapshot.truncated_before
+          const merge = (wasJoined || !!cached) && !hole
+          lastSeqRef.current = snapshot.last_seq
+          // Not merging still keeps what is waiting to be sent: those bubbles are
+          // ours, not the server's, and its events clear the ones that arrived.
+          setTranscript((t) => applySnapshot(snapshot, merge ? t : { ...emptyTranscript, pending: t.pending }))
+          setJoinError(null)
+        })
+        .receive("error", (resp: { reason?: string }) =>
+          setJoinError(resp?.reason ?? "join failed"),
+        )
+        .receive("timeout", () => setJoinError("join timed out"))
+      return channel
+    }
+    void wait()
 
     return () => {
+      torn = true
+      clearTimeout(retry)
+      if (!channel) return
       // phoenix.js silently *skips* the leave push when the channel has not
       // finished joining — it fakes a local "ok" and closes its own copy — so
       // the server keeps the channel, keeps it subscribed, and keeps pushing to
@@ -245,10 +268,15 @@ export function useAgent(
   }, [sessionId, transcript.pending])
 
   // The message itself, its files already on the server.
-  const push = useCallback((p: PendingMessage) => {
+  const push = useCallback((p: PendingMessage, waited = 0): void => {
     const channel = channelRef.current
     const fail = (reason: string) => setTranscript((t) => markPending(t, p.clientMsgId, reason))
-    if (!channel) return fail("not connected")
+    // A new chat's channel opens once the server has it; see `whenCreated`.
+    if (!channel) {
+      if (waited >= SUBMIT_TIMEOUT_MS) return fail("not connected")
+      setTimeout(() => push(p, waited + 250), 250)
+      return
+    }
 
     channel
       .push(
@@ -282,12 +310,15 @@ export function useAgent(
   const send = useCallback((p: PendingMessage) => {
     const fail = (reason: string) => setTranscript((t) => markPending(t, p.clientMsgId, reason))
     const uploads = p.uploads ?? []
-    if (uploads.length === 0) return push(p)
     if (!sessionId) return fail("not connected")
+    if (uploads.length === 0) {
+      whenMade(sessionId).then(() => push(p), () => fail("couldn't start this chat — the connection may be weak"))
+      return
+    }
     if (uploads.some((u) => !u.blob)) return fail("its files were lost when the page reloaded — attach them again")
 
     const blobs = uploads.map((u) => (u.blob instanceof File ? u.blob : new File([u.blob!], u.name, { type: u.type })))
-    uploadAgentFiles(sessionId, blobs).then(
+    whenMade(sessionId).then(() => uploadAgentFiles(sessionId, blobs)).then(
       (stored) => {
         // Moved to another session meanwhile: this one's copy, kept on the
         // device, shows it as not got through; a resend uploads again.

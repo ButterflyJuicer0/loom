@@ -25,7 +25,7 @@ import { useNarrow } from "./useNarrow"
 import { useSwipe } from "./useSwipe"
 import {
   continueAgent,
-  createAgent,
+  createAgentLater,
   createSession,
   deleteAgent,
   deleteSession,
@@ -40,6 +40,7 @@ import {
   readNotice,
   bellSession,
   type AgentBackend,
+  type AgentInfo,
   type Employee,
   type Notice,
   type Project,
@@ -354,8 +355,11 @@ function App() {
     setDrawerOpen(false)
   }
 
+  // Opens at once: the server makes it in the background while the user
+  // types, and the first message waits for it. See `createAgentLater`.
   const create = async (backend: AgentBackend, projectId?: string, incognito?: boolean, model?: string | null) => {
-    const session = await createAgent(backend, projectId, incognito, model)
+    const { info: session, made } = createAgentLater(backend, projectId, incognito, model)
+    made.then(upsert, () => {})
     if (projectId) reveal()
     upsert(session)
     setActiveId(session.id)
@@ -453,9 +457,23 @@ function App() {
   const [keeping, setKeeping] = useState<string | null>(null)
   const [renaming, setRenaming] = useState<string | null>(null)
   const renamed = async (id: string, title: string | null) => {
-    if (title !== null) upsert(await renameAgent(id, title))
     setRenaming(null)
+    if (title === null) return
+    const before = everything.find((s) => s.id === id)
+    if (before) upsert({ ...before, title })
+    renameAgent(id, title).then(upsert, (e: Error) => {
+      if (before) upsert(before)
+      setOops(`Couldn't rename it — ${e.message}`)
+    })
   }
+  // One line at the foot of the window for a change the server refused after
+  // the screen already showed it.
+  const [oops, setOops] = useState<string | null>(null)
+  useEffect(() => {
+    if (!oops) return
+    const t = setTimeout(() => setOops(null), 5000)
+    return () => clearTimeout(t)
+  }, [oops])
 
   // ── Terminals ────────────────────────────────────────────────────────────
   //
@@ -680,7 +698,26 @@ function App() {
 
   // Out of Working, from the sidebar or the switcher. Writing in it again
   // brings it back.
-  const markDone = async (id: string) => upsert(await updateAgent(id, { done: true }))
+  // A tap shows at once: the row moves, the pin shows, before the server has
+  // answered. Its answer replaces the guess; a refusal puts the row back and
+  // says why. Returns at once, so a menu closes on the tap.
+  const change = async (id: string, attrs: Parameters<typeof updateAgent>[1]) => {
+    const before = everything.find((s) => s.id === id)
+    if (before) {
+      const guess: AgentInfo = { ...before }
+      if (attrs.pinned !== undefined) guess.pinned = attrs.pinned
+      if (attrs.archived !== undefined) guess.archived_at = attrs.archived ? Date.now() : null
+      if (attrs.done) guess.done_at = Date.now()
+      if (attrs.project_id !== undefined) guess.project_id = attrs.project_id
+      if (attrs.seen_seq !== undefined) guess.seen_seq = attrs.seen_seq
+      upsert(guess)
+    }
+    updateAgent(id, attrs).then(upsert, (e: Error) => {
+      if (before) upsert(before)
+      setOops(`Couldn't save that — ${e.message}`)
+    })
+  }
+  const markDone = (id: string) => change(id, { done: true })
   const working = sidebarGroups(sessions, projects).working
 
   const sidebar = (
@@ -709,12 +746,12 @@ function App() {
       onCreate={create}
       onDelete={remove}
       onRename={setRenaming}
-      onPin={async (id, pinned) => upsert(await updateAgent(id, { pinned }))}
+      onPin={(id, pinned) => change(id, { pinned })}
       onContinue={carryOn}
-      onArchive={async (id, archived) => upsert(await updateAgent(id, { archived }))}
+      onArchive={(id, archived) => change(id, { archived })}
       onDone={markDone}
       onMove={async (id, projectId) => {
-        upsert(await updateAgent(id, { project_id: projectId }))
+        void change(id, { project_id: projectId })
         if (projectId) reveal()
       }}
       onCollapse={() => (narrow ? setDrawerOpen(false) : setSidebarOpen(false))}
@@ -811,10 +848,10 @@ function App() {
               renamingId={renaming}
               onRenamed={renamed}
               onRename={setRenaming}
-              onPin={async (id, pinned) => upsert(await updateAgent(id, { pinned }))}
+              onPin={(id, pinned) => change(id, { pinned })}
               onContinue={carryOn}
-              onMove={async (id, projectId) => upsert(await updateAgent(id, { project_id: projectId }))}
-              onArchive={async (id, archived) => upsert(await updateAgent(id, { archived }))}
+              onMove={(id, projectId) => change(id, { project_id: projectId })}
+              onArchive={(id, archived) => change(id, { archived })}
               onDelete={remove}
             />
           ) : view === "tasks" ? (
@@ -863,7 +900,7 @@ function App() {
                 active.kind === "incognito"
                   ? {
                       pinned: active.pinned ?? false,
-                      onPin: async (pinned) => upsert(await updateAgent(active.id, { pinned })),
+                      onPin: (pinned) => change(active.id, { pinned }),
                       onKeep: () => setKeeping(active.id),
                     }
                   : undefined
@@ -1002,8 +1039,13 @@ function App() {
             const id = deleting
             // The cursor moves on to a neighbour rather than off the list.
             if (listCursor === id) setListCursor(step(ids, id, 1) === id ? step(ids, id, -1) : step(ids, id, 1))
-            await deleteAgent(id)
+            // Gone from the list on the tap; back, with why, if the server says no.
+            const before = everything.find((s) => s.id === id)
             drop(id)
+            deleteAgent(id).catch((e: Error) => {
+              if (before) upsert(before)
+              setOops(`Couldn't delete it — ${e.message}`)
+            })
           }}
           onClose={() => setDeleting(null)}
         />
@@ -1080,11 +1122,16 @@ function App() {
             setSettingsOpen(false)
             select(id)
           }}
-          onUnarchive={async (id) => upsert(await updateAgent(id, { archived: false }))}
+          onUnarchive={(id) => change(id, { archived: false })}
           incognito={incognito}
           onKeep={setKeeping}
           onDelete={remove}
         />
+      )}
+      {oops && (
+        <div className="app-oops" role="alert" onClick={() => setOops(null)}>
+          {oops}
+        </div>
       )}
       <WhichKey pending={pending} keymap={keymap} groups={{ "Space n": "new session" }} />
       {help && (

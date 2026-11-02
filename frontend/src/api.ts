@@ -217,8 +217,10 @@ export async function createAgent(
   projectId?: string | null,
   incognito?: boolean,
   model?: string | null,
+  id?: string,
 ): Promise<AgentInfo> {
   const body: Record<string, unknown> = { backend }
+  if (id) body.id = id
   if (projectId) body.project_id = projectId
   else if (incognito) body.incognito = true
   if (model) body.model = model
@@ -226,10 +228,115 @@ export async function createAgent(
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(body),
+    // Made in the background (see `createAgentLater`), so a weak network gets
+    // an answer and a retry rather than a wait with no end.
+    signal: id ? AbortSignal.timeout(20_000) : undefined,
   })
   if (res.status === 401) throw unauthorized()
   if (!res.ok) throw new Error(`createAgent failed: ${res.status}`)
   return res.json()
+}
+
+// ── A new chat, open before the server has it ──────────────────────────────
+//
+// New chat shows the conversation at once, under an id made here, and asks
+// the server for it in the background: on a slow network the user is already
+// typing. The channel join, a message and its uploads wait for `whenCreated`.
+// The same id may be asked for again, so a retry after a lost reply returns
+// the session already made; a failed attempt is tried again by whatever needs
+// it next (a resend).
+
+type Creating = {
+  info: AgentInfo
+  make: () => Promise<AgentInfo>
+  attempt: Promise<AgentInfo> | null
+  done: boolean
+}
+const creating = new Map<string, Creating>()
+
+export function newAgentId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(9))
+  return "a_" + btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_")
+}
+
+/** Starts making the session; returns at once with a stand-in to show. */
+export function createAgentLater(
+  backend: AgentBackend,
+  projectId?: string | null,
+  incognito?: boolean,
+  model?: string | null,
+): { info: AgentInfo; made: Promise<AgentInfo> } {
+  const id = newAgentId()
+  const now = Date.now()
+  const info: AgentInfo = {
+    id,
+    title: null,
+    backend,
+    backend_label: backend,
+    project_id: projectId ?? null,
+    kind: incognito && !projectId ? "incognito" : null,
+    model: model ?? null,
+    created_at: now,
+    last_active_at: now,
+    status: "idle",
+    queued: 0,
+    queue: [],
+    usage: null,
+    context_tokens: 0,
+    context_window: null,
+    turns: 0,
+    // Below anything the server sends, so its own summary replaces this.
+    seq: -1,
+  }
+  const make = (): Promise<AgentInfo> =>
+    createAgent(backend, projectId, incognito, model, id).then(
+      (made) => {
+        entry.done = true
+        return made
+      },
+      (e) => {
+        entry.attempt = null
+        throw e
+      },
+    )
+  const entry: Creating = { info, make, attempt: null, done: false }
+  entry.attempt = make()
+  creating.set(id, entry)
+  return { info, made: entry.attempt }
+}
+
+/** Resolves once the server has the session; tries again after a failure. */
+export function whenCreated(id: string): Promise<unknown> {
+  const entry = creating.get(id)
+  if (!entry || entry.done) return Promise.resolve()
+  if (!entry.attempt) entry.attempt = entry.make()
+  return entry.attempt
+}
+
+/**
+ * For a request about a session, given its id or its `/api/agents/<id>` URL:
+ * a new chat's waits until the server has it. A failure is the request's to
+ * report, so it goes ahead either way.
+ */
+function untilMade(idOrUrl: string): Promise<unknown> {
+  const id = idOrUrl.match(/^\/api\/agents\/(a_[^/?]+)/)?.[1] ?? idOrUrl
+  return whenMade(id).catch(() => {})
+}
+
+/** `whenCreated`, tried again every 2 s for as long as a message waits (20 s). */
+export async function whenMade(id: string, until = Date.now() + 20_000): Promise<unknown> {
+  try {
+    return await whenCreated(id)
+  } catch (e) {
+    if (Date.now() > until) throw e
+    await new Promise((r) => setTimeout(r, 2000))
+    return whenMade(id, until)
+  }
+}
+
+/** Stand-ins the server does not list yet, to keep through a fresh list. */
+export function stillCreating(): AgentInfo[] {
+  return [...creating.values()].filter((c) => !c.done).map((c) => c.info)
 }
 
 // Local to loom — a sidebar label, never pushed to the backend.
@@ -237,6 +344,7 @@ export async function renameAgent(
   id: string,
   title: string,
 ): Promise<AgentInfo> {
+  await untilMade(id)
   const res = await fetch(`/api/agents/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -349,6 +457,7 @@ export function putDraft(id: string, text: string, keepalive = false): Promise<{
 // Permanent: the server discards the session's history too, otherwise it would
 // reappear at the next boot when Bootstrap restores everything on disk.
 export async function deleteAgent(id: string): Promise<void> {
+  await untilMade(id)
   const res = await fetch(`/api/agents/${id}`, {
     method: "DELETE",
     headers: authHeaders(),
@@ -409,6 +518,7 @@ export type SessionTree = {
 }
 
 export async function sessionTree(id: string): Promise<SessionTree> {
+  await untilMade(id)
   const res = await fetch(`/api/agents/${id}/tree`, { headers: authHeaders() })
   if (res.status === 401) throw unauthorized()
   if (!res.ok) throw new Error(`could not list the files: ${res.status}`)
@@ -546,7 +656,7 @@ export function canvasBase(id: string): Promise<CanvasBases> {
   const cached = canvasBases.get(id)
   if (cached && Date.now() - cached.at < CANVAS_TTL) return cached.bases
 
-  const bases = fetch(`/api/agents/${id}/canvas`, { method: "POST", headers: authHeaders() }).then(
+  const bases = untilMade(id).then(() => fetch(`/api/agents/${id}/canvas`, { method: "POST", headers: authHeaders() })).then(
     async (res) => {
       if (res.status === 401) throw unauthorized()
       if (!res.ok) throw new Error(`canvas failed: ${res.status}`)
@@ -632,6 +742,7 @@ export type Device = {
 // The server words its refusals ("there is already a device called mac", "that
 // name is taken"), so they are shown as they are.
 async function apiCall<T>(url: string, init: RequestInit): Promise<T> {
+  await untilMade(url)
   const res = await fetch(url, {
     ...init,
     headers: { "Content-Type": "application/json", ...authHeaders() },

@@ -1773,3 +1773,19 @@
     min-height: 2.8rem;
   }
 }
+
+/* A change the screen showed at once and the server then refused. */
+.app-oops {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 88px);
+  transform: translateX(-50%);
+  z-index: 1000;
+  max-width: min(90vw, 420px);
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--fg, #111);
+  color: var(--bg, #fff);
+  font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}

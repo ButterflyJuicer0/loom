@@ -169,33 +169,51 @@ export function NoticesSheet({
 }
 
 /** The user's own list: added here, or by an agent told to; ticked off here. */
-function TodoList({ todos }: { todos: Todo[] }) {
+function TodoList({ todos: given }: { todos: Todo[] }) {
   const [text, setText] = useState("")
   const [due, setDue] = useState("")
   const [showDone, setShowDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // A tick or a removal shows on the tap, before the server's list comes back
+  // with it; the next list from the server replaces these guesses.
+  const [guess, setGuess] = useState<Record<string, boolean | "gone">>({})
+  useEffect(() => setGuess({}), [given])
+  const todos = given
+    .filter((t) => guess[t.id] !== "gone")
+    .map((t) => (typeof guess[t.id] === "boolean" ? { ...t, done: guess[t.id] as boolean } : t))
   const open = todos.filter((t) => !t.done)
   const done = todos.filter((t) => t.done)
   const today = new Date().toLocaleDateString("sv")
 
-  const run = async (call: Promise<unknown>) => {
+  const run = (id: string, change: boolean | "gone", call: Promise<unknown>) => {
     setError(null)
-    try {
-      await call
-    } catch (err) {
+    setGuess((g) => ({ ...g, [id]: change }))
+    call.catch((err) => {
+      setGuess((g) => {
+        const { [id]: _, ...rest } = g
+        return rest
+      })
       setError((err as Error).message)
-    }
+    })
   }
-  const add = async () => {
-    if (!text.trim()) return
-    await run(addTodo(text.trim(), due || null))
+  // The field clears on the tap; what was typed comes back if it failed.
+  const add = () => {
+    const what = text.trim()
+    if (!what) return
+    const when = due
     setText("")
     setDue("")
+    setError(null)
+    addTodo(what, when || null).catch((err) => {
+      setText(what)
+      setDue(when)
+      setError((err as Error).message)
+    })
   }
 
   const row = (t: Todo) => (
     <div key={t.id} className={"todo-row" + (t.done ? " done" : "")}>
-      <button className="todo-check" onClick={() => run(updateTodo(t.id, { done: !t.done }))} title={t.done ? "Not done" : "Done"}>
+      <button className="todo-check" onClick={() => run(t.id, !t.done, updateTodo(t.id, { done: !t.done }))} title={t.done ? "Not done" : "Done"}>
         {t.done ? <CheckCircle2 /> : <Circle />}
       </button>
       <span className="todo-text">
@@ -207,7 +225,7 @@ function TodoList({ todos }: { todos: Todo[] }) {
           </span>
         )}
       </span>
-      <button className="todo-rm" onClick={() => run(deleteTodo(t.id))} title="Remove">
+      <button className="todo-rm" onClick={() => run(t.id, "gone", deleteTodo(t.id))} title="Remove">
         <X />
       </button>
     </div>
@@ -219,7 +237,7 @@ function TodoList({ todos }: { todos: Todo[] }) {
         className="todo-add"
         onSubmit={(e) => {
           e.preventDefault()
-          void add()
+          add()
         }}
       >
         <input value={text} placeholder="Add a to-do" enterKeyHint="done" onChange={(e) => setText(e.target.value)} />

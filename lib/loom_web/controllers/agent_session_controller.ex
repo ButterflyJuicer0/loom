@@ -29,8 +29,36 @@ defmodule LoomWeb.AgentSessionController do
     end
   end
 
+  # `id`, optional, is one the browser made up (`a_` + 12 url-safe chars), so
+  # it can show the new chat and take a message before this reply comes back
+  # on a slow network. The same id again returns the session already made:
+  # a retry after a lost reply cannot make a second one.
   defp create_session(conn, backend, params) do
-    id = Agent.new_id()
+    case params["id"] do
+      nil -> start_new(conn, backend, params, Agent.new_id())
+      id when is_binary(id) -> start_given(conn, backend, params, id)
+      _ -> conn |> put_status(:unprocessable_entity) |> json(%{error: "bad id"})
+    end
+  end
+
+  defp start_given(conn, backend, params, id) do
+    cond do
+      not Regex.match?(~r/\Aa_[A-Za-z0-9_-]{12}\z/, id) ->
+        conn |> put_status(:unprocessable_entity) |> json(%{error: "bad id"})
+
+      Agent.exists?(id) ->
+        json(conn, view(Agent.info(id)))
+
+      # Stored but not running: someone else's history, not ours to start.
+      match?({:ok, _}, Loom.Agent.Store.read_meta(id)) ->
+        conn |> put_status(:conflict) |> json(%{error: "id taken"})
+
+      true ->
+        start_new(conn, backend, params, id)
+    end
+  end
+
+  defp start_new(conn, backend, params, id) do
     opts = [{:backend, backend} | build_opts(params)]
 
     case Agent.start_session(id, opts) do

@@ -81,6 +81,18 @@ defmodule LoomWeb.AgentSessionControllerTest do
       assert body["backend_label"] == "Codex"
     end
 
+    test "takes an id made by the browser, and the same id again is the same session", %{conn: conn} do
+      body = %{backend: "codex", id: "a_abcDEF123_-x"}
+      assert %{"id" => "a_abcDEF123_-x"} = post(conn, ~p"/api/agents", body) |> json_response(201)
+      assert %{"id" => "a_abcDEF123_-x"} = post(conn, ~p"/api/agents", body) |> json_response(200)
+      assert Enum.count(Agent.list_sessions(), &(&1.id == "a_abcDEF123_-x")) == 1
+    end
+
+    test "refuses an id not shaped like one of ours", %{conn: conn} do
+      conn = post(conn, ~p"/api/agents", %{backend: "codex", id: "../etc"})
+      assert json_response(conn, 422)["error"] == "bad id"
+    end
+
     test "requires a token", %{conn: conn} do
       conn = conn |> delete_req_header("authorization") |> post(~p"/api/agents", %{})
       assert json_response(conn, 401)

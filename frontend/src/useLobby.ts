@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Channel } from "phoenix"
 import { getSocket } from "./socket"
 import type { AgentInfo, Device, Employee, Notice, Project, Todo } from "./api"
+import { stillCreating } from "./api"
 
 export type Watching = { endpoint: string; session: string | null }
 
@@ -173,7 +174,10 @@ export function useLobby(enabled: boolean, watching: Watching | null = null): Lo
         }
         joinedChannel.current = channel
         if (watchingRef.current) channel.push("watching", watchingRef.current)
-        setById(new Map(sessions.map((s) => [s.id, s])))
+        // A chat only just opened here and not yet on the server stays.
+        const fresh = new Map(sessions.map((s) => [s.id, s]))
+        for (const s of stillCreating()) if (!fresh.has(s.id)) fresh.set(s.id, s)
+        setById(fresh)
         setDevices(new Map((nodes ?? []).map((d) => [d.id, d])))
         setProjects(new Map((projects ?? []).map((p) => [p.id, p])))
         setEmployees(new Map((employees ?? []).map((e) => [e.id, e])))
