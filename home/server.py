@@ -79,7 +79,7 @@ def dump_wav(samples, keep=30):
 
 
 MUSIC = ROOT / "music"
-THINK = ["嗯，", "我想想，", "嗯…让我想想，", "好的，"]
+THINK = CFG.get("fillers", [])  # e.g. ["嗯，"]: said the moment ASR is done, for a slow LLM/TTS; off by default
 FILLER_PCM = {}
 
 
@@ -437,7 +437,7 @@ class Session:
     async def reply(self, text):
         await self.send({"type": "stt", "text": text})
         self.failed, self.calling = [], False
-        filler = random.choice(THINK)  # pre-synthesized, plays the moment ASR is done
+        filler = random.choice(THINK) if THINK else ""  # pre-synthesized, plays the moment ASR is done
         h = self.history
         if time.monotonic() - h["at"] > 1800:
             h["msgs"].clear()
