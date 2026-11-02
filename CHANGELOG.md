@@ -1,5 +1,7 @@
 # Changelog
 
+**English** · [简体中文](CHANGELOG.zh-CN.md)
+
 All notable changes to this fork. Versions are git tags; each one is a build
 that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 

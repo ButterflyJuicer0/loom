@@ -6,7 +6,7 @@
 Claude Code、Codex、Kiro 跑在你自己的服务器上，电脑和手机浏览器都能用，
 你自己的设备一条命令就能接进来。
 
-[![Version](https://img.shields.io/badge/version-0.4.0-black)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.0-black)](CHANGELOG.zh-CN.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black)](LICENSE)
 [![Elixir](https://img.shields.io/badge/Elixir-Phoenix-4B275F)](mix.exs)
 [![React](https://img.shields.io/badge/React-Vite-149ECA)](frontend/)
@@ -17,7 +17,7 @@ Claude Code、Codex、Kiro 跑在你自己的服务器上，电脑和手机浏�
 [官网](https://quanquan1996.github.io/loom) ·
 [功能](#功能) ·
 [和上游的区别](#和上游相比新增了什么) ·
-[更新日志](CHANGELOG.md) ·
+[更新日志](CHANGELOG.zh-CN.md) ·
 [快速开始](#快速开始) ·
 [文档](#文档)
 
@@ -59,7 +59,7 @@ Loom 是一个单用户使用的编程 agent 网页端。agent 跑在你的服�
 | 浏览器 | 桌面尺寸窗口 | 加了**手机尺寸**的窗口和画面流 |
 | 部署 | `rel/deploy.sh` | **`rel/ship.sh`**：只发布已提交的代码，不会比线上版本旧；先列出要上线的提交，加 `--yes` 才发布 |
 
-每个版本加了什么，见[更新日志](CHANGELOG.md)。
+每个版本加了什么，见[更新日志](CHANGELOG.zh-CN.md)。
 
 ## 功能
 
@@ -174,13 +174,13 @@ rel/ship.sh --frontend --yes   # 只热替换前端，不重启
 
 ## 文档
 
-文档为英文：
+以下文档为英文（更新日志另有中文版）：
 
 - [docs/architecture.md](docs/architecture.md)：Loom 怎么搭的（会话、项目、Sleep、员工、铃铛、无痕会话、设备）
 - [docs/backends.md](docs/backends.md)：Claude Code、Codex、Kiro 的协议，按实测记录
 - [docs/deploy.md](docs/deploy.md)：单机部署
 - [docs/keys.md](docs/keys.md)：快捷键
-- [CHANGELOG.md](CHANGELOG.md)：各版本及新增内容
+- [CHANGELOG.md](CHANGELOG.zh-CN.md)：各版本及新增内容
 
 ## 致谢
 
