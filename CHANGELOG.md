@@ -12,6 +12,14 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 | [0.2.0](#020--2026-10-29) | 2026-10-29 | Projects, ChatGPT UI, Kiro, Sleep, employees, restart survival |
 | [0.1.0](#010--2026-10-28) | 2026-10-28 | Upstream base |
 
+## [Unreleased]
+
+### Changed
+- **Taps answer at once**: New chat opens immediately and the server makes
+  the session in the background (the first message waits for it, retrying on
+  a weak network). Pin, archive, done, move, rename, delete and to-do ticks
+  show on the tap and are put back, with a note, if the server refuses.
+
 ## [0.4.0] – 2026-11-02
 
 ### Added
