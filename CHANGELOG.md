@@ -29,6 +29,9 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   character but letters and digits into a dash, `_` included.
 
 ### Changed
+- **Only the bell rings the phone.** A turn ending no longer sends a
+  notification; only bell notices do (0–2 at once, 3–5 in the 20:00 digest).
+  A long job that should wake you posts a notice.
 - **Taps answer at once**: New chat opens immediately and the server makes
   the session in the background (the first message waits for it, retrying on
   a weak network). Pin, archive, done, move, rename, delete and to-do ticks

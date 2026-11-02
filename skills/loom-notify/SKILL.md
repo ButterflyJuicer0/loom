@@ -27,6 +27,10 @@ A virtual employee reports through its work card's `report` instead (same
 priorities, same `key`, `needs`, `detail`, `options`, and `withdraw`); the
 command works too.
 
+The bell is the only thing that reaches the user's phone: a turn ending sends
+nothing. So when the user asked to be told when something is done ("好了叫我",
+"跑完告诉我") and has left, post a notice (2 if they are waiting on it, else 3–5).
+
 ## Choosing the priority
 
 | Priority | Means | What the user gets |

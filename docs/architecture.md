@@ -139,16 +139,15 @@ steers or queues it as usual.
 ### 2.6 Notifications
 
 `Loom.Push` sends a Web Push notification to every device that turned them on
-(the bell at the foot of the sidebar) when a turn ends with nothing queued
-behind it: the session's title, and the start of the last reply or the error.
-An interrupt sends nothing. Tapping it opens that session.
+(the switch at the foot of the sidebar), only for what the bell says matters
+(§2.10: 0–2 at once, 3–5 in the 20:00 digest), through `notify/4`. A turn
+ending sends nothing (the user's call, 2026-11-02): a long job that wants the
+phone to ring posts a notice. Tapping it opens the notice's session.
 
 - **No account anywhere.** The VAPID key pair is made on first boot and kept
   in `~/.loom/push.json`, beside the subscriptions; encryption and signing are
   `:crypto` (`Loom.Push.WebPush`). Losing the file orphans every device, which
   then has to turn notifications on again.
-- **The session broadcasts, Push decides.** A session only announces
-  `{:turn_ended, id, summary}` on `Loom.Agent.turns_topic/0`.
 - **Not to a device that is looking.** Each subscribed device tells the lobby
   channel which session it is showing (`watching`, `nil` when hidden), and is
   skipped for that one. In memory against the channel's pid, so a device that
@@ -744,7 +743,7 @@ Loom.Supervisor
 ├─ Loom.Agent.Bootstrap           reattaches persisted sessions at boot
 ├─ Loom.Cron                      scheduled prompts
 ├─ Loom.Nodes                     the user's devices (loom-node)
-├─ Loom.Push                      notifications when a turn ends
+├─ Loom.Push                      notifications for the bell
 ├─ Loom.Employees                 virtual employees' heartbeat and budget
 ├─ Loom.Restarter                 restart once no Codex turn runs, for deploys
 └─ LoomWeb.Endpoint

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { deletePushSubscription, pushKey, savePushSubscription } from "./api"
 
 /**
- * Notifications when a turn ends, per device; the server side is `Loom.Push`.
+ * Notifications, per device; the server side is `Loom.Push`, which sends only what the bell says matters.
  *
  * - `unsupported`: no Push API here. On an iPhone that means Safari rather
  *   than the home-screen app, which is the only place iOS allows it.

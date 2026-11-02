@@ -1,19 +1,17 @@
 defmodule Loom.Push do
   @moduledoc """
-  Notifications on the user's devices when a turn is over, so a long job can
-  be left running with the phone locked. Web Push, so the same code reaches an
+  Notifications on the user's devices for what the bell (`Loom.Notices`)
+  says matters, so a long job can be left running with the phone locked. Web Push, so the same code reaches an
   iPhone home-screen app (iOS 16.4+), Chrome and Firefox; see
   `Loom.Push.WebPush` for the protocol.
 
   - **Truth is `~/.loom/push.json`**: the VAPID key pair, made on first boot
     and kept, since every subscription is bound to it, and one subscription
     per device that turned notifications on.
-  - **What is sent.** A session broadcasts `{:turn_ended, id, summary}` on
-    `Loom.Agent.turns_topic/0` when a turn ends with nothing queued after it
-    (not on an interrupt: whoever stopped it knows). Every subscription gets
-    the session's title and the start of the last reply, or the error. Not for
-    a virtual employee's work session, whose every heartbeat is a turn: it
-    says what matters through `notify/4`, from `Loom.Employees`.
+  - **What is sent: only the bell.** `notify/4`, called by `Loom.Notices` for
+    the notices worth a notification (0–2 at once, 3–5 in the 20:00 digest).
+    A turn ending sends nothing: the user asked (2026-11-02) that only the
+    important notices reach the phone.
   - **Not to a device that is looking.** A device showing a session says so on
     the lobby channel (`watching/3`), and gets nothing for that session while
     it is. Held only in memory, against the channel's pid: a device that drops
@@ -59,8 +57,8 @@ defmodule Loom.Push do
   def unsubscribe(endpoint, server \\ @name), do: GenServer.call(server, {:unsubscribe, endpoint})
 
   @doc """
-  A notification of the caller's own, on every device not looking at
-  `session_id`: what a virtual employee reports (`Loom.Employees`).
+  A notification on every device not looking at `session_id`: a bell notice
+  (`Loom.Notices`).
   """
   def notify(title, body, session_id, server \\ @name),
     do: GenServer.cast(server, {:notify, title, body, session_id})
@@ -92,7 +90,6 @@ defmodule Loom.Push do
     }
 
     state = if keys, do: state, else: save(%{state | keys: WebPush.generate_keys()})
-    Phoenix.PubSub.subscribe(Loom.PubSub, Loom.Agent.turns_topic())
     {:ok, state}
   end
 
@@ -150,20 +147,6 @@ defmodule Loom.Push do
   end
 
   @impl true
-  def handle_info({:turn_ended, _id, %{kind: "employee_work"}}, state), do: {:noreply, state}
-  # The bell's chat is answered while the user is looking at it.
-  def handle_info({:turn_ended, _id, %{kind: "bell"}}, state), do: {:noreply, state}
-
-  def handle_info({:turn_ended, id, summary}, state) do
-    {title, body} = describe(summary)
-
-    for {endpoint, sub} <- state.subs, not looking?(state, endpoint, id) do
-      send_to(state, sub, message(sub, title, body, id))
-    end
-
-    {:noreply, state}
-  end
-
   def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
     watching = Map.reject(state.watching, fn {_, {_, _, r}} -> r == ref end)
     {:noreply, %{state | watching: watching}}
@@ -174,17 +157,6 @@ defmodule Loom.Push do
   # ── Sending ─────────────────────────────────────────────────────────────
 
   defp looking?(state, endpoint, id), do: match?({^id, _, _}, state.watching[endpoint])
-
-  defp describe(%{title: title, outcome: outcome}) do
-    body =
-      case outcome do
-        {:ok, text} when is_binary(text) and text != "" -> snippet(text)
-        {:error, message} -> "Failed: " <> snippet(message)
-        _ -> "Done."
-      end
-
-    {title || "loom", body}
-  end
 
   # Markdown read as plain text: a notification shows a line or two.
   defp snippet(text) do

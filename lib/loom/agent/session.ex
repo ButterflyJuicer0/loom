@@ -1406,7 +1406,7 @@ defmodule Loom.Agent.Session do
     |> schedule_release()
   end
 
-  # For notifications (`Loom.Push`). The reply is the turn's last text, found by
+  # For whoever waits on a turn (`Loom.Dream`, `Loom.Employees`). The reply is the turn's last text, found by
   # reading back to the message that started it; an error after it wins, since
   # that is how the turn actually ended.
   defp announce_turn_end(state) do

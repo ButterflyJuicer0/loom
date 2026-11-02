@@ -208,8 +208,8 @@ in once or pass a captcha.
 
 ### App
 
-- Installable as a PWA. **Notifications** when a turn ends, on the lock screen
-  too, with no account or push key of your own.
+- Installable as a PWA. **Notifications** for the bell's important notices,
+  on the lock screen too, with no account or push key of your own.
 - **Vim-style keys** on desktop: `i` to type, `j`/`k` to scroll, Space as the
   leader, `?` for the list ([docs/keys.md](docs/keys.md)).
 
