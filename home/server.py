@@ -108,7 +108,8 @@ def shows():
 
 
 HOME_PROMPT = ("家里还有这些设备，用调用标签控制，写法 [call:设备.工具 {{JSON 参数}}]，例如 [call:bedroom.set {{\"on\":false}}]；"
-               "可以和动作标签一起写，写了标签才会真的执行，执行结果系统会告诉主人，你不用说成功没成功：\n{devices}")
+               "可以和动作标签一起写，写了标签才会真的执行。写完标签照常用一句话回应主人，例如 好，卧室的灯关啦；"
+               "执行失败系统会另外告诉主人：\n{devices}")
 _CLIPS = {}
 
 
@@ -200,9 +201,13 @@ def _local_synth(text):
     return np.concatenate([r.to_ndarray().reshape(-1) for r in rs.resample(fr) + rs.resample(None)])
 
 
+LATIN_WORD = re.compile(r"[A-Za-z]{2,}")
+
+
 async def synth(text):
-    """Local TTS when configured (falls back to edge-tts on error), else edge-tts -> 24 kHz mono int16 PCM."""
-    if _local_tts():
+    """Local TTS when configured (falls back to edge-tts on error), else edge-tts -> 24 kHz mono int16 PCM.
+    Sentences with English words go to edge-tts: the local Chinese voice cannot read them."""
+    if _local_tts() and not LATIN_WORD.search(text):
         try:
             return await asyncio.get_running_loop().run_in_executor(None, _local_synth, text)
         except Exception as e:
@@ -479,7 +484,7 @@ class Session:
                [{"role": "user", "content": f"（现在{now}）{text}" + (
                    f"（你已经先说了“{said}”，接着往下说，别重复）" if said else "")}]
         content, buf, spoke, t0 = "", "", False, time.monotonic()
-        actions = []  # run sequentially, without blocking speech
+        actions, actions_run = [], False  # run sequentially, without blocking speech
         async for piece in bedrock_stream(msgs):
                 if not piece:
                     continue
@@ -497,6 +502,7 @@ class Session:
                     elif kind:
                         actions.append((kind, arg))
                     buf = buf[:m.start()] + buf[m.end():]
+                actions_run = actions_run or bool(actions)
                 if actions:  # chain after earlier tags so the dog moves in the order written
                     self.act_task = asyncio.create_task(self._run_tags(actions, after=self.act_task))
                     actions = []
@@ -516,6 +522,8 @@ class Session:
         rest = clean(TAG.sub("", buf))
         if rest:
             await sentences.put(rest)
+        elif not spoke and actions_run:  # tags only: never leave the user in silence
+            await sentences.put("好的。")
         return content
 
     async def _run_tags(self, todo, after=None):
