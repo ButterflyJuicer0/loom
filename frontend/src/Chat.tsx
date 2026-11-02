@@ -697,9 +697,11 @@ function MeetingFold({ text, at }: { text: string; at?: number }) {
   const lines = text.split("\n").filter((l) => /^\[[^\]]*\] /.test(l))
   const summary = text.startsWith("【会议模式开始】")
     ? "Meeting started"
-    : text.includes("【会议结束】")
-      ? `Meeting ended${lines.length ? ` · ${lines.length} lines` : ""}`
-      : `Transcript · ${lines.length} line${lines.length === 1 ? "" : "s"}`
+    : text.startsWith("【会议取消】")
+      ? "Meeting cancelled"
+      : text.includes("【会议结束】")
+        ? `Meeting ended${lines.length ? ` · ${lines.length} lines` : ""}`
+        : `Transcript · ${lines.length} line${lines.length === 1 ? "" : "s"}`
   return (
     <div className={"meeting-fold" + (open ? " open" : "")}>
       <button className="meeting-fold-head" onClick={() => setOpen(!open)} aria-expanded={open}>

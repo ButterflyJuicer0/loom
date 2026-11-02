@@ -161,7 +161,8 @@ export function MeetingBar({ sessionId }: { sessionId: string }) {
     )
   }
 
-  if (orphan && m.phase !== "running") {
+  // Not while the dialog is up: opening it already opened the meeting.
+  if (orphan && m.phase === "idle") {
     return (
       <div className="meeting-bar">
         <span className="meeting-dot off" />

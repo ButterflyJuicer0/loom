@@ -10,9 +10,11 @@ defmodule Loom.Meeting do
   while the agent is thinking, sentences pile up instead of steering into its
   turn. "Ask now" from the page sends at once, whatever the clock says.
 
-  Turning meeting mode on sends the meeting prompt (`prompt/0`, which the user
-  can replace with `~/.loom/meeting/prompt.md`); turning it off sends what is
-  left and asks for the minutes. Every sentence also goes to a transcript file
+  Opening meeting mode — the menu item, before the user has picked what to
+  share — sends the meeting prompt (`prompt/0`, which the user can replace
+  with `~/.loom/meeting/prompt.md`), so the agent loads its skills and looks
+  the meeting up while the page gets the models ready; backing out cancels
+  it. Ending it sends what is left and asks for the minutes. Every sentence also goes to a transcript file
   in the session's directory, so the minutes come from the whole meeting, not
   from what is left of the conversation after compaction.
 
@@ -31,6 +33,9 @@ defmodule Loom.Meeting do
   @doc "`title`: what to call the chat if it has no title yet (the page's local time)."
   def start(id, title \\ nil), do: GenServer.call(__MODULE__, {:start, id, title})
   def stop(id), do: GenServer.call(__MODULE__, {:stop, id})
+
+  @doc "Backed out before anything was heard: no minutes."
+  def cancel(id), do: GenServer.call(__MODULE__, {:cancel, id})
   def ask(id), do: GenServer.call(__MODULE__, {:ask, id})
   def lines(id, lines), do: GenServer.call(__MODULE__, {:lines, id, lines})
   def info(id), do: GenServer.call(__MODULE__, {:info, id})
@@ -85,8 +90,23 @@ defmodule Loom.Meeting do
         {:reply, :ok, state}
 
       {m, state} ->
-        tail = if m.pending == [], do: "", else: Enum.join(Enum.reverse(m.pending), "\n") <> "\n\n"
-        _ = Session.submit(id, tail <> "【会议结束】完整转写在 `#{m.file}`。", origin: @origin)
+        finish(id, m)
+        {:reply, :ok, state}
+    end
+  end
+
+  def handle_call({:cancel, id}, _from, state) do
+    case Map.pop(state, id) do
+      {nil, state} ->
+        {:reply, :ok, state}
+
+      {%{count: 0}, state} ->
+        _ = Session.submit(id, "【会议取消】还没开始听就取消了，不用出纪要。", origin: @origin)
+        {:reply, :ok, state}
+
+      # Something was heard after all: as End.
+      {m, state} ->
+        finish(id, m)
         {:reply, :ok, state}
     end
   end
@@ -122,6 +142,11 @@ defmodule Loom.Meeting do
   @impl true
   def handle_info(:tick, state) do
     {:noreply, Map.new(state, fn {id, m} -> {id, flush(id, m, false)} end)}
+  end
+
+  defp finish(id, m) do
+    tail = if m.pending == [], do: "", else: (m.pending |> Enum.reverse() |> Enum.sort() |> Enum.join("\n")) <> "\n\n"
+    _ = Session.submit(id, tail <> "【会议结束】完整转写在 `#{m.file}`。", origin: @origin)
   end
 
   # Send the pending sentences if it is time and the agent is free. `now?`

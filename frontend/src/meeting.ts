@@ -187,19 +187,59 @@ const counts: Record<string, number> = {}
 export async function openMeeting(sessionId: string) {
   if (state.phase === "running" || state.phase === "loading") return
   set({ sessionId, error: null, phase: "checking" })
+  // The agent gets the meeting prompt now, not at Start: it loads its skills
+  // and looks the meeting up while the models come and the user picks a screen.
+  void begin(sessionId)
   try {
     const status = await modelStatus()
     if (status.state === "ready") {
       manifest = status.files
       const missing = await missingInBrowser(status.files)
-      if (missing.length === 0) return set({ phase: "ready" })
+      if (missing.length === 0) {
+        warm()
+        return set({ phase: "ready" })
+      }
       return set({ phase: "offer", total: missing.reduce((n, f) => n + f.size, 0) })
     }
-    if (status.state === "downloading") return watchServer()
+    if (status.state === "downloading") return await watchServer()
     set({ phase: "offer", total: status.size, error: status.error })
   } catch (e) {
     set({ phase: "error", error: String((e as Error).message ?? e) })
   }
+}
+
+// Whether the server has this session's meeting open (the prompt was sent).
+let begun: string | null = null
+
+async function begin(sessionId: string) {
+  if (begun === sessionId) return
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, "0")
+  const title = `会议 ${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  try {
+    await post(sessionId, { action: "start", title })
+    begun = sessionId
+  } catch {
+    // Start tries again.
+  }
+}
+
+// The recognisers, started as soon as the models are here so Start is quick.
+let asrReady: Promise<Worker> | null = null
+let diarReady: Promise<Worker> | null = null
+
+function warm() {
+  if (!manifest) return
+  asrReady ??= startWorker("/meeting/asr-worker.js", filesOf(manifest, "asr"))
+  diarReady ??= startWorker("/meeting/diar-worker.js", filesOf(manifest, "diar"))
+  // Failures surface at Start (asr) or as no speaker labels (diar).
+  asrReady.catch(() => {})
+  diarReady.catch(() => {})
+}
+
+function coolDown() {
+  for (const p of [asrReady, diarReady]) p?.then((w) => w.terminate(), () => {})
+  asrReady = diarReady = null
 }
 
 /** The dialog's Download. */
@@ -211,6 +251,7 @@ export async function downloadModels() {
     if (status.state === "ready") {
       manifest = status.files
       await downloadToBrowser(await missingInBrowser(status.files))
+      warm()
       return set({ phase: "ready" })
     }
     await watchServer()
@@ -225,6 +266,7 @@ async function watchServer() {
     if (status.state === "ready") {
       manifest = status.files
       await downloadToBrowser(await missingInBrowser(status.files))
+      warm()
       return set({ phase: "ready" })
     }
     if (status.state === "missing") throw new Error(status.error ?? "download failed on the server")
@@ -233,8 +275,17 @@ async function watchServer() {
   }
 }
 
+/** Cancel, or a tap outside: backing out before the meeting started. */
 export function closeMeetingDialog() {
-  if (state.phase !== "running" && state.phase !== "loading") set({ phase: "idle", error: null })
+  if (state.phase === "running" || state.phase === "loading") return
+  // Hiding a download keeps it going (and the meeting open); anything else
+  // backs out of the meeting the menu opened.
+  if (state.phase !== "server" && state.phase !== "browser") {
+    coolDown()
+    if (begun) void post(begun, { action: "cancel" }).catch(() => {})
+    begun = null
+  }
+  set({ phase: "idle", error: null })
 }
 
 function startWorker(script: string, files: Files): Promise<Worker> {
@@ -282,10 +333,19 @@ export async function startMeeting(sessionId: string, resume = false) {
       if (status.state !== "ready") throw new Error("the speech models are not downloaded")
       manifest = status.files
     }
-    asr = await startWorker("/meeting/asr-worker.js", filesOf(manifest, "asr"))
+    warm()
+    const asrP = asrReady!
+    const diarP = diarReady!
+    asrReady = diarReady = null // theirs now: teardown terminates them
+    try {
+      asr = await asrP
+    } catch (e) {
+      diarP.then((w) => w.terminate(), () => {})
+      throw e
+    }
     diarTrack = systemAudio ? "them" : "me"
     diarOk = false
-    startWorker("/meeting/diar-worker.js", filesOf(manifest, "diar")).then(
+    diarP.then(
       (w) => {
         diar = w
         diarOk = true
@@ -304,12 +364,8 @@ export async function startMeeting(sessionId: string, resume = false) {
       display.getVideoTracks()[0]?.addEventListener("ended", () => void stopMeeting())
     }
 
-    if (!resume) {
-      const d = new Date()
-      const pad = (n: number) => String(n).padStart(2, "0")
-      const title = `会议 ${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-      await post(sessionId, { action: "start", title })
-    }
+    if (!resume) await begin(sessionId)
+    if (!resume && begun !== sessionId) throw new Error("could not start the meeting on the server")
     flushTimer = window.setInterval(flush, 2000)
     set({ phase: "running", startedAt: Date.now(), lines: 0, systemAudio, partial: { me: "", them: "" } })
   } catch (e) {
@@ -446,5 +502,6 @@ export async function stopMeeting(sessionId = state.sessionId) {
   await flush()
   teardown()
   set({ phase: "idle", startedAt: null, partial: { me: "", them: "" }, speakers: false })
+  begun = null
   await post(sessionId, { action: "stop" }).catch(() => {})
 }

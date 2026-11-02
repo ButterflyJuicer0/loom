@@ -33,7 +33,7 @@ defmodule LoomWeb.MeetingController do
     end
   end
 
-  # POST /api/agents/:id/meeting — `action`: start | stop | ask | lines (+ `lines`).
+  # POST /api/agents/:id/meeting — `action`: start | stop | cancel | ask | lines (+ `lines`).
   def update(conn, %{"id" => id, "action" => action} = params) do
     if Agent.exists?(id) do
       lines = params["lines"]
@@ -42,6 +42,7 @@ defmodule LoomWeb.MeetingController do
         case action do
           "start" -> Meeting.start(id, params["title"])
           "stop" -> Meeting.stop(id)
+          "cancel" -> Meeting.cancel(id)
           "ask" -> Meeting.ask(id)
           "lines" when is_list(lines) -> Meeting.lines(id, lines)
           _ -> {:error, :bad_action}
