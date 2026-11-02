@@ -140,7 +140,7 @@ steers or queues it as usual.
 
 `Loom.Push` sends a Web Push notification to every device that turned them on
 (the switch at the foot of the sidebar), only for what the bell says matters
-(§2.10: 0–2 at once, 3–5 in the 20:00 digest), through `notify/4`. A turn
+(§2.10: 0–5 at once, then a reminder every 20 minutes while they are open). A turn
 ending sends nothing (the user's call, 2026-11-02): a long job that wants the
 phone to ring posts a notice. Tapping it opens the notice's session.
 
@@ -358,9 +358,13 @@ for 3–5.
   when to re-rate (post the same key again) or withdraw. Code keeps only what
   cannot be left to them: one 0–2 a day per source (the next is posted as 3,
   with a note), the clock, and what counts as answered.
-- **Notifying.** 0–2 at once (between 22:00 and 07:00 only 0–1; a 2 waits
-  for 07:00); 3–5 in one notification at 20:00; 6–10 never. Through
-  `Loom.Push.notify/4`.
+- **Notifying.** 0–5 at once (between 22:00 and 07:00 only 0–1; 2–5 wait
+  for 07:00); 6–10 never. Through `Loom.Push.notify/4`.
+- **Reminding.** While any 0–5 is open (at night 0–1; not those put off),
+  one notification listing them 20 minutes after the last one sent, and every
+  20 minutes after that (`Loom.Push.remind/2`). It carries the tag
+  `loom-remind` and `replace: true`: `sw.js` closes Loom's earlier
+  notifications before showing it, so the lock screen holds only the latest.
 - **Done** when the user writes in the notice's session (`AgentChannel`'s
   submit calls `replied/1`), approves or rejects it in the bell (told to the
   session as a message, `origin: "notice"`), or opens one that only asks to be

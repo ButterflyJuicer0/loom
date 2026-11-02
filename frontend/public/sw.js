@@ -18,13 +18,21 @@ self.addEventListener("push", (event) => {
   }
   const n = message.notification ?? {}
   event.waitUntil(
-    self.registration.showNotification(n.title || "loom", {
-      body: n.body || "",
-      tag: n.tag,
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
-      data: { navigate: n.navigate || "/", session: n.data?.session ?? null },
-    }),
+    (async () => {
+      // The bell's reminder stands for everything still waiting: Loom's
+      // earlier notifications go, so only the latest is on the lock screen.
+      if (n.data?.replace) {
+        const old = await self.registration.getNotifications().catch(() => [])
+        for (const o of old) o.close()
+      }
+      await self.registration.showNotification(n.title || "loom", {
+        body: n.body || "",
+        tag: n.tag,
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-192.png",
+        data: { navigate: n.navigate || "/", session: n.data?.session ?? null },
+      })
+    })(),
   )
 })
 

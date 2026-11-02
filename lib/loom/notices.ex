@@ -10,9 +10,12 @@ defmodule Loom.Notices do
     `LOOM_SESSION_ID`. How to pick a priority, and when to raise, lower or
     withdraw one, is the agents' judgement, written down in the `loom-notify`
     skill; what is here is only what must not be left to them.
-  - **Three bands.** 0–2 urgent: a notification at once. 3–5 important: one
-    notification at 20:00 for all of them. 6–10 the rest: no notification.
-    Between 22:00 and 07:00 only 0–1 notify; a 2 waits for 07:00.
+  - **Bands.** 0–2 urgent and 3–5 important: a notification at once. 6–10
+    the rest: no notification. Between 22:00 and 07:00 only 0–1 notify; 2–5
+    wait for 07:00.
+  - **A reminder every 20 minutes** while any 0–5 is open (0–1 at night, none
+    put off): one notification listing them, counted from the last one sent,
+    which replaces the one before (`Loom.Push.remind/2`).
   - **One urgent a day per source.** A second one the same day is posted as a
     3, with a note saying why: the agents decide how urgent things are, but
     one that cries wolf cannot keep waking the user.
@@ -55,7 +58,7 @@ defmodule Loom.Notices do
   @tick :timer.minutes(1)
   # The user's wall clock, as for employees and sleep: Asia/Shanghai.
   @offset 480
-  @digest_hour 20
+  @remind_every :timer.minutes(20)
   @quiet {22, 7}
   @fyi_ttl :timer.hours(24 * 7)
   @kept :timer.hours(24 * 30)
@@ -143,11 +146,12 @@ defmodule Loom.Notices do
       path: path,
       tick: tick,
       notices: notices,
-      # The days the 20:00 digest and the 07:00 catch-up last went out.
+      # The day the 07:00 catch-up last went out; when the last reminder did.
       marks: marks,
       todos: todos,
       clock: Keyword.get(opts, :clock, &now/0),
       notify: Keyword.get(opts, :notify, &Loom.Push.notify/3),
+      remind: Keyword.get(opts, :remind, &Loom.Push.remind/2),
       submit: Keyword.get(opts, :submit, &submit/2)
     }
 
@@ -378,7 +382,7 @@ defmodule Loom.Notices do
   @impl true
   def handle_info(:tick, state) do
     Process.send_after(self(), :tick, state.tick)
-    {:noreply, state |> expire() |> due_again() |> digest() |> catch_up() |> changed()}
+    {:noreply, state |> expire() |> due_again() |> catch_up() |> remind() |> changed()}
   end
 
   defp do_update_todo(state, id, attrs) do
@@ -503,15 +507,15 @@ defmodule Loom.Notices do
 
   defp alert(state, n, now) do
     cond do
-      n["priority"] > 2 ->
+      n["priority"] > 5 ->
         n
 
-      n["priority"] == 2 and quiet?(now) ->
+      n["priority"] >= 2 and quiet?(now) ->
         Map.put(n, "held", true)
 
       true ->
         state.notify.(title(n), n["summary"], n["session"])
-        n
+        Map.put(n, "pushed_at", now)
     end
   end
 
@@ -519,7 +523,8 @@ defmodule Loom.Notices do
 
   defp label(%{"needs" => "approve"}), do: "needs your approval"
   defp label(%{"needs" => "reply"}), do: "needs you"
-  defp label(_), do: "urgent"
+  defp label(%{"priority" => p}) when p <= 2, do: "urgent"
+  defp label(_), do: "important"
 
   # ── The clock ───────────────────────────────────────────────────────────
 
@@ -557,27 +562,35 @@ defmodule Loom.Notices do
     |> Enum.filter(&(is_integer(&1["later_until"]) and &1["later_until"] <= now))
     |> Enum.reduce(state, fn n, state ->
       state.notify.("#{n["source"]["name"]} · reminder", n["summary"], n["session"])
-      put_in(state.notices[n["id"]], Map.merge(n, %{"later_until" => nil, "updated_at" => now}))
+
+      put_in(
+        state.notices[n["id"]],
+        Map.merge(n, %{"later_until" => nil, "updated_at" => now, "pushed_at" => now})
+      )
     end)
   end
 
   defp later?(n, now), do: is_integer(n["later_until"]) and n["later_until"] > now
 
-  # 20:00: one notification for all the important ones still open.
-  defp digest(state) do
+  # Every 20 minutes after the last notification, while 0–5 are open: one
+  # that lists them, replacing the one before. At night only 0–1.
+  defp remind(state) do
     now = state.clock.()
-    today = day(now)
+    top = if quiet?(now), do: 1, else: 5
 
-    if hour(now) >= @digest_hour and state.marks["digest"] != today do
-      open =
-        state |> open() |> Enum.filter(&(&1["priority"] in 3..5 and not later?(&1, now)))
+    waiting =
+      state
+      |> open()
+      |> Enum.filter(&(&1["priority"] <= top and not &1["held"] and not later?(&1, now)))
+      |> Enum.sort_by(&{&1["priority"], &1["created_at"]})
 
-      if open != [] do
-        body = open |> Enum.map(&"#{&1["source"]["name"]}: #{&1["summary"]}") |> Enum.join(" · ")
-        state.notify.("#{length(open)} important #{plural(length(open))} waiting", body, nil)
-      end
+    last =
+      Enum.max([state.marks["reminded"] || 0 | Enum.map(open(state), &(&1["pushed_at"] || 0))])
 
-      put_in(state.marks["digest"], today)
+    if waiting != [] and now - last >= @remind_every do
+      body = Enum.map_join(waiting, " · ", &"#{&1["source"]["name"]}: #{&1["summary"]}")
+      state.remind.("#{length(waiting)} waiting in the bell", body)
+      put_in(state.marks["reminded"], now)
     else
       state
     end
@@ -600,13 +613,17 @@ defmodule Loom.Notices do
 
         list ->
           state.notify.(
-            "#{length(list)} urgent overnight",
+            "#{length(list)} from the night",
             Enum.map_join(list, " · ", & &1["summary"]),
             nil
           )
       end
 
-      state = Enum.reduce(held, state, fn n, s -> put_in(s.notices[n["id"]]["held"], false) end)
+      state =
+        Enum.reduce(held, state, fn n, s ->
+          put_in(s.notices[n["id"]], Map.merge(n, %{"held" => false, "pushed_at" => now}))
+        end)
+
       put_in(state.marks["morning"], today)
     else
       state
@@ -656,9 +673,6 @@ defmodule Loom.Notices do
   defp local(ms), do: DateTime.from_unix!(div(ms, 1000) + @offset * 60)
   defp hour(ms), do: local(ms).hour
   defp day(ms), do: ms |> local() |> DateTime.to_date() |> Date.to_iso8601()
-
-  defp plural(1), do: "thing"
-  defp plural(_), do: "things"
 
   # ── State ───────────────────────────────────────────────────────────────
 

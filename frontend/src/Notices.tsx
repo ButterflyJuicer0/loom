@@ -22,8 +22,8 @@ import "./Notices.css"
  * answer it there: the background, and the answers its source foresees as
  * buttons. An urgent or important one can be put off until later.
  *
- * The bands, by priority: 0–2 urgent (notified at once), 3–5 important (one
- * notification at 20:00), 6–10 the rest.
+ * The bands, by priority: 0–2 urgent and 3–5 important (notified at once,
+ * then reminded every 20 minutes while open), 6–10 the rest.
  *
  * Beside the notices, the user's to-dos, and a chat with the bell's own
  * session to go through both in plain words.

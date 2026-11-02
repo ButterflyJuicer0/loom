@@ -29,17 +29,22 @@ command works too.
 
 The bell is the only thing that reaches the user's phone: a turn ending sends
 nothing. So when the user asked to be told when something is done ("好了叫我",
-"跑完告诉我") and has left, post a notice (2 if they are waiting on it, else 3–5).
+"跑完告诉我") and has left, post a notice (2 if they are waiting on it, else 5).
 
 ## Choosing the priority
 
 | Priority | Means | What the user gets |
 |---|---|---|
 | **0–1** | Something is breaking or about to be lost; acting late costs real damage. | Notified at once, even at night. |
-| **2** | Blocked, or a decision / permission is needed today, and it cannot wait for the evening. | Notified at once (held until 07:00 at night). |
-| **3–5** | Important but can wait for the evening: a decision, a KPI ready for review, a real finding. 3 sooner, 5 later. | One notification at 20:00 for all of them. |
+| **2** | Blocked, or a decision / permission is needed within hours. | Notified at once (held until 07:00 at night). |
+| **3–5** | Important, for today: a decision, a KPI ready for review, a real finding. 3 sooner, 5 later. | Notified at once (held until 07:00 at night). |
 | **6–8** | Worth knowing: progress, a report written, a result. | No notification; seen when the user looks. Gone after a week unread. |
 | **9–10** | By the way. | Same, at the bottom. |
+
+While any 0–5 is open, the phone gets one reminder listing them every 20
+minutes, until the user handles them or puts them off. So 0–5 nags: use it only
+for what the user should really act on today, and withdraw or lower a notice as
+soon as it no longer needs them. Anything that can wait for them to look is 6+.
 
 - **Default low.** If you hesitate between two, take the less urgent. Most
   work needs no notice at all; never post "nothing happened".
