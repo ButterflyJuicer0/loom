@@ -9,7 +9,7 @@ defmodule Loom.Push do
     and kept, since every subscription is bound to it, and one subscription
     per device that turned notifications on.
   - **What is sent: only the bell.** `notify/4`, called by `Loom.Notices` for
-    the notices worth a notification (0–5, none from 00:00 to 07:00).
+    the notices worth a notification (0–5, only 0 from 00:00 to 07:00).
     A turn ending sends nothing: the user asked (2026-11-02) that only the
     important notices reach the phone.
   - **Not to a device that is looking.** A device showing a session says so on

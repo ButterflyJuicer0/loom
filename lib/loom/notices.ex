@@ -12,7 +12,8 @@ defmodule Loom.Notices do
     skill; what is here is only what must not be left to them.
   - **Bands.** 0–2 urgent and 3–5 important: a notification at once, one per
     notice. 6–10 the rest: no notification. Between 00:00 and 07:00 nothing
-    notifies; what came in waits for 07:00, and goes out then, one by one.
+    notifies but a 0; what came in waits for 07:00, and goes out then, one by
+    one.
   - **One urgent a day per source.** A second one the same day is posted as a
     3, with a note saying why: the agents decide how urgent things are, but
     one that cries wolf cannot keep waking the user.
@@ -505,7 +506,7 @@ defmodule Loom.Notices do
       n["priority"] > 5 ->
         n
 
-      quiet?(now) ->
+      n["priority"] > 0 and quiet?(now) ->
         Map.put(n, "held", true)
 
       true ->
@@ -554,9 +555,10 @@ defmodule Loom.Notices do
 
     state
     |> open()
-    # Not at night: it waits for 07:00 like the rest.
+    # Not at night but a 0: it waits for 07:00 like the rest.
     |> Enum.filter(
-      &(is_integer(&1["later_until"]) and &1["later_until"] <= now and not quiet?(now))
+      &(is_integer(&1["later_until"]) and &1["later_until"] <= now and
+          (&1["priority"] == 0 or not quiet?(now)))
     )
     |> Enum.reduce(state, fn n, state ->
       state.notify.("#{n["source"]["name"]} · reminder", n["summary"], n["session"])

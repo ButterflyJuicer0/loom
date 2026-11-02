@@ -23,7 +23,7 @@ import "./Notices.css"
  * buttons. An urgent or important one can be put off until later.
  *
  * The bands, by priority: 0–2 urgent and 3–5 important (notified at once,
- * one each; nothing between 00:00 and 07:00), 6–10 the rest.
+ * one each; only 0 between 00:00 and 07:00), 6–10 the rest.
  *
  * Beside the notices, the user's to-dos, and a chat with the bell's own
  * session to go through both in plain words.

@@ -35,7 +35,8 @@ nothing. So when the user asked to be told when something is done ("好了叫我
 
 | Priority | Means | What the user gets |
 |---|---|---|
-| **0–1** | Something is breaking or about to be lost; acting late costs real damage. | Notified at once. |
+| **0** | Something is breaking or about to be lost right now; waiting until 07:00 costs real damage. | Notified at once, even at night. |
+| **1** | Breaking or about to be lost, but it can wait for the morning. | Notified at once. |
 | **2** | Blocked, or a decision / permission is needed within hours. | Notified at once. |
 | **3–5** | Important, for today: a decision, a KPI ready for review, a real finding. 3 sooner, 5 later. | Notified at once. |
 | **6–8** | Worth knowing: progress, a report written, a result. | No notification; seen when the user looks. Gone after a week unread. |
@@ -43,8 +44,8 @@ nothing. So when the user asked to be told when something is done ("好了叫我
 
 Every 0–5 rings the phone, one notification each, so use them only for what
 the user should act on today; anything that can wait for them to look is 6+.
-Between 00:00 and 07:00 nothing rings, whatever the priority: it goes out at
-07:00.
+Between 00:00 and 07:00 only a 0 rings; the rest go out at 07:00. So a 0
+wakes the user up: only for real damage that cannot wait for the morning.
 
 - **Default low.** If you hesitate between two, take the less urgent. Most
   work needs no notice at all; never post "nothing happened".

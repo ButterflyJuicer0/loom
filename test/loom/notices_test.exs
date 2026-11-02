@@ -187,33 +187,34 @@ defmodule Loom.NoticesTest do
     assert m["later_until"] == nil
   end
 
-  test "nothing between 00:00 and 07:00; then one by one", %{s: s, set: set} do
+  test "nothing but a 0 between 00:00 and 07:00; then one by one", %{s: s, set: set} do
     # 23:00: still the evening.
     set.(@ten + 13 * @hour)
     {:ok, _} = post(s, %{summary: "晚上的", priority: 4})
     assert_received {:notified, _, "晚上的", _}
 
-    # 01:00: held, even a 0.
+    # 01:00: a 0 gets through, the rest are held.
     set.(@ten + 15 * @hour)
     {:ok, _} = post(s, %{summary: "夜里的", priority: 3}, %{kind: "dream", id: "d", name: "Dream"})
     {:ok, n} = post(s, %{summary: "着火了", priority: 0}, %{kind: "session", id: "a_7", name: "z"})
+    assert_received {:notified, "z · urgent", "着火了", nil}
     {:ok, _} = Notices.later(n["id"], @ten + 16 * @hour, s)
     {:ok, m} = post(s, %{summary: "推后的", priority: 5}, %{kind: "session", id: "a_8", name: "v"})
     {:ok, _} = Notices.later(m["id"], @ten + 16 * @hour, s)
     send(s, :tick)
     _ = Notices.list(s)
     refute_received {:notified, _, _, _}
-    # 02:00: put off until now, still night.
+    # 02:00: put off until now, still night: only the 0 comes back.
     set.(@ten + 16 * @hour)
     send(s, :tick)
     _ = Notices.list(s)
+    assert_received {:notified, "z · reminder", "着火了", nil}
     refute_received {:notified, _, _, _}
 
     # 07:10: each on its own, most urgent first.
     set.(@ten + 21 * @hour + 600_000)
     send(s, :tick)
     _ = Notices.list(s)
-    assert_received {:notified, "z · reminder", "着火了", nil}
     assert_received {:notified, "v · reminder", "推后的", nil}
     assert_received {:notified, "Dream · important", "夜里的", nil}
     send(s, :tick)
