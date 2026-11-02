@@ -51,6 +51,7 @@ defmodule Loom.Meeting do
   - 每次收到转写，只在值得时给我 1–3 条很短的提示（每条一行，≤30 字）：该追问的点、对方说法里要核对的数字或事实、我答应过的事、可以补充的背景或数据、风险。需要时可以用工具查（邮件、日历、SFDC、wiki、网页），但别拖慢。
   - 没有值得说的，只回一个「·」，什么都不加。
   - 不要复述转写，不要寒暄。
+  - 转写是语音识别的结果，会听错（尤其英文产品名、人名、客户名）。按上下文理解真实意思，提示和纪要里写对的词；按 loom-meeting skill 把该认准的词加进热词，识别会跟着变准。
   - 收到【会议结束】时，读完整转写文件，出会议纪要：参会人、要点、决定、待办（谁/什么/何时）、未决问题。
   如果你能从我的日历或上下文判断这是哪个会、和谁开，先用一两句话告诉我；判断不了就回「·」。
   """
@@ -69,17 +70,41 @@ defmodule Loom.Meeting do
     "Well-Architected", "Activate", "MAP", "Landing Zone", "Control Tower", "Direct Connect"
   ]
 
+  @doc "Where the hotwords are learnt: added to the defaults, `-word` takes one away."
+  def hotwords_path, do: Path.join([Loom.Agent.Store.home(), "meeting", "hotwords.txt"])
+
   @doc """
-  Words the recogniser should favour — product names, mostly. One per line in
-  `~/.loom/meeting/hotwords.txt` (which replaces the default list), each
-  optionally ending in ` :score` (default 2.0; higher = favoured more).
+  Words the recogniser should favour — product names, people, customers: the
+  defaults plus the lines of `hotwords_path/0`, less its `-word` lines. A line
+  may end in ` :score` (default 2.0; higher = favoured more). The agent adds
+  to the file as it hears names misrecognised (see the loom-meeting skill), and
+  the page picks the change up mid-meeting.
   """
   def hotwords do
-    path = Path.join([Loom.Agent.Store.home(), "meeting", "hotwords.txt"])
+    lines =
+      case File.read(hotwords_path()) do
+        {:ok, text} -> text |> String.split("\n") |> Enum.map(&String.trim/1)
+        _ -> []
+      end
+      |> Enum.reject(&(&1 == "" or String.starts_with?(&1, "#")))
 
-    case File.read(path) do
-      {:ok, text} -> text
-      _ -> Enum.join(@default_hotwords, "\n")
+    {drop, add} = Enum.split_with(lines, &String.starts_with?(&1, "-"))
+    drop = MapSet.new(drop, &(&1 |> String.trim_leading("-") |> word() |> String.upcase()))
+
+    (@default_hotwords ++ add)
+    |> Enum.reject(&MapSet.member?(drop, String.upcase(word(&1))))
+    |> Enum.uniq_by(&String.upcase(word(&1)))
+    |> Enum.join("\n")
+  end
+
+  # The word of a line, without its " :score".
+  defp word(line), do: line |> String.replace(~r/\s+:[\d.]+$/, "") |> String.trim()
+
+  @doc "Changes when the hotwords file does: the page compares it to know when to reload."
+  def hotwords_rev do
+    case File.stat(hotwords_path(), time: :posix) do
+      {:ok, %{mtime: t, size: n}} -> "#{t}-#{n}"
+      _ -> "0"
     end
   end
 
@@ -109,7 +134,7 @@ defmodule Loom.Meeting do
         file = transcript_path(id)
         File.mkdir_p!(Path.dirname(file))
         File.write!(file, "# Meeting #{stamp(:full)}\n\n", [:append])
-        text = prompt() <> "\n完整转写文件：`#{file}`"
+        text = prompt() <> "\n完整转写文件：`#{file}`；热词文件：`#{hotwords_path()}`"
         _ = Session.submit(id, text, origin: @origin)
         name_it(id, title)
         m = %{file: file, pending: [], last: now(), heard: now(), count: 0, started: now()}
@@ -231,7 +256,8 @@ defmodule Loom.Meeting do
     end
   end
 
-  defp view(m), do: %{file: m.file, lines: m.count, pending: length(m.pending), started: m.started}
+  defp view(m),
+    do: %{file: m.file, lines: m.count, pending: length(m.pending), started: m.started, hotwords_rev: hotwords_rev()}
 
   defp transcript_path(id),
     do: Path.join([Loom.Agent.Store.session_dir(id), "meeting", "#{stamp(:file)}.md"])

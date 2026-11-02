@@ -99,7 +99,8 @@ defmodule Loom.Meeting.Models do
 
   defp view(state) do
     cond do
-      ready?() -> %{state: "ready", files: manifest(), hotwords: Loom.Meeting.hotwords()}
+      ready?() ->
+        %{state: "ready", files: manifest(), hotwords: Loom.Meeting.hotwords(), hotwords_rev: Loom.Meeting.hotwords_rev()}
       state.task -> %{state: "downloading", got: state.got, total: state.total, unpacking: state.unpacking}
       true -> %{state: "missing", error: state.error, size: 228_000_000}
     end

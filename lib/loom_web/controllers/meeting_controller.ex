@@ -58,6 +58,10 @@ defmodule LoomWeb.MeetingController do
     end
   end
 
+  # GET /api/meeting/hotwords — the current list, for a page whose rev is stale.
+  def hotwords(conn, _params),
+    do: json(conn, %{hotwords: Meeting.hotwords(), rev: Meeting.hotwords_rev()})
+
   # GET /api/agents/:id/meeting — the running meeting, or null.
   def show(conn, %{"id" => id}), do: json(conn, %{meeting: Meeting.info(id)})
 end

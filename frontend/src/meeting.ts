@@ -82,7 +82,7 @@ function auth(): Record<string, string> {
 }
 
 type ModelStatus =
-  | { state: "ready"; files: Record<string, Record<string, number>>; hotwords?: string }
+  | { state: "ready"; files: Record<string, Record<string, number>>; hotwords?: string; hotwords_rev?: string }
   | { state: "downloading"; got: number; total: number; unpacking?: boolean }
   | { state: "missing"; error: string | null; size: number }
 
@@ -133,6 +133,7 @@ function filesOf(manifest: Record<string, Record<string, number>>, bundle: strin
 
 let manifest: Record<string, Record<string, number>> | null = null
 let hotwords = ""
+let hotRev = ""
 
 async function missingInBrowser(m: Record<string, Record<string, number>>) {
   const cache = await caches.open(CACHE)
@@ -198,6 +199,7 @@ export async function openMeeting(sessionId: string) {
     if (status.state === "ready") {
       manifest = status.files
       hotwords = status.hotwords ?? ""
+      hotRev = status.hotwords_rev ?? ""
       const missing = await missingInBrowser(status.files)
       if (missing.length === 0) {
         warm()
@@ -255,6 +257,7 @@ export async function downloadModels() {
     if (status.state === "ready") {
       manifest = status.files
       hotwords = status.hotwords ?? ""
+      hotRev = status.hotwords_rev ?? ""
       await downloadToBrowser(await missingInBrowser(status.files))
       warm()
       return set({ phase: "ready" })
@@ -271,6 +274,7 @@ async function watchServer() {
     if (status.state === "ready") {
       manifest = status.files
       hotwords = status.hotwords ?? ""
+      hotRev = status.hotwords_rev ?? ""
       await downloadToBrowser(await missingInBrowser(status.files))
       warm()
       return set({ phase: "ready" })
@@ -339,6 +343,7 @@ export async function startMeeting(sessionId: string, resume = false) {
       if (status.state !== "ready") throw new Error("the speech models are not downloaded")
       manifest = status.files
       hotwords = status.hotwords ?? ""
+      hotRev = status.hotwords_rev ?? ""
     }
     warm()
     const asrP = asrReady!
@@ -424,6 +429,8 @@ function onAsr(e: MessageEvent) {
     } else {
       outbox.push({ at, speaker: m.track === "me" ? (diarTrack === "me" ? "说话人" : "我") : "对方", text: m.text })
     }
+  } else if (m.type === "hotwords") {
+    console.info(`meeting: ${m.count} hotwords in use`)
   } else if (m.type === "error") {
     console.warn("meeting asr:", m.message)
   }
@@ -474,8 +481,26 @@ async function flush() {
   try {
     const r = await post(state.sessionId, { action: "lines", lines })
     set({ lines: r.meeting?.lines ?? state.lines + lines.length })
+    const rev = r.meeting?.hotwords_rev
+    if (rev && rev !== hotRev) void reloadHotwords(rev)
   } catch {
     outbox = lines.concat(outbox) // try again next time
+  }
+}
+
+// The agent added words it heard wrong (see the loom-meeting skill): hand the
+// new list to the recogniser, which switches at the next pause.
+async function reloadHotwords(rev: string) {
+  hotRev = rev
+  try {
+    const res = await fetch("/api/meeting/hotwords", { headers: auth() })
+    if (!res.ok) return
+    const data = await res.json()
+    hotwords = data.hotwords
+    hotRev = data.rev
+    asr?.postMessage({ type: "hotwords", hotwords })
+  } catch {
+    hotRev = "" // ask again next time
   }
 }
 

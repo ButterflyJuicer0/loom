@@ -15,13 +15,17 @@
 //
 // In:  {type: "init", cache, files: {js, api, wasm, data, vocab?}, hotwords?}
 //      {type: "audio", track, samples}   16 kHz mono Float32Array
+//      {type: "hotwords", hotwords}       a new list, from the next pause on
 // Out: {type: "ready"} | {type: "error", message}
 //      {type: "partial", track, text}
 //      {type: "final", track, text, start, end}   seconds on that track's clock
+//      {type: "hotwords", count}          the new list is in use
 
 /* global createOnlineRecognizer */
 let recognizer = null
 const tracks = {}
+let canHotword = false // the vocabulary is in the wasm file system
+let nextHotwords = null // a new list, applied between sentences
 
 async function fromCache(cacheName, url) {
   const cache = await caches.open(cacheName)
@@ -61,6 +65,7 @@ async function init({ cache, files, hotwords }) {
     const vocab = await (await fromCache(cache, files.vocab)).text()
     self.Module.FS_createDataFile("/", "bpe.vocab", vocab, true, true, true)
     config = recognizerConfig(hotwords)
+    canHotword = true
   }
   recognizer = createOnlineRecognizer(self.Module, config)
 }
@@ -134,6 +139,23 @@ function feed(name, samples) {
     t.last = ""
     postMessage({ type: "partial", track: name, text: "" })
   }
+  if (nextHotwords !== null && Object.values(tracks).every((x) => x.last === "")) rebuild()
+}
+
+// A new hotword list means a new recognizer: this build can't give a stream
+// its own. Done when no track is mid-sentence, so nothing said is lost; the
+// model is loaded again from the wasm file system, a second or two.
+function rebuild() {
+  const words = nextHotwords
+  nextHotwords = null
+  const old = recognizer
+  recognizer = createOnlineRecognizer(self.Module, recognizerConfig(words))
+  for (const t of Object.values(tracks)) {
+    t.stream.free()
+    t.stream = recognizer.createStream()
+  }
+  old.free()
+  postMessage({ type: "hotwords", count: words.split("\n").filter((l) => l.trim()).length })
 }
 
 onmessage = (e) => {
@@ -143,6 +165,8 @@ onmessage = (e) => {
       () => postMessage({ type: "ready" }),
       (err) => postMessage({ type: "error", message: String(err?.message ?? err) }),
     )
+  } else if (m.type === "hotwords") {
+    if (canHotword && m.hotwords?.trim()) nextHotwords = m.hotwords
   } else if (m.type === "audio" && recognizer) {
     try {
       feed(m.track, m.samples)

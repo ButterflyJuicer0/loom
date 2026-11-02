@@ -36,6 +36,7 @@ defmodule LoomWeb.Router do
     get "/agents/:id/meeting", MeetingController, :show
     post "/agents/:id/meeting", MeetingController, :update
     get "/meeting/models", MeetingController, :models
+    get "/meeting/hotwords", MeetingController, :hotwords
     post "/meeting/models", MeetingController, :fetch
     get "/meeting/models/:bundle/:name", MeetingController, :file
     get "/agents/:id/draft", AgentDraftController, :show
