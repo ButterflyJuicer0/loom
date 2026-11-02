@@ -35,16 +35,16 @@ nothing. So when the user asked to be told when something is done ("好了叫我
 
 | Priority | Means | What the user gets |
 |---|---|---|
-| **0–1** | Something is breaking or about to be lost; acting late costs real damage. | Notified at once, even at night. |
-| **2** | Blocked, or a decision / permission is needed within hours. | Notified at once (held until 07:00 at night). |
-| **3–5** | Important, for today: a decision, a KPI ready for review, a real finding. 3 sooner, 5 later. | Notified at once (held until 07:00 at night). |
+| **0–1** | Something is breaking or about to be lost; acting late costs real damage. | Notified at once. |
+| **2** | Blocked, or a decision / permission is needed within hours. | Notified at once. |
+| **3–5** | Important, for today: a decision, a KPI ready for review, a real finding. 3 sooner, 5 later. | Notified at once. |
 | **6–8** | Worth knowing: progress, a report written, a result. | No notification; seen when the user looks. Gone after a week unread. |
 | **9–10** | By the way. | Same, at the bottom. |
 
-While any 0–5 is open, the phone gets one reminder listing them every 20
-minutes, until the user handles them or puts them off. So 0–5 nags: use it only
-for what the user should really act on today, and withdraw or lower a notice as
-soon as it no longer needs them. Anything that can wait for them to look is 6+.
+Every 0–5 rings the phone, one notification each, so use them only for what
+the user should act on today; anything that can wait for them to look is 6+.
+Between 00:00 and 07:00 nothing rings, whatever the priority: it goes out at
+07:00.
 
 - **Default low.** If you hesitate between two, take the less urgent. Most
   work needs no notice at all; never post "nothing happened".

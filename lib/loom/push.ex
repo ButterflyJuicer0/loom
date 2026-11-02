@@ -9,7 +9,7 @@ defmodule Loom.Push do
     and kept, since every subscription is bound to it, and one subscription
     per device that turned notifications on.
   - **What is sent: only the bell.** `notify/4`, called by `Loom.Notices` for
-    the notices worth a notification (0–5), and `remind/2` every 20 minutes.
+    the notices worth a notification (0–5, none from 00:00 to 07:00).
     A turn ending sends nothing: the user asked (2026-11-02) that only the
     important notices reach the phone.
   - **Not to a device that is looking.** A device showing a session says so on
@@ -31,7 +31,6 @@ defmodule Loom.Push do
 
   @name __MODULE__
   @body_limit 180
-  @remind_tag "loom-remind"
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, @name))
@@ -63,14 +62,6 @@ defmodule Loom.Push do
   """
   def notify(title, body, session_id, server \\ @name),
     do: GenServer.cast(server, {:notify, title, body, session_id})
-
-  @doc """
-  The bell's reminder: one notification for everything still waiting, which
-  replaces the last one and, on the device, closes Loom's earlier ones
-  (`frontend/public/sw.js`), so the lock screen holds only the latest.
-  """
-  def remind(title, body, server \\ @name),
-    do: GenServer.cast(server, {:remind, title, body})
 
   @doc "Every subscription, for inspection."
   def list(server \\ @name), do: GenServer.call(server, :list)
@@ -150,14 +141,6 @@ defmodule Loom.Push do
     {:noreply, state}
   end
 
-  def handle_cast({:remind, title, body}, state) do
-    for sub <- Map.values(state.subs) do
-      send_to(state, sub, message(sub, title, snippet(body), nil, @remind_tag))
-    end
-
-    {:noreply, state}
-  end
-
   def handle_cast({:gone, endpoint}, state) do
     Logger.info("Loom.Push: #{endpoint} is gone; dropping it")
     {:noreply, drop(state, endpoint)}
@@ -194,7 +177,7 @@ defmodule Loom.Push do
       else: text
   end
 
-  defp message(sub, title, body, session_id, tag \\ nil) do
+  defp message(sub, title, body, session_id) do
     url = if session_id, do: "#{sub.origin}/?session=#{session_id}", else: sub.origin <> "/"
 
     Jason.encode!(%{
@@ -203,9 +186,9 @@ defmodule Loom.Push do
         title: title,
         body: body,
         navigate: url,
-        # One notification per session: a newer one replaces the older one.
-        tag: tag || session_id || "loom",
-        data: %{session: session_id, replace: tag == @remind_tag}
+        # One notification per session: a newer turn replaces the older one.
+        tag: session_id || "loom",
+        data: %{session: session_id}
       }
     })
   end

@@ -30,11 +30,9 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 - **Only the bell rings the phone.** A turn ending no longer sends a
-  notification; only bell notices 0–5 do, at once (2–5 wait for 07:00 at
-  night). A long job that should wake you posts a notice.
-- **A reminder every 20 minutes** while 0–5 notices are open (0–1 at night):
-  one notification listing them, which replaces Loom's earlier ones on the
-  lock screen. The 20:00 digest is gone.
+  notification; only bell notices 0–5 do, at once, one each. The 20:00
+  digest is gone. Nothing rings between 00:00 and 07:00, not even a 0: it
+  goes out at 07:00. A long job that should wake you posts a notice.
 - **Taps answer at once**: New chat opens immediately and the server makes
   the session in the background (the first message waits for it, retrying on
   a weak network). Pin, archive, done, move, rename, delete and to-do ticks
