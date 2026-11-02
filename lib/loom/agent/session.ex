@@ -406,6 +406,9 @@ defmodule Loom.Agent.Session do
   defp instructions(id, project, {_, "bell"}),
     do: instructions(id, project, nil) <> "\n" <> Loom.Notices.Prompt.system()
 
+  defp instructions(id, project, {_, "employee_setup"}),
+    do: instructions(id, project, nil) <> "\n" <> Loom.Employees.Prompt.setup()
+
   defp instructions(id, project, {_, "incognito"}),
     do: instructions(id, project, nil) <> "\n" <> Loom.Agent.Sandbox.instructions()
 

@@ -160,7 +160,7 @@ export type AgentInfo = {
   // virtual employee's, opened from its page; see `Employees.tsx`. "bell" for
   // the bell's chat; "task" for a task's own session, opened from the task.
   // Older servers do not send it.
-  kind?: "dream" | "employee_chat" | "employee_work" | "bell" | "task" | "incognito" | null
+  kind?: "dream" | "employee_chat" | "employee_work" | "employee_setup" | "bell" | "task" | "incognito" | null
   employee_id?: string | null
   // When a safety classifier stopped the model here (ms), and why; a session
   // kept for a fixed job is then carried on in a fresh one. See
@@ -1094,6 +1094,9 @@ export type Employee = {
   // is kept when the device is removed.
   workstation: string | null
   workstation_name: string | null
+  // Hard limits Claude Code holds it to, set from a setup chat only; the page
+  // shows the summary. Null: every tool, as any session.
+  permissions: { summary: string } | null
   status: EmployeeStatus
   chat_session: string
   work_session: string
@@ -1151,6 +1154,13 @@ const one = async (call: Promise<{ employee: Employee }>) => (await call).employ
 
 export function createEmployee(attrs: EmployeeSettings): Promise<Employee> {
   return one(apiCall("/api/employees", { method: "POST", body: JSON.stringify(attrs) }))
+}
+
+/** A setup chat: hire in conversation, or with an id, change that employee. Its session id. */
+export async function employeeSetup(employeeId?: string): Promise<string> {
+  const body = employeeId ? { employee_id: employeeId } : {}
+  return (await apiCall<{ session: string }>("/api/employees/setup", { method: "POST", body: JSON.stringify(body) }))
+    .session
 }
 
 export function updateEmployee(id: string, attrs: EmployeeSettings): Promise<Employee> {

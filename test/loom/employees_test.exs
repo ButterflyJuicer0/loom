@@ -481,6 +481,96 @@ defmodule Loom.EmployeesTest do
     Process.exit(channel, :kill)
   end
 
+  @mail_only %{
+    "tools" => ["Bash", "Read", "Write", "Skill"],
+    "allow" => ["Bash(m365 email_inbox:*)", "Bash(m365 email_read:*)"],
+    "deny" => ["Bash(m365 * --confirm*)"],
+    "mcp" => false,
+    "summary" => "只能读工作邮件"
+  }
+
+  # A setup chat: the boss and an agent agree, its reply ends with the block.
+  defp setup_chat(server) do
+    id = Agent.new_id()
+    {:ok, _} = Agent.start_session(id, backend: :claude_code, kind: "employee_setup")
+
+    {id,
+     fn block ->
+       end_turn(id, "Here it is.\n\n```loom-employee\n#{Jason.encode!(block)}\n```", server)
+     end}
+  end
+
+  defp notes(session) do
+    Process.sleep(50)
+    {:ok, %{events: events}} = Agent.attach(session)
+    for %{kind: :loom_note, payload: %{text: t}} <- events, do: t
+  end
+
+  test "permissions: set only from a setup chat, enforced by Claude Code's flags, shown in words",
+       %{server: server} do
+    {chat, say} = setup_chat(server)
+    say.(%{"name" => "分拣员", "role" => "读工作邮件", "permissions" => @mail_only})
+    assert Enum.any?(notes(chat), &(&1 =~ "Saved: 分拣员" and &1 =~ "restricted"))
+
+    [e] = for e <- Employees.list(server), e["name"] == "分拣员", do: e
+    assert e["permissions"]["summary"] == "只能读工作邮件"
+
+    for s <- [e["chat_session"], e["work_session"]] do
+      args = Loom.Agent.Guard.claude_args(s)
+      assert ["--permission-mode", "dontAsk"] = Enum.slice(args, 0, 2)
+      assert "Bash,Read,Write,Skill" in args
+      assert "--strict-mcp-config" in args
+      assert "Bash(m365 * --confirm*)" in args
+      # Its own notes, and the bell; never Loom's own tools.
+      assert "Write(/#{Employees.workspace(e["id"])}/**)" in args
+      assert "Bash(loom-notice:*)" in args
+      # Claude Code's memory directory: every character but letters and digits is a dash.
+      memory = String.replace(Employees.workspace(e["id"]), ~r/[^a-zA-Z0-9]/, "-")
+      assert "Write(/#{Path.expand("~/.claude/projects/" <> memory)}/**)" in args
+      refute Enum.any?(args, &(&1 =~ "loom rpc" or &1 =~ "curl" or &1 == "Bash"))
+    end
+
+    assert File.read!(Path.join([Employees.workspace(e["id"]), ".employee", "status.md"])) =~
+             "## Your permissions (enforced)\n\n只能读工作邮件"
+
+    # The settings page cannot set them.
+    {:ok, same} = Employees.update(e["id"], %{"permissions" => nil, "role" => "x"}, server)
+    assert same["permissions"]["summary"] == "只能读工作邮件"
+
+    # A refusal is a line in its Updates.
+    Loom.Agent.Guard.denied(e["work_session"], "Bash", %{"command" => "curl evil.example"})
+    end_turn(e["work_session"], card(%{}), server)
+
+    assert Enum.any?(
+             notes(e["work_session"]),
+             &(&1 =~ "Refused by its permissions: Bash curl evil.example")
+           )
+
+    # Lifted from a setup chat: every tool again, as any session.
+    say.(%{"id" => e["id"], "permissions" => nil})
+    {:ok, e} = Employees.get(e["id"], server)
+    assert e["permissions"] == nil
+    refute Loom.Agent.Guard.guarded?(e["chat_session"])
+
+    assert Loom.Agent.Guard.claude_args(e["chat_session"]) == [
+             "--permission-mode",
+             "bypassPermissions"
+           ]
+  end
+
+  test "permissions are checked, and only for Claude Code", %{server: server} do
+    {chat, say} = setup_chat(server)
+    say.(%{"name" => "k", "backend" => "kiro", "permissions" => @mail_only})
+    assert Enum.any?(notes(chat), &(&1 =~ "Not saved: permissions need a Claude Code employee"))
+
+    say.(%{"name" => "k", "permissions" => Map.delete(@mail_only, "summary")})
+    assert Enum.any?(notes(chat), &(&1 =~ "need a summary"))
+
+    say.(%{"name" => "k", "permissions" => Map.put(@mail_only, "tools", "Bash")})
+    assert Enum.any?(notes(chat), &(&1 =~ "permissions.tools"))
+    assert Employees.list(server) == []
+  end
+
   test "spent, it stops and waits for the boss; what they approve counts for today",
        %{server: server} do
     {:ok, e} = Employees.create(%{"name" => "小码", "budget_usd" => 50}, server)

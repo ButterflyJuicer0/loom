@@ -41,6 +41,7 @@ import {
   openDream,
   readNotice,
   bellSession,
+  employeeSetup,
   type AgentBackend,
   type Employee,
   type Notice,
@@ -404,6 +405,16 @@ function App() {
     setActiveId(id)
     setView("chat")
     setDrawerOpen(false)
+  }
+
+  // A setup chat (`Loom.Employees.setup_chat/1`): to hire in conversation, or
+  // to change an employee, its permissions included. Into Recents, opened.
+  const setupChat = async (employeeId?: string) => {
+    try {
+      select(await employeeSetup(employeeId))
+    } catch (err) {
+      alert((err as Error).message)
+    }
   }
 
   // A moon: the scope's sleep session, made on first use, on its report.
@@ -867,6 +878,7 @@ function App() {
               projects={projects}
               devices={devices}
               chat={chatProps}
+              onSetupChat={(id) => void setupChat(id)}
             />
           ) : active && chatProps && isDream(active) ? (
             <Sleep
@@ -1070,6 +1082,7 @@ function App() {
             upsertEmployee(e)
             openEmployee(e)
           }}
+          onChat={() => void setupChat()}
           onClose={() => setHiring(false)}
         />
       )}

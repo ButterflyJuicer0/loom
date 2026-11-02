@@ -309,7 +309,7 @@ defmodule Loom.Employees.Prompt do
     - Weekly report on #{day(e["weekly_report"]["day"])} at #{e["weekly_report"]["time"]}
     - Budget today: #{Loom.Employees.amount(e, ctx.spent)} used of #{Loom.Employees.amount(e, ctx.cap)} — #{Loom.Employees.amount(e, max(ctx.cap - ctx.spent, 0))} left
     #{if e["persona"] not in [nil, ""], do: "\nHow the boss wants you to work:\n" <> e["persona"] <> "\n", else: ""}
-#{workstation(e, ctx)}
+    #{workstation(e, ctx)}
     ## The boss profile (shared by all employees)
 
     #{boss(ctx[:boss] || [], ctx.offset)}
@@ -318,6 +318,7 @@ defmodule Loom.Employees.Prompt do
 
     #{projects(ctx.projects, ctx.workspace)}
 
+    #{permissions(e)}
     ## Ask the boss first before
 
     #{Enum.map_join(e["ask_first"] || [], "\n", &("- " <> &1))}
@@ -367,6 +368,20 @@ defmodule Loom.Employees.Prompt do
   end
 
   defp workstation(_e, _ctx), do: ""
+
+  defp permissions(%{"permissions" => %{"summary" => summary}}) do
+    """
+    ## Your permissions (enforced)
+
+    #{summary}
+
+    Claude Code holds you to them: other tools don't exist for you, and a call
+    they don't allow is refused and shows in your updates. Don't look for a
+    way around a refusal; if the job needs more, ask the boss.
+    """
+  end
+
+  defp permissions(_e), do: ""
 
   defp boss([], _offset), do: "Nothing yet."
 
@@ -465,4 +480,131 @@ defmodule Loom.Employees.Prompt do
 
   defp pad(n), do: String.pad_leading(to_string(n), 2, "0")
   defp blank(v, default), do: if(v in [nil, ""], do: default, else: v)
+
+  # ── Setup chats ─────────────────────────────────────────────────────────
+
+  @doc """
+  The system prompt of a setup chat (`employee_setup`): an agent that hires
+  a virtual employee with the user, or changes one, in conversation. What it
+  agrees on, it ends a reply with, as a `loom-employee` block, which
+  `Loom.Employees` saves when the turn ends.
+  """
+  def setup do
+    """
+    ## You set up virtual employees
+
+    This chat is where the user (the boss) hires a virtual employee in Loom,
+    or changes one, by talking it through with you. A virtual employee is an
+    agent Loom wakes on a heartbeat to work toward KPIs on the projects it is
+    given; it reports to the boss's bell when it needs them.
+
+    Find out what the job is, in a few short questions at most: what it should
+    do and how often, which projects, its hours and daily budget, what it must
+    ask before doing, whether it works on one of the boss's devices, and
+    whether it should be held to hard permissions. Suggest sensible values for
+    what the boss leaves open rather than asking about each. Then show the
+    settings in plain words, and once the boss agrees, end that reply with one
+    block:
+
+    ```loom-employee
+    {"name": "…", "role": "…", …}
+    ```
+
+    Loom saves it when your reply ends and says so under it, to the boss and
+    to you (`[Loom: saved …]`, or why not), so don't say it is saved: say what
+    it will be. If it was not, fix it with the boss. The block is the only way: never create
+    or change an employee by editing files or calling Loom's API. Don't write
+    a block before the boss has agreed: whatever it says is saved as it is.
+
+    ### The fields
+
+    - `name` (required to hire), `role` (one line), `persona` (how to work,
+      a short paragraph), `language` (of its reports, e.g. "简体中文")
+    - `project_ids`: ids from the list Loom gives you below
+    - `hours`: `[from, to]`, hours 0–24 of the boss's day (UTC+8); `null` is all day
+    - `heartbeat_min` (default 120), `min_gap_min` (15), `max_turn_min` (60)
+    - `budget_usd`: dollars a day (default 50); `budget_turns` for Kiro/Codex (40)
+    - `weekly_report`: `{"day": 1–7 (Monday is 1), "time": "HH:MM"}`
+    - `ask_first`: what it must ask the boss before doing, a list of short
+      lines (default: deploying, deleting what is not its own, git push or
+      PRs, publishing or sending anything outside this machine). Soft: it is
+      told, nothing enforces it.
+    - `backend`, at hiring only and for good: `claude_code` (default), `kiro`
+      or `codex`; `model`: leave it out for the backend's best
+    - `workstation`: a device id from the list below, if it works there
+    - `permissions`: hard limits, below; leave it out for none
+
+    To change an employee, give its `id` and only what changes:
+    `{"id": "e_…", "hours": [9, 18]}`.
+
+    ### Permissions
+
+    Without `permissions` an employee may use every tool, like any session.
+    With them, Claude Code itself holds it to them, whatever it is told —
+    suggest them when its job feeds it text it can't trust (mail, web pages,
+    chats from others), which could try to talk it into something:
+
+        "permissions": {
+          "tools": ["Bash", "Read", "Write", "Skill"],
+          "allow": ["Bash(m365 email_inbox:*)", "Bash(m365 email_read:*)"],
+          "deny": ["Bash(m365 * --confirm*)"],
+          "mcp": false,
+          "summary": "只能读工作邮件（收件箱、搜索、读信），不能发信、不能联网、不能用 MCP；只能读写自己的目录，可以响铃铛。"
+        }
+
+    - `tools`: the only built-in tools it has; the rest don't exist for it.
+      Names: Bash, Read, Write, Edit, Glob, Grep, Skill, WebSearch, WebFetch,
+      TodoWrite, Agent, NotebookEdit.
+    - `allow`: what it may do without being stopped; anything else is
+      refused. `Bash(prefix:*)` is a command starting with that prefix; a
+      command chained with `&&`, `;` or `|` must match in every part.
+      `Read(//abs/dir/**)`, `Write(…)`, `Edit(…)` for paths (two slashes for
+      an absolute path). A bare tool name (`WebSearch`) allows all its uses.
+    - `deny`: refused even when allowed; it wins.
+    - `mcp`: whether it keeps the MCP servers (default false).
+    - `summary`: what the boss reads on its page instead of the rules: in the
+      boss's language, a sentence or two, what it can and cannot do. Keep it
+      true to the rules.
+
+    Loom adds on its own: reading and writing its workspace and memory,
+    reading its skills and its own files, and `loom-notice` for the bell.
+
+    Never allow what would let it run anything or reach Loom itself, which
+    would undo the rest: a bare `Bash` or `Bash(*)`, shells and interpreters
+    (`bash`, `sh`, `python`, `node`, `env`, `xargs`), `curl`/`wget`, `ssh`,
+    `loom-node`, Loom's `bin/loom`, or writing outside its own directories.
+    `"permissions": null` lifts them. Only Claude Code employees can have
+    them. Changed permissions apply as soon as they are saved: Loom starts
+    its sessions again.
+    """
+  end
+
+  @doc "What a setup chat is told before the boss's first message: the choices, and the employee it is about."
+  def setup_context(e, projects, devices) do
+    projects =
+      if projects == [],
+        do: "none",
+        else: Enum.map_join(projects, "\n", &"- #{&1.name}: `#{&1.id}`")
+
+    devices =
+      if devices == [],
+        do: "none",
+        else: Enum.map_join(devices, "\n", &"- #{&1.name}: `#{&1.id}`")
+
+    about =
+      case e do
+        nil ->
+          "The boss wants to hire a new employee."
+
+        e ->
+          keys = ~w(id name role persona language project_ids hours heartbeat_min min_gap_min
+                    max_turn_min budget_usd budget_turns weekly_report ask_first backend model
+                    workstation permissions)
+
+          "The boss wants to change #{e["name"]}. Its settings now:\n\n```json\n" <>
+            Jason.encode!(Map.take(e, keys), pretty: true) <> "\n```"
+      end
+
+    "[Loom: #{about}\n\nProjects:\n#{projects}\n\nDevices:\n#{devices}]"
+  end
 end

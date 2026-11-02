@@ -137,7 +137,10 @@ See the [changelog](CHANGELOG.md) for what came in which version.
   page, with an HTTP API (`Loom.Cron`).
 - **Virtual employees.** An agent with a role, KPIs and a daily budget that
   keeps working on the projects it is given, on Claude Code, Kiro or Codex. A
-  workstation can bind it to one device, enforced by a hook. All employees
+  workstation can bind it to one device, enforced by a hook. Hire one from
+  the form, or describe it in a chat. An employee can be held to hard
+  permissions (only some tools and commands, enforced by Claude Code itself),
+  for jobs that read text you can't trust, like mail. All employees
   share one boss profile, learned from your words and editable by you.
 - **Sleep / Dream.** At night a hidden session goes over each project's
   sessions and consolidates Claude Code's memory, writes a report, and only

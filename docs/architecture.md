@@ -300,8 +300,38 @@ says when it needs the user.
   it whole, a chat's system prompt has it as of its start and is told each
   change ahead of its next message (`Agent.tell/2`). Mirrored to
   `~/.loom/boss.md`, which Sleep is told to leave its facts in.
-- **Permissions are soft**: the projects and their workspaces are named in
-  the prompt, with what to ask first. Same Unix user as every agent.
+- **Permissions are soft, unless it is given some.** Soft: the projects and
+  their workspaces are named in the prompt, with what to ask first; same Unix
+  user as every agent. Hard (`permissions`, Claude Code only):
+  `{tools, allow, deny, mcp, summary}`, carried in the same guard file, and
+  turned by `Guard.claude_args/1` into Claude Code's own flags at each spawn:
+  `--tools` (the only built-ins it has; the rest, `WebFetch` say, don't
+  exist), `--allowedTools` (its `allow`, plus what Loom adds: read/write its
+  workspace and memory, read its skills and own files,
+  `Bash(loom-notice:*)`), `--disallowedTools`, `--strict-mcp-config` unless
+  `mcp`, under `--permission-mode dontAsk` instead of `bypassPermissions`, so
+  a call no rule allows is refused, never asked about. Claude Code splits
+  `&&`/`;`/`|` chains and refuses `$(…)`, so a `Bash(prefix:*)` rule holds;
+  absolute paths are `Read(//abs/**)`. A refusal comes back as
+  `system/permission_denied`; the backend logs it to `blocked.jsonl` with
+  `by: "permissions"` (`Guard.denied/3`), and Updates shows it. They are not
+  among the page's settings (`PATCH` ignores them): only a setup chat sets
+  them, JSON and summary together; the page shows the summary, and a lock
+  "Restricted" mark on the page and the sidebar row. A change starts both
+  sessions again (`Agent.reload_backend/1`) and tells them. Nothing they are
+  allowed reaches Loom: no shell, `curl`, `loom rpc` or `node-cli.json`, so a
+  restricted employee cannot lift its own; the setup prompt says never to
+  allow those. Kiro and Codex employees cannot have them: saving says why.
+- **Setup chats** (`kind: "employee_setup"`, `Employees.setup_chat/1`,
+  `POST /api/employees/setup`): "Describe it in a chat" on top of the hiring
+  form, and "Change in a chat" under Permissions, open one in the sidebar.
+  Its instructions (`Prompt.setup/0`, in code rather than a skill, so they
+  ship with Loom) have it talk the job through and, once the user agrees,
+  end a reply with a fenced `loom-employee` JSON block: settings to hire
+  with, or an `id` and what to change. `Loom.Employees` reads the last block
+  when the turn ends, saves it, and says so in the chat (`Session.note/2`)
+  and to the agent (`Agent.tell/2`). Before the first message it is told the
+  projects, the devices and, for a change, the employee's settings.
 - **Truth is `~/.loom/employees.json`.** Pushed on the lobby as `employee`
   and `employee_removed`; `/api/employees` and its `pause`, `wake`,
   `approve`, `kpis` and `reports` routes serve the page. Sleep (§2.8) leaves

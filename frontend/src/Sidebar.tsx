@@ -425,6 +425,7 @@ export function Sidebar({
                   <span className="emp-row-name">
                     {e.name}
                     {e.workstation && <span className="emp-row-station"> · {e.workstation_name}</span>}
+                    {e.permissions && <span className="emp-row-station"> · Restricted</span>}
                   </span>
                   <StatusIcon status={e.status} />
                   <BudgetRing employee={e} />

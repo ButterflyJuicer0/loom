@@ -63,6 +63,7 @@ defmodule LoomWeb.Router do
 
     get "/employees", EmployeeController, :index
     post "/employees", EmployeeController, :create
+    post "/employees/setup", EmployeeController, :setup
     get "/employees/:id", EmployeeController, :show
     patch "/employees/:id", EmployeeController, :update
     delete "/employees/:id", EmployeeController, :delete

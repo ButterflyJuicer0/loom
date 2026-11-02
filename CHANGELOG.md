@@ -14,6 +14,19 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **Hire in a chat**: "Describe it in a chat" on top of the hiring form opens
+  a chat that talks the job through and creates the employee once you agree.
+  The form stays.
+- **Hard permissions for an employee** (Claude Code): only the tools and
+  commands it is allowed, enforced by Claude Code itself, so text it reads
+  (mail, web pages) can't talk it into more. Set in a chat; the page shows a
+  summary in words and a "Restricted" mark, refusals show in Updates.
+
+### Fixed
+- An employee's memory directory in its guard rules: Claude Code turns every
+  character but letters and digits into a dash, `_` included.
+
 ### Changed
 - **Taps answer at once**: New chat opens immediately and the server makes
   the session in the background (the first message waits for it, retrying on
