@@ -1,0 +1,31 @@
+{
+  "host": "0.0.0.0",
+  "port": 8000,
+  "token": "change-me: the bearer token your robots send",
+  "voice": "zh-CN-XiaoxiaoNeural",
+  "voice_rate": "+10%",
+  "vad_silence_seconds": 0.6,
+  "idle_close_seconds": 20,
+  "asr_language": "zh",
+  "utc_offset_hours": 8,
+  "bedrock": {
+    "region": "us-west-2",
+    "model": "global.anthropic.claude-haiku-5-5",
+    "api_key": "a Bedrock API key",
+    "proxy": null
+  },
+  "mqtt": {
+    "host": "192.168.1.1",
+    "port": 1883,
+    "user": "voice",
+    "password": "change-me",
+    "client_id": "loom-home-voice"
+  },
+  "home_ids": {
+    "aa:bb:cc:dd:ee:ff": "dog"
+  },
+  "system_prompt": "You are a small desk robot talking by voice. Keep every answer to one or two short spoken sentences, no lists or markdown. Start each answer with one emotion tag such as [happy], chosen from: {emotions}. Your body can do: {actions}. To move, write an action tag after the emotion, e.g. [happy][do:shake_hand]. Only tags make things happen.",
+  "device_prompts": {
+    "my-other-robot": "A different persona for the device whose Device-Id header is my-other-robot. Same {emotions} and {actions} placeholders."
+  }
+}

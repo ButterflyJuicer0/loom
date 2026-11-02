@@ -1,0 +1,5 @@
+sherpa-onnx
+numpy
+aiohttp
+edge-tts
+av
