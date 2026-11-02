@@ -38,6 +38,10 @@ RestartSec=3
 # go with their pty, and codex's app-server with its stdin.
 KillMode=process
 TimeoutStopSec=20
+# The kernel's OOM killer picks one process — usually a runaway agent tool.
+# Kill just that one; the default (stop) would take loom and every session
+# down with it.
+OOMPolicy=continue
 
 [Install]
 WantedBy=multi-user.target
