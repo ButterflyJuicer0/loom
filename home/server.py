@@ -3,7 +3,7 @@
 Device protocol: 78/xiaozhi-esp32 docs/websocket.md + docs/mcp-protocol.md, checked
 against the firmware (main/application.cc, protocols/websocket_protocol.cc, mcp_server.cc).
 Pipeline modeled on xinnan-tech/xiaozhi-esp32-server: Silero VAD -> SenseVoice ASR ->
-Claude on Bedrock -> edge-tts -> Opus. Home devices: PROTOCOL.md, via home.py.
+Claude (or GPT) on Bedrock -> local Matcha TTS or edge-tts -> Opus. Home devices: PROTOCOL.md, via home.py.
 
 Run:  python server.py   (config.json next to it; see config.example.json)
 Local control (127.0.0.1 only): POST /api/say {"text"}, POST /api/tool {"name","arguments"},
@@ -136,10 +136,12 @@ async def bedrock_stream(msgs):
     b = CFG["bedrock"]
     if BEDROCK_HTTP is None:  # bedrock.proxy: optional HTTP proxy (Anthropic models refuse some regions' source IPs)
         BEDROCK_HTTP = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30, sock_connect=3))
-    body = {"system": [{"text": msgs[0]["content"]}, {"cachePoint": {"type": "default"}}],
+    claude = "anthropic" in b["model"]
+    body = {"system": [{"text": msgs[0]["content"]}] + ([{"cachePoint": {"type": "default"}}] if claude else []),
             "messages": [{"role": m["role"], "content": [{"text": m["content"]}]} for m in msgs[1:] if m["content"]],
             "inferenceConfig": {"maxTokens": 160},  # Claude 5 rejects temperature
-            "additionalModelRequestFields": {"thinking": {"type": "disabled"}}}  # thinking ate the whole budget
+            # no thinking: it ate the whole budget and doubled the first-token time
+            "additionalModelRequestFields": {"thinking": {"type": "disabled"}} if claude else {"reasoning": {"effort": "none"}}}
     body.update(b.get("extra", {}))
     url = f"https://bedrock-runtime.{b['region']}.amazonaws.com/model/{b['model']}/converse-stream"
     async with BEDROCK_HTTP.post(url, json=body, headers={"Authorization": "Bearer " + b["api_key"]},
@@ -166,7 +168,49 @@ async def bedrock_stream(msgs):
                     log.info("bedrock usage %s", ev.get("usage"))
 
 
+LOCAL_TTS, LOCAL_TTS_LOCK = None, None
+
+
+def _local_tts():
+    """sherpa-onnx Matcha (config local_tts): ~0.2 s a sentence on CPU, offline. None when not configured."""
+    global LOCAL_TTS, LOCAL_TTS_LOCK
+    c = CFG.get("local_tts")
+    if c and LOCAL_TTS is None:
+        import threading
+        d = ROOT / c["model_dir"]
+        LOCAL_TTS = sherpa_onnx.OfflineTts(sherpa_onnx.OfflineTtsConfig(
+            model=sherpa_onnx.OfflineTtsModelConfig(matcha=sherpa_onnx.OfflineTtsMatchaModelConfig(
+                acoustic_model=str(d / c.get("acoustic_model", "model-steps-3.onnx")), vocoder=str(ROOT / c["vocoder"]),
+                lexicon=str(d / "lexicon.txt"), tokens=str(d / "tokens.txt"), dict_dir=str(d / "dict")),
+                num_threads=c.get("threads", 2)),
+            rule_fsts=",".join(str(d / f) for f in ("date.fst", "number.fst", "phone.fst") if (d / f).exists())))
+        LOCAL_TTS_LOCK = threading.Lock()
+    return LOCAL_TTS
+
+
+def _local_synth(text):
+    with LOCAL_TTS_LOCK:  # one engine, one sentence at a time
+        a = LOCAL_TTS.generate(text, sid=CFG["local_tts"].get("sid", 0), speed=CFG["local_tts"].get("speed", 1.1))
+    pcm = (np.clip(np.asarray(a.samples, np.float32), -1, 1) * 32767).astype(np.int16)
+    if a.sample_rate == OUT_RATE or not len(pcm):
+        return pcm
+    fr = av.AudioFrame.from_ndarray(pcm.reshape(1, -1), format="s16", layout="mono")
+    fr.sample_rate = a.sample_rate
+    rs = av.AudioResampler(format="s16", layout="mono", rate=OUT_RATE)
+    return np.concatenate([r.to_ndarray().reshape(-1) for r in rs.resample(fr) + rs.resample(None)])
+
+
 async def synth(text):
+    """Local TTS when configured (falls back to edge-tts on error), else edge-tts -> 24 kHz mono int16 PCM."""
+    if _local_tts():
+        try:
+            return await asyncio.get_running_loop().run_in_executor(None, _local_synth, text)
+        except Exception as e:
+            log.warning("local tts failed, using edge-tts: %r", e)
+    return await edge_synth(text)
+
+
+async def edge_synth(text):
     """edge-tts -> 24 kHz mono int16 PCM."""
     mp3 = bytearray()
     local = CFG.get("tts_local_addr")
@@ -461,7 +505,8 @@ class Session:
                 while True:
                     m = SENT_END.search(buf)
                     comma = buf.find("，") + 1
-                    cut = m.end() if m else (comma if comma and (len(buf) > 30 or (not spoke and comma >= 5)) else 0)
+                    # the first clause goes out as soon as it ends: local TTS makes even "好嘞，" worth sending alone
+                    cut = m.end() if m else (comma if comma and (len(buf) > 30 or (not spoke and comma >= (2 if LOCAL_TTS else 5))) else 0)
                     if not cut:
                         break
                     s, buf = clean(buf[:cut]), buf[cut:]

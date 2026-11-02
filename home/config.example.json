@@ -4,6 +4,12 @@
   "token": "change-me: the bearer token your robots send",
   "voice": "zh-CN-XiaoxiaoNeural",
   "voice_rate": "+10%",
+  "local_tts": {
+    "model_dir": "models/tts/matcha-icefall-zh-baker",
+    "vocoder": "models/tts/vocos-22khz-univ.onnx",
+    "threads": 2,
+    "speed": 1.1
+  },
   "vad_silence_seconds": 0.6,
   "idle_close_seconds": 20,
   "asr_language": "zh",
