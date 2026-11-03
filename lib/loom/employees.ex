@@ -1573,7 +1573,7 @@ defmodule Loom.Employees do
   defp write_guard(%{"workstation" => nil, "permissions" => nil}, session, _kind),
     do: Guard.put(session, nil)
 
-  defp write_guard(e, session, _kind) do
+  defp write_guard(e, session, kind) do
     ws = workspace(e["id"])
     # Claude Code keeps its memory for a directory under ~/.claude/projects.
     memory = Path.expand("~/.claude/projects/" <> String.replace(ws, ~r/[^a-zA-Z0-9]/, "-"))
@@ -1586,6 +1586,10 @@ defmodule Loom.Employees do
       reads: [memory, skills, Path.expand("~/.kiro/skills"), dir(e["id"])],
       log: Path.join(dir(e["id"]), "blocked.jsonl"),
       permissions: e["permissions"],
+      # A heartbeat between 5 and 60 minutes outlives the default prompt cache
+      # but not the hour-long one: each wake-up would otherwise write its whole
+      # context again (~$0.30 a wake-up on Opus, measured 2026-11-03).
+      cache_1h: kind == "employee_work" and (e["heartbeat_min"] || 0) in 6..59,
       # What every employee with permissions may do whatever they say: keep
       # its notes and memory, read its skills and its own files, and post to
       # the bell. Nothing that could change its own settings.

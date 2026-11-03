@@ -66,7 +66,11 @@ defmodule Loom.Agent.Guard do
   """
   def claude_args(session_id) do
     rules = rules(session_id) || %{}
-    hook = if rules["workstation"], do: ["--settings", claude_settings()], else: []
+    hook =
+      case claude_settings(rules) do
+        nil -> []
+        settings -> ["--settings", settings]
+      end
 
     case rules["permissions"] do
       %{} = p ->
@@ -117,12 +121,27 @@ defmodule Loom.Agent.Guard do
   defp describe(%{} = input), do: input |> Jason.encode!() |> String.slice(0, 200)
   defp describe(_), do: ""
 
-  @doc "Claude Code's `--settings`, with the hook."
-  def claude_settings do
-    Jason.encode!(%{
-      hooks: %{"PreToolUse" => [%{matcher: "", hooks: [%{type: "command", command: command()}]}]}
-    })
+  # Both names: the first for the Anthropic API, the second for Bedrock.
+  @cache_1h_env %{"ENABLE_PROMPT_CACHING_1H" => "1", "ENABLE_PROMPT_CACHING_1H_BEDROCK" => "1"}
+
+  @doc """
+  Claude Code's `--settings` for a session's rules, or nil: the hook when it
+  has a workstation; the hour-long prompt cache when it asks for one
+  (`cache_1h`, an employee whose heartbeat outlasts the 5-minute default, so
+  each wake-up reads the cache instead of writing the whole context again).
+  """
+  def claude_settings(rules) do
+    %{}
+    |> then(&if(rules["workstation"], do: Map.put(&1, :hooks, hooks()), else: &1))
+    |> then(&if(rules["cache_1h"], do: Map.put(&1, :env, @cache_1h_env), else: &1))
+    |> case do
+      empty when map_size(empty) == 0 -> nil
+      settings -> Jason.encode!(settings)
+    end
   end
+
+  defp hooks,
+    do: %{"PreToolUse" => [%{matcher: "", hooks: [%{type: "command", command: command()}]}]}
 
   @doc "A Kiro agent's `hooks`."
   def kiro_hooks, do: %{"preToolUse" => [%{matcher: "*", command: command()}]}
