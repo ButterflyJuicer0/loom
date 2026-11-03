@@ -472,10 +472,14 @@ export function updateAgent(
 
 /**
  * Carry a session on in a new one, which starts on a handoff summary: a copy
- * of its conversation when that is healthy, else it reads it. The new session.
+ * of its conversation when that is healthy, else it reads it. The new session,
+ * on `backend` if given (another engine always reads it).
  */
-export function continueAgent(id: string): Promise<AgentInfo> {
-  return apiCall(`/api/agents/${id}/continue`, { method: "POST" })
+export function continueAgent(id: string, backend?: AgentBackend): Promise<AgentInfo> {
+  return apiCall(`/api/agents/${id}/continue`, {
+    method: "POST",
+    ...(backend ? { body: JSON.stringify({ backend }) } : {}),
+  })
 }
 
 /** A session's unsent composer text, on the server; "" when there is none. */

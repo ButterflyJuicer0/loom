@@ -4,7 +4,7 @@ import { createPortal } from "react-dom"
 import type { AgentBackend } from "./api"
 import { BackendIcon } from "./BackendIcon"
 
-const BACKENDS: { id: AgentBackend; label: string }[] = [
+export const BACKENDS: { id: AgentBackend; label: string }[] = [
   { id: "claude_code", label: "Claude Code" },
   { id: "codex", label: "Codex" },
   { id: "kiro", label: "Kiro" },
