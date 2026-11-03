@@ -15,6 +15,18 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **Continue picks the backend**: an arrow beside "Continue in new chat" (in
+  the chat and in a sidebar row's menu) lets the new chat run on another
+  backend instead of the old one's.
+
+### Changed
+- Employee page tabs: Updates comes first.
+- Meeting bar: the people icon and the bare line count are gone; they read as
+  attendees and rounds.
+- loom-home: the Bedrock connection is warmed when a device opens its channel
+  and kept alive for 75 s, so the first reply comes sooner.
+
 ## [0.5.0] – 2026-11-03
 
 ### Added
