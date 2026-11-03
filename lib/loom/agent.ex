@@ -113,7 +113,7 @@ defmodule Loom.Agent do
     end
   end
 
-  @doc "Stop a session and delete its persisted history."
+  @doc "Stop a session and move its persisted history to the trash."
   def delete_session(id) do
     incognito? = match?({:ok, %{kind: "incognito"}}, Loom.Agent.Store.read_meta(id))
     stop_session(id)
