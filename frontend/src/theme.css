@@ -2053,17 +2053,12 @@ body.sidebar-resizing iframe {
 @keyframes meeting-pulse {
   50% { opacity: 0.35; }
 }
-.meeting-time,
-.meeting-meta {
+.meeting-time {
   color: var(--fg-dim);
   font-variant-numeric: tabular-nums;
   flex: none;
   display: inline-flex;
   align-items: center;
-}
-.meeting-meta svg {
-  width: 14px;
-  height: 14px;
 }
 .meeting-live {
   flex: 1;
