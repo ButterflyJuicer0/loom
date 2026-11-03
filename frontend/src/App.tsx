@@ -778,7 +778,7 @@ function App() {
         setDrawerOpen(false)
       }}
       activeEmployeeId={view === "chat" ? (activeEmployee?.id ?? null) : null}
-      onOpenEmployee={(id) => openEmployee(id)}
+      onOpenEmployee={(id) => openEmployee(id, "updates")}
       onHire={() => {
         setHiring(true)
         setDrawerOpen(false)
