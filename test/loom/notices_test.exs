@@ -22,7 +22,8 @@ defmodule Loom.NoticesTest do
        tick: :timer.hours(24),
        clock: fn -> :counters.get(clock, 1) end,
        notify: fn title, body, session -> send(test, {:notified, title, body, session}) end,
-       submit: fn session, text -> send(test, {:submitted, session, text}) end}
+       submit: fn session, text -> send(test, {:submitted, session, text}) end,
+       ring: fn title, _body, _session -> send(test, {:rang, title}) end}
     )
 
     on_exit(fn -> File.rm(path) end)
@@ -38,11 +39,14 @@ defmodule Loom.NoticesTest do
     {:ok, n} = post(s, %{summary: "部署要批准", priority: 1, needs: "approve", session: "a_1"})
     assert n["status"] == "open" and n["priority"] == 1
     assert_received {:notified, "钱多多 · needs your approval", "部署要批准", "a_1"}
+    assert_received {:rang, "钱多多 · needs your approval"}
 
     {:ok, _} = post(s, %{summary: "换供应商？", priority: 4}, %{kind: "session", id: "a_2", name: "x"})
     assert_received {:notified, "x · important", "换供应商？", nil}
     {:ok, _} = post(s, %{summary: "日报", priority: 7}, %{kind: "session", id: "a_3", name: "y"})
     refute_received {:notified, _, _, _}
+    # Only 0–1 ring Bark.
+    refute_received {:rang, _}
   end
 
   test "one urgent a day per source; the next is posted as 3", %{s: s} do

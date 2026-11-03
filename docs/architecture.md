@@ -361,7 +361,10 @@ for 3–5.
 - **Notifying.** 0–5 at once, one notification per notice; 6–10 never.
   Between 00:00 and 07:00 only a 0 (the user's call, 2026-11-02): the rest,
   as they come in or come back from Later, wait and go out at 07:00, one by
-  one, most urgent first. Through `Loom.Push.notify/4`.
+  one, most urgent first. Through `Loom.Push.notify/4`. A 0–1 also rings
+  Bark: `~/.claude/skills/bark/ring`, a critical alert to the iPhone through
+  the self-hosted bark-server, which sounds through silent mode and Focus;
+  no script or no key, no ring.
 - **Done** when the user writes in the notice's session (`AgentChannel`'s
   submit calls `replied/1`), approves or rejects it in the bell (told to the
   session as a message, `origin: "notice"`), or opens one that only asks to be

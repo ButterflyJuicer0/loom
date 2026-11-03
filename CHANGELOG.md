@@ -50,6 +50,8 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   notification; only bell notices 0–5 do, at once, one each. The 20:00
   digest is gone. Between 00:00 and 07:00 only a 0 rings; the rest go out
   at 07:00. A long job that should wake you posts a notice.
+- **0–1 ring through silent mode**: a bell notice at 0–1 also sends a Bark
+  critical alert (self-hosted bark-server, `bark` skill), when set up.
 - **Taps answer at once**: New chat opens immediately and the server makes
   the session in the background (the first message waits for it, retrying on
   a weak network). Pin, archive, done, move, rename, delete and to-do ticks

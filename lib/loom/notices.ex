@@ -13,7 +13,8 @@ defmodule Loom.Notices do
   - **Bands.** 0–2 urgent and 3–5 important: a notification at once, one per
     notice. 6–10 the rest: no notification. Between 00:00 and 07:00 nothing
     notifies but a 0; what came in waits for 07:00, and goes out then, one by
-    one.
+    one. A 0–1 also rings Bark (the `bark` skill's `ring`), a critical alert
+    that sounds through silent mode and Focus.
   - **One urgent a day per source.** A second one the same day is posted as a
     3, with a note saying why: the agents decide how urgent things are, but
     one that cries wolf cannot keep waking the user.
@@ -148,7 +149,10 @@ defmodule Loom.Notices do
       todos: todos,
       clock: Keyword.get(opts, :clock, &now/0),
       notify: Keyword.get(opts, :notify, &Loom.Push.notify/3),
-      submit: Keyword.get(opts, :submit, &submit/2)
+      submit: Keyword.get(opts, :submit, &submit/2),
+      ring:
+        Keyword.get(opts, :ring) ||
+          Application.get_env(:loom, __MODULE__, [])[:ring] || (&ring/3)
     }
 
     Process.send_after(self(), :tick, tick)
@@ -510,9 +514,16 @@ defmodule Loom.Notices do
         Map.put(n, "held", true)
 
       true ->
-        state.notify.(title(n), n["summary"], n["session"])
+        push(state, title(n), n)
         n
     end
+  end
+
+  # The notification; for a 0–1 also a Bark critical alert, which sounds
+  # through silent mode and Focus.
+  defp push(state, title, n) do
+    state.notify.(title, n["summary"], n["session"])
+    if n["priority"] <= 1, do: state.ring.(title, n["summary"], n["session"])
   end
 
   defp title(n), do: "#{n["source"]["name"]} · #{label(n)}"
@@ -561,7 +572,7 @@ defmodule Loom.Notices do
           (&1["priority"] == 0 or not quiet?(now)))
     )
     |> Enum.reduce(state, fn n, state ->
-      state.notify.("#{n["source"]["name"]} · reminder", n["summary"], n["session"])
+      push(state, "#{n["source"]["name"]} · reminder", n)
 
       put_in(
         state.notices[n["id"]],
@@ -584,7 +595,7 @@ defmodule Loom.Notices do
         |> Enum.filter(& &1["held"])
         |> Enum.sort_by(&{&1["priority"], &1["created_at"]})
 
-      for n <- held, not later?(n, now), do: state.notify.(title(n), n["summary"], n["session"])
+      for n <- held, not later?(n, now), do: push(state, title(n), n)
 
       state = Enum.reduce(held, state, fn n, s -> put_in(s.notices[n["id"]]["held"], false) end)
       put_in(state.marks["morning"], today)
@@ -704,6 +715,24 @@ defmodule Loom.Notices do
     # Open: what is due first, then the undated, newest first. Done: latest first.
     Enum.sort_by(open, &{&1["due"] || "9999", -&1["created_at"]}) ++
       Enum.sort_by(done, &(-(&1["done_at"] || 0)))
+  end
+
+  # Through the `bark` skill's script, the one place that sends to Bark; not
+  # there or not set up, nothing rings.
+  defp ring(title, body, session) do
+    script = Path.expand("~/.claude/skills/bark/ring")
+
+    if File.exists?(script) do
+      Task.start(fn ->
+        case System.cmd(script, [title, body],
+               env: [{"LOOM_SESSION_ID", session || ""}],
+               stderr_to_stdout: true
+             ) do
+          {_, 0} -> :ok
+          {out, code} -> Logger.warning("Loom.Notices: Bark ring failed (#{code}): #{out}")
+        end
+      end)
+    end
   end
 
   defp submit(session, text) do
