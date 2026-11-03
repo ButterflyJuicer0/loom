@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react"
 import { createPortal } from "react-dom"
-import { ChevronRight, Mic, Square, Sparkles, Users } from "lucide-react"
+import { ChevronRight, Mic, Square, Sparkles } from "lucide-react"
 import {
   askNow,
   closeMeetingDialog,
@@ -136,19 +136,13 @@ export function MeetingBar({ sessionId }: { sessionId: string }) {
     const live = m.partial.them || m.partial.me
     return (
       <div className="meeting-bar">
-        <span className="meeting-dot" />
+        <span className="meeting-dot" title={m.speakers ? "Listening; voices are told apart" : "Listening"} />
         <span className="meeting-time">
           <Elapsed since={m.startedAt ?? Date.now()} />
         </span>
         <span className="meeting-live" title={live}>
           {live || (m.systemAudio ? "Listening…" : "Listening (microphone only)…")}
         </span>
-        {m.speakers && (
-          <span className="meeting-meta" title="Voices are told apart">
-            <Users />
-          </span>
-        )}
-        <span className="meeting-meta">{m.lines}</span>
         <button className="meeting-btn" title="Send what was said so far and get hints now" onClick={() => void askNow()}>
           <Sparkles />
           Ask
