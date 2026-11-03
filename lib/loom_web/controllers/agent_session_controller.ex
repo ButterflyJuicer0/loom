@@ -77,19 +77,26 @@ defmodule LoomWeb.AgentSessionController do
     conn
     |> put_status(:unprocessable_entity)
     |> json(%{
-      error: "`backend` must be \"claude_code\" or \"codex\"",
+      error: "`backend` must be \"claude_code\", \"codex\" or \"kiro\"",
       given: given
     })
   end
 
   # POST /api/agents/:id/continue — carry it on in a new session, which
-  # starts on a handoff summary; see `Loom.Agent.Carry`.
-  def continue(conn, %{"id" => id}) do
-    case Agent.Carry.continue(id) do
-      {:ok, new} -> conn |> put_status(:created) |> json(view(Agent.info(new)))
+  # starts on a handoff summary; see `Loom.Agent.Carry`. An optional
+  # `backend` moves it to another engine.
+  def continue(conn, %{"id" => id} = params) do
+    with {:ok, backend} <- continue_backend(params["backend"]),
+         {:ok, new} <- Agent.Carry.continue(id, backend) do
+      conn |> put_status(:created) |> json(view(Agent.info(new)))
+    else
+      :error -> bad_backend(conn, params["backend"])
       {:error, reason} -> conn |> put_status(:unprocessable_entity) |> json(%{error: reason})
     end
   end
+
+  defp continue_backend(nil), do: {:ok, nil}
+  defp continue_backend(given), do: Loom.Agent.Backend.parse(given)
 
   # PATCH /api/agents/:id — any of `title` (rename), `pinned`, `archived`, `done`, `seen_seq` (read
   # up to there), `effort` (the thinking level, null for the default), `model` (likewise) and `project_id` (move into that project, or out of any with

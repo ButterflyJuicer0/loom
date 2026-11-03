@@ -351,8 +351,8 @@ function App() {
   // project too: its workspace is the session's working directory for good.
   // "Continue in a new chat", from a row's menu or under an error: the new
   // session opens at once, on its handoff summary. See `Loom.Agent.Carry`.
-  const carryOn = async (id: string) => {
-    const session = await continueAgent(id)
+  const carryOn = async (id: string, backend?: AgentBackend) => {
+    const session = await continueAgent(id, backend)
     if (session.project_id) reveal()
     upsert(session)
     setActiveId(session.id)
@@ -801,7 +801,10 @@ function App() {
       refreshCanvas(active.id, outputs)
     },
     focus: focusNotice ? { notice: focusNotice, onAnswered: upsertNotice } : null,
-    onContinue: active.kind == null && !active.employee_id ? () => carryOn(active.id) : undefined,
+    onContinue:
+      active.kind == null && !active.employee_id
+        ? (backend?: AgentBackend) => carryOn(active.id, backend)
+        : undefined,
     onSwitch: narrow && working.length > 0 ? () => setSwitching(true) : undefined,
   }
 

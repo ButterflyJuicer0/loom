@@ -108,6 +108,15 @@ defmodule Loom.Agent.CarryTest do
       assert Agent.info("a_old").title == "Trip plan"
     end
 
+    test "onto another backend: a new session there, which reads the old one" do
+      {:ok, _} = Agent.start_session("a_cc", backend: :claude_code, title: "Port it")
+
+      assert {:ok, new} = Carry.continue("a_cc", :codex)
+      assert BackendStub.await_turn() =~ "loom-session read a_cc --files"
+      assert Agent.info(new).backend == :codex
+      assert Agent.info("a_cc").backend == :claude_code
+    end
+
     test "not an employee's, Dream's or the bell's session" do
       {:ok, _} =
         Agent.start_session("a_emp", backend: :claude_code, employee: "e_1", kind: "work")

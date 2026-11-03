@@ -60,6 +60,7 @@ import {
 import { getSocket } from "./socket"
 import { itemForAttachment, itemForOutput, itemForPath, type CanvasItem } from "./canvasItems"
 import { BackendIcon } from "./BackendIcon"
+import { BACKENDS } from "./NewMenu"
 import { formatBytes } from "./format"
 import { isComposing } from "./ime"
 import { Markdown, MessageCopy, OutputLink } from "./markdown"
@@ -82,6 +83,7 @@ import {
   downloadAttachment,
   modelName,
   outputUrl,
+  type AgentBackend,
   type AgentFile,
   type AgentInfo,
   type Notice,
@@ -122,8 +124,9 @@ type Props = {
   // turn it came from, and shows it under that turn to be answered.
   focus?: { notice: Notice; onAnswered: (n: Notice) => void } | null
   // Carry it on in a new session ("Continue in a new chat"), offered under a
-  // turn that ended in an error. Only for a plain conversation.
-  onContinue?: () => Promise<void>
+  // turn that ended in an error. Only for a plain conversation. The header's
+  // menu may pass another backend to carry it on there.
+  onContinue?: (backend?: AgentBackend) => Promise<void>
   /** Set only for an incognito session: pin it (it stays incognito), or keep it, into Recents. */
   incognito?: { pinned: boolean; onPin: (pinned: boolean) => void; onKeep: () => void }
   // The project it is in: "‹ name" before the title goes back to its page.
@@ -755,11 +758,11 @@ function PaneMenu({
   onToggleTerminal: () => void
   canvasOpen: boolean
   onToggleCanvas: () => void
-  onContinue?: () => Promise<void>
+  onContinue?: (backend?: AgentBackend) => Promise<void>
   onKeep?: () => void
 }) {
   const [at, setAt] = useState<{ top: number; right: number } | null>(null)
-  const [view, setView] = useState<"main" | "model">("main")
+  const [view, setView] = useState<"main" | "model" | "continue">("main")
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -799,6 +802,24 @@ function PaneMenu({
           <div className="session-menu pane-menu" role="menu" ref={ref} style={at}>
             {view === "model" ? (
               <ModelList session={session} onBack={() => setView("main")} onDone={() => setAt(null)} />
+            ) : view === "continue" && onContinue ? (
+              <>
+                <button role="menuitem" className="session-menu-back" onClick={() => setView("main")}>
+                  <ChevronLeft /> Continue in new chat
+                </button>
+                <div className="session-menu-sep" />
+                {BACKENDS.map((b) => (
+                  <button
+                    key={b.id}
+                    role="menuitem"
+                    onClick={() => pick(() => void onContinue(b.id).catch(() => {}))}
+                  >
+                    <BackendIcon backend={b.id} />
+                    <span className="session-menu-label">{b.label}</span>
+                    {b.id === session.backend && <Check className="session-menu-more" />}
+                  </button>
+                ))}
+              </>
             ) : (
             <>
             <button role="menuitem" onClick={() => setView("model")}>
@@ -822,10 +843,16 @@ function PaneMenu({
               </>
             )}
             {onContinue && (
-              <button role="menuitem" onClick={() => pick(() => void onContinue().catch(() => {}))}>
-                <CornerDownRight />
-                Continue in new chat
-              </button>
+              // The tap carries it on as it is; the arrow picks another backend.
+              <div className="new-menu-kind">
+                <button role="menuitem" onClick={() => pick(() => void onContinue().catch(() => {}))}>
+                  <CornerDownRight />
+                  <span className="session-menu-label">Continue in new chat</span>
+                </button>
+                <button className="new-menu-more" title="Continue on another engine" onClick={() => setView("continue")}>
+                  <ChevronRight />
+                </button>
+              </div>
             )}
             {onKeep && (
               <button role="menuitem" onClick={() => pick(onKeep)}>
