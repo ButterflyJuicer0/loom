@@ -596,6 +596,10 @@ export function Sidebar({
           employees={employees}
           onUpsert={onUpsertDevice}
           onClose={() => setDevicesOpen(false)}
+          onOpenSession={(id) => {
+            setDevicesOpen(false)
+            onSelect(id)
+          }}
         />
       )}
     </aside>

@@ -36,6 +36,9 @@ Optional settings:
 - `LOOM_CLAUDE_CLI` and `LOOM_CODEX_CLI`
 - `LOOM_CLAUDE_FALLBACK_MODEL`: Claude Code's `--fallback-model`, for when
   the usual model is overloaded (see docs/backends.md §6.13)
+- `LOOM_ONESHOT_MODEL`: the model of Loom's own one-shot calls (`haiku` by
+  default; empty for the CLI's default). A refused model is retried on the
+  CLI's default anyway.
 
 No TLS settings and no model API keys are needed.
 

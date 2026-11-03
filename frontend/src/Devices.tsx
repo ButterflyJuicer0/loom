@@ -1,6 +1,7 @@
 import { X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
+import { DeviceSessionsDialog } from "./DeviceSessions"
 import { DEVICE_ICONS, DeviceIcon, ICON_LABELS, deviceIcon } from "./DeviceIcon"
 import { isComposing } from "./ime"
 import {
@@ -28,12 +29,15 @@ export function DevicesDialog({
   employees,
   onUpsert,
   onClose,
+  onOpenSession,
 }: {
   devices: Device[]
   // Those working on a device are named before it is removed: they stop.
   employees: Employee[]
   onUpsert: (device: Device) => void
   onClose: () => void
+  // A device session carried on in Loom: its new session is opened.
+  onOpenSession: (id: string) => void
 }) {
   const [name, setName] = useState("")
   // The icon for the device being added; null follows the os it reports.
@@ -41,12 +45,16 @@ export function DevicesDialog({
   const [error, setError] = useState<string | null>(null)
   // The device whose install commands are on screen, and its code.
   const [install, setInstall] = useState<{ id: string; code: string } | null>(null)
+  // The device whose agent sessions are open on top of this dialog.
+  const [viewing, setViewing] = useState<string | null>(null)
+  const viewed = devices.find((d) => d.id === viewing) ?? null
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose()
+    // The sessions view, when open, takes Escape for itself.
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !viewing && onClose()
     document.addEventListener("keydown", onKey)
     return () => document.removeEventListener("keydown", onKey)
-  }, [onClose])
+  }, [onClose, viewing])
 
   // Its install code has to come from the server, so this one waits — but
   // says so, and cannot be sent twice.
@@ -131,6 +139,7 @@ export function DevicesDialog({
                 onRename={(value) => rename(d, value)}
                 onReinstall={() => reinstall(d)}
                 onRemove={() => remove(d)}
+                onSessions={() => setViewing(d.id)}
               />
               {install?.id === d.id && (
                 <InstallBox code={install.code} onDone={() => setInstall(null)} />
@@ -162,6 +171,7 @@ export function DevicesDialog({
           </button>
         </form>
       </div>
+      {viewed && <DeviceSessionsDialog device={viewed} onClose={() => setViewing(null)} onOpenSession={onOpenSession} />}
     </div>,
     document.body,
   )
@@ -196,11 +206,13 @@ function DeviceRow({
   onRename,
   onReinstall,
   onRemove,
+  onSessions,
 }: {
   device: Device
   onRename: (name: string) => void
   onReinstall: () => void
   onRemove: () => void
+  onSessions: () => void
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(device.name)
@@ -253,6 +265,11 @@ function DeviceRow({
           {[system, device.hostname, seen(device)].filter(Boolean).join(" · ")}
         </span>
       </div>
+      {device.online && device.os !== "windows" && device.os !== "android" && (
+        <button className="device-action" onClick={onSessions} title="Claude Code and Codex sessions on this device">
+          sessions
+        </button>
+      )}
       <button className="device-action" onClick={onReinstall} title="New install command (replaces this device's token)">
         install
       </button>
