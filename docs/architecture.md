@@ -364,7 +364,7 @@ for 3–5.
   one, most urgent first. Through `Loom.Push.notify/4`. A 0–1 also rings
   Bark: `~/.claude/skills/bark/ring`, a critical alert to the iPhone through
   the self-hosted bark-server, which sounds through silent mode and Focus;
-  no script or no key, no ring.
+  no script or no key, no ring. Volume 10; a 0 rings for 30 s (`--call`).
 - **Done** when the user writes in the notice's session (`AgentChannel`'s
   submit calls `replied/1`), approves or rejects it in the bell (told to the
   session as a message, `origin: "notice"`), or opens one that only asks to be

@@ -152,7 +152,7 @@ defmodule Loom.Notices do
       submit: Keyword.get(opts, :submit, &submit/2),
       ring:
         Keyword.get(opts, :ring) ||
-          Application.get_env(:loom, __MODULE__, [])[:ring] || (&ring/3)
+          Application.get_env(:loom, __MODULE__, [])[:ring] || (&ring/4)
     }
 
     Process.send_after(self(), :tick, tick)
@@ -523,7 +523,9 @@ defmodule Loom.Notices do
   # through silent mode and Focus.
   defp push(state, title, n) do
     state.notify.(title, n["summary"], n["session"])
-    if n["priority"] <= 1, do: state.ring.(title, n["summary"], n["session"])
+    # A 0 keeps ringing for 30 seconds (the user's call, 2026-11-03).
+    if n["priority"] <= 1,
+      do: state.ring.(title, n["summary"], n["session"], n["priority"] == 0)
   end
 
   defp title(n), do: "#{n["source"]["name"]} · #{label(n)}"
@@ -719,12 +721,13 @@ defmodule Loom.Notices do
 
   # Through the `bark` skill's script, the one place that sends to Bark; not
   # there or not set up, nothing rings.
-  defp ring(title, body, session) do
+  defp ring(title, body, session, call?) do
     script = Path.expand("~/.claude/skills/bark/ring")
+    args = if call?, do: ["--call", title, body], else: [title, body]
 
     if File.exists?(script) do
       Task.start(fn ->
-        case System.cmd(script, [title, body],
+        case System.cmd(script, args,
                env: [{"LOOM_SESSION_ID", session || ""}],
                stderr_to_stdout: true
              ) do

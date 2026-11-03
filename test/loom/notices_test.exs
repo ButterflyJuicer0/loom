@@ -23,7 +23,7 @@ defmodule Loom.NoticesTest do
        clock: fn -> :counters.get(clock, 1) end,
        notify: fn title, body, session -> send(test, {:notified, title, body, session}) end,
        submit: fn session, text -> send(test, {:submitted, session, text}) end,
-       ring: fn title, _body, _session -> send(test, {:rang, title}) end}
+       ring: fn title, _body, _session, call? -> send(test, {:rang, title, call?}) end}
     )
 
     on_exit(fn -> File.rm(path) end)
@@ -39,14 +39,14 @@ defmodule Loom.NoticesTest do
     {:ok, n} = post(s, %{summary: "部署要批准", priority: 1, needs: "approve", session: "a_1"})
     assert n["status"] == "open" and n["priority"] == 1
     assert_received {:notified, "钱多多 · needs your approval", "部署要批准", "a_1"}
-    assert_received {:rang, "钱多多 · needs your approval"}
+    assert_received {:rang, "钱多多 · needs your approval", false}
 
     {:ok, _} = post(s, %{summary: "换供应商？", priority: 4}, %{kind: "session", id: "a_2", name: "x"})
     assert_received {:notified, "x · important", "换供应商？", nil}
     {:ok, _} = post(s, %{summary: "日报", priority: 7}, %{kind: "session", id: "a_3", name: "y"})
     refute_received {:notified, _, _, _}
     # Only 0–1 ring Bark.
-    refute_received {:rang, _}
+    refute_received {:rang, _, _}
   end
 
   test "one urgent a day per source; the next is posted as 3", %{s: s} do
@@ -202,6 +202,8 @@ defmodule Loom.NoticesTest do
     {:ok, _} = post(s, %{summary: "夜里的", priority: 3}, %{kind: "dream", id: "d", name: "Dream"})
     {:ok, n} = post(s, %{summary: "着火了", priority: 0}, %{kind: "session", id: "a_7", name: "z"})
     assert_received {:notified, "z · urgent", "着火了", nil}
+    # A 0 keeps ringing.
+    assert_received {:rang, "z · urgent", true}
     {:ok, _} = Notices.later(n["id"], @ten + 16 * @hour, s)
     {:ok, m} = post(s, %{summary: "推后的", priority: 5}, %{kind: "session", id: "a_8", name: "v"})
     {:ok, _} = Notices.later(m["id"], @ten + 16 * @hour, s)
