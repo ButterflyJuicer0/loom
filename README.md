@@ -68,7 +68,9 @@ commits on top. It does not track upstream.
 | Copying | Select text | Tap inline code to copy; copy button under every message |
 | Scheduling | `/cron` | **Tasks page**, HTTP API, wall-clock times, tasks described in plain words |
 | Autonomy | — | **Virtual employees** (budget, KPIs, workstation on one device, shared boss profile), **Sleep / Dream** memory consolidation |
-| Notifications | Push when a turn ends | **The bell**: prioritised notices (0–10) posted by agents, with background, answers, Later; plus your to-do list |
+| Notifications | Push when a turn ends | **The bell**: prioritised notices (0–10) posted by agents, with background, answers, Later; plus your to-do list. Only the bell rings the phone; 0–1 can ring through silent mode (Bark) |
+| Meetings | — | **Meeting mode**: live transcript in the browser (mic + shared screen), hints every ~30 s, minutes at the end, hotwords the agent learns |
+| Home | — | **loom-home**: an MQTT broker in `loom-node` and a voice server for xiaozhi-protocol robots that control home devices by speech |
 | Housekeeping | — | `loom-tidy` / `loom-retitle`: retitle, archive, merge sessions, on a schedule |
 | Devices (`loom-node`) | macOS, Linux, WSL | **+ native Windows, + Android** (one APK, screen control), device icons, self-uninstall on removal, install-code brute-force lock |
 | Browser | Desktop window | + a **phone-shaped** window and stream |
@@ -152,6 +154,22 @@ See the [changelog](CHANGELOG.md) for what came in which version.
 - **Safety classifier stops** are handled: a flagged session is set aside and
   can be continued in a fresh one.
 
+### Meetings
+
+- **Meeting mode** from a chat's `…` menu: listens to your microphone and the
+  shared screen's audio, transcribes in the browser (sherpa-onnx, Chinese and
+  English, speakers told apart), and gives the chat's agent a batch about every
+  30 seconds for live hints. End, ten quiet minutes or a closed page brings the
+  minutes. Names it should hear right go in a hotword list the agent keeps
+  itself (`loom-meeting`).
+
+### Home (`home/`)
+
+- **loom-home**: devices talk over the MQTT broker inside `loom-node`
+  ([PROTOCOL](home/PROTOCOL.md)); a voice server lets xiaozhi-protocol robots
+  control them by speech, with the device list learned at run time. See
+  [home/README.md](home/README.md).
+
 ### Terminals
 
 - Real PTY shells beside the chat, several at once, that outlive the tab and
@@ -204,6 +222,7 @@ in once or pass a captcha.
 | `loom-notify` | Post to the bell and the to-do list |
 | `loom-sessions` | Find and read an earlier session |
 | `loom-handoff` | Hand a matter off to a new session |
+| `loom-meeting` | Live hints, minutes and hotwords in Meeting mode |
 | `loom-tidy`, `loom-retitle` | Retitle, archive and merge sessions |
 
 ### App
@@ -259,6 +278,7 @@ rel/ship.sh --frontend --yes   # frontend-only hot swap, no restart
   protocols, as measured
 - [docs/deploy.md](docs/deploy.md): deploying on one machine
 - [docs/keys.md](docs/keys.md): the keyboard
+- [home/README.md](home/README.md): loom-home, the MQTT home devices and voice server
 - [CHANGELOG.md](CHANGELOG.md): versions and what each added
 
 ## Acknowledgements

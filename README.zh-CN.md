@@ -53,7 +53,9 @@ Loom 是一个单用户使用的编程 agent 网页端。agent 跑在你的服�
 | 复制 | 手动选中文字 | 点一下行内代码就复制；每条消息下面有复制按钮 |
 | 定时 | `/cron` | **Tasks 页面**、HTTP API、按实际钟点、用一句话描述任务 |
 | 自主工作 | — | **虚拟员工**（预算、KPI、限定在一台设备上的工位、共用的老板画像）；**Sleep / Dream** 整理记忆 |
-| 通知 | 一轮结束时推送 | **铃铛**：agent 推送的通知按 0–10 排优先级，带背景和可选回答，可以稍后再看；旁边是你的待办 |
+| 通知 | 一轮结束时推送 | **铃铛**：agent 推送的通知按 0–10 排优先级，带背景和可选回答，可以稍后再看；旁边是你的待办。只有铃铛会让手机响；0–1 级静音也能响（Bark） |
+| 会议 | — | **会议模式**：浏览器里实时转写（麦克风 + 共享屏幕），约 30 秒出一次提示，结束出纪要，热词由 agent 自己学 |
+| 家居 | — | **loom-home**：`loom-node` 内置 MQTT broker，配一个语音服务，让小智协议的机器人用说话控制家里的设备 |
 | 整理 | — | `loom-tidy` / `loom-retitle`：定时改标题、归档、合并会话 |
 | 设备（`loom-node`） | macOS、Linux、WSL | **加了原生 Windows 和 Android**（一个 APK，能控制屏幕）；设备图标；移除即自动卸载；安装码防暴力尝试 |
 | 浏览器 | 桌面尺寸窗口 | 加了**手机尺寸**的窗口和画面流 |
@@ -116,6 +118,14 @@ Loom 是一个单用户使用的编程 agent 网页端。agent 跑在你的服�
 - **只往外连**：由设备主动连 Loom，所以在 NAT 后面也能用。
 - **默认就安全**：每台设备有自己的 token，服务器上只存哈希值。安装码 24 小时有效，2 分钟内输错 20 次，所有安装码都会作废。在 Loom 里移除设备，`loom-node` 会自己卸载，并删掉临时目录和日志。设备上跑过的所有命令都会在那台设备上记日志。
 
+### 会议
+
+- 对话 `…` 菜单里的**会议模式**：同时听麦克风和共享屏幕的声音，在浏览器里转写（sherpa-onnx，中英文，按音色分人），大约每 30 秒把一批转写交给这个会话的 agent 出实时提示。点 End、连续 10 分钟没声音或关掉页面，都会出会议纪要。需要听准的名字放进热词表，由 agent 自己维护（`loom-meeting`）。
+
+### 家居（`home/`）
+
+- **loom-home**：设备通过 `loom-node` 里的 MQTT broker 通信（[PROTOCOL](home/PROTOCOL.md)）；语音服务让小智协议的机器人用说话控制它们，设备列表运行时自动发现。见 [home/README.md](home/README.md)。
+
 ### 浏览器
 
 可选：一个常驻在主机上的 Chromium，跑在虚拟显示器上（`rel/browser/`），窗口可以是桌面尺寸，也可以是手机尺寸。agent 通过 CDP 操作它。需要你登录一次网站或者过验证码时，从侧边栏的 **Browser** 接管（noVNC，在 Loom 的登录后面）。
@@ -130,6 +140,7 @@ Loom 是一个单用户使用的编程 agent 网页端。agent 跑在你的服�
 | `loom-notify` | 往铃铛和待办里发东西 |
 | `loom-sessions` | 找到并读之前的某个会话 |
 | `loom-handoff` | 把一件事转给一个新会话 |
+| `loom-meeting` | 会议模式里的实时提示、纪要和热词 |
 | `loom-tidy`、`loom-retitle` | 改标题、归档、合并会话 |
 
 ### 应用
@@ -180,6 +191,7 @@ rel/ship.sh --frontend --yes   # 只热替换前端，不重启
 - [docs/backends.md](docs/backends.md)：Claude Code、Codex、Kiro 的协议，按实测记录
 - [docs/deploy.md](docs/deploy.md)：单机部署
 - [docs/keys.md](docs/keys.md)：快捷键
+- [home/README.md](home/README.md)：loom-home，MQTT 家居设备和语音服务
 - [CHANGELOG.md](CHANGELOG.zh-CN.md)：各版本及新增内容
 
 ## 致谢

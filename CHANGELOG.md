@@ -7,6 +7,7 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 
 | Version | Date | Theme |
 | --- | --- | --- |
+| [0.5.0](#050--2026-11-03) | 2026-11-03 | Meeting mode, hiring in a chat, hard employee permissions, only the bell rings, loom-home |
 | [0.4.0](#040--2026-11-02) | 2026-11-02 | Model picker, Continue, incognito, Working, Android |
 | [0.3.0](#030--2026-10-31) | 2026-10-31 | The bell, tidy, employee workstations, safer devices |
 | [0.2.0](#020--2026-10-29) | 2026-10-29 | Projects, ChatGPT UI, Kiro, Sleep, employees, restart survival |
@@ -14,7 +15,16 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.5.0] – 2026-11-03
+
 ### Added
+- **loom-home** (`home/`): an open home IoT setup on Loom. `loom-node` has a
+  minimal MQTT broker (`loom-node mqtt pub|sub`, e.g. on the router); devices
+  announce what they can do and take commands over it ([PROTOCOL](home/PROTOCOL.md)).
+  A voice server lets xiaozhi-protocol robots control them by speech
+  (VAD → SenseVoice → Claude or GPT on Bedrock → local TTS / edge-tts), with
+  nothing hard-coded about the devices. Bedrock can be reached directly, through a
+  proxy or through your own endpoint (`bedrock.endpoint`).
 - **Meeting mode**: "Meeting mode" in a chat's `…` menu listens to a meeting
   (your microphone plus the shared screen's system audio), transcribes it in
   the browser with sherpa-onnx (Chinese + English, voices told apart), and
@@ -51,13 +61,17 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   digest is gone. Between 00:00 and 07:00 only a 0 rings; the rest go out
   at 07:00. A long job that should wake you posts a notice.
 - **0–1 ring through silent mode**: a bell notice at 0–1 also sends a Bark
-  critical alert (self-hosted bark-server, `bark` skill), when set up.
+  critical alert (self-hosted bark-server, `bark` skill), when set up; a 0
+  keeps ringing for 30 seconds.
 - **Taps answer at once**: New chat opens immediately and the server makes
   the session in the background (the first message waits for it, retrying on
   a weak network). Pin, archive, done, move, rename, delete and to-do ticks
   show on the tap and are put back, with a note, if the server refuses.
   So do the model pick, bell answers, to-dos, employee Wake/Pause/KPI review,
   Boss lines, file rename/delete, Sleep settings and device rename.
+- **Employees keep an hour-long prompt cache** when their heartbeat is between
+  5 and 60 minutes, so an idle wake-up no longer rewrites its whole context.
+- **New app icon**: an interlaced three-loop knot.
 
 ## [0.4.0] – 2026-11-02
 
@@ -168,6 +182,7 @@ The fork point: [EthanLLL/loom](https://github.com/EthanLLL/loom) at
 scheduled prompts, `loom-node` for macOS/Linux/WSL, the shared browser, PWA
 and push notifications.
 
+[0.5.0]: https://github.com/quanquan1996/loom/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/quanquan1996/loom/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/quanquan1996/loom/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/quanquan1996/loom/compare/v0.1.0...v0.2.0
