@@ -247,9 +247,9 @@ export function EmployeePage({
 // ── The bar under the header ───────────────────────────────────────────────
 
 const TABS: { id: EmployeeTab; label: string; icon: ReactNode }[] = [
+  { id: "updates", label: "Updates", icon: <Siren /> },
   { id: "chat", label: "Chat", icon: <MessageCircle /> },
   { id: "kpis", label: "KPIs", icon: <ListChecks /> },
-  { id: "updates", label: "Updates", icon: <Siren /> },
   { id: "reports", label: "Reports", icon: <FileText /> },
   { id: "settings", label: "Settings", icon: <SettingsIcon /> },
 ]
