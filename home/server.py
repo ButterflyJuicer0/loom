@@ -144,7 +144,10 @@ async def bedrock_stream(msgs):
             # no thinking: it ate the whole budget and doubled the first-token time
             "additionalModelRequestFields": {"thinking": {"type": "disabled"}} if claude else {"reasoning": {"effort": "none"}}}
     body.update(b.get("extra", {}))
-    url = f"https://bedrock-runtime.{b['region']}.amazonaws.com/model/{b['model']}/converse-stream"
+    # bedrock.endpoint: optional base URL, e.g. a CloudFront distribution in front of bedrock-runtime
+    # (reach a US region from places whose source IPs some models refuse, without a proxy)
+    base = b.get("endpoint") or f"https://bedrock-runtime.{b['region']}.amazonaws.com"
+    url = f"{base.rstrip('/')}/model/{b['model']}/converse-stream"
     async with BEDROCK_HTTP.post(url, json=body, headers={"Authorization": "Bearer " + b["api_key"]},
                                  proxy=b.get("proxy")) as r:
         if r.status != 200:

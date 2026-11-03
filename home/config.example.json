@@ -18,6 +18,7 @@
     "region": "us-west-2",
     "model": "global.anthropic.claude-haiku-5-5",
     "api_key": "a Bedrock API key",
+    "endpoint": null,
     "proxy": null
   },
   "mqtt": {
