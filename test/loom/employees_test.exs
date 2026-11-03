@@ -553,6 +553,16 @@ defmodule Loom.EmployeesTest do
     refute "--strict-mcp-config" in args
     refute Loom.Agent.Guard.guarded?(e["chat_session"])
 
+    # A heartbeat past the 5-minute prompt cache: its work session caches
+    # for an hour; the chat, and a two-hour heartbeat, do not.
+    refute "--settings" in args
+    {:ok, _} = Employees.update(e["id"], %{"heartbeat_min" => 10}, server)
+    args = Loom.Agent.Guard.claude_args(e["work_session"])
+    [settings] = for {"--settings", v} <- Enum.zip(args, tl(args)), do: v
+    assert %{"env" => %{"ENABLE_PROMPT_CACHING_1H_BEDROCK" => "1"}} = Jason.decode!(settings)
+    refute Map.has_key?(Jason.decode!(settings), "hooks")
+    refute "--settings" in Loom.Agent.Guard.claude_args(e["chat_session"])
+
     # The settings page cannot set them.
     {:ok, same} = Employees.update(e["id"], %{"permissions" => nil, "role" => "x"}, server)
     assert same["permissions"]["summary"] == "只能读工作邮件"
