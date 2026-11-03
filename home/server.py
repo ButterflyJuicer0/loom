@@ -130,13 +130,38 @@ def show_clip(show):
 BEDROCK_HTTP = None
 
 
+def bedrock_http():
+    """One pooled HTTPS session to Bedrock (or bedrock.endpoint); idle connections live 75 s, not aiohttp's 15 s."""
+    global BEDROCK_HTTP
+    if BEDROCK_HTTP is None:
+        BEDROCK_HTTP = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30, sock_connect=3),
+                                             connector=aiohttp.TCPConnector(keepalive_timeout=75))
+    return BEDROCK_HTTP
+
+
+def bedrock_base():
+    b = CFG["bedrock"]
+    # bedrock.endpoint: optional base URL, e.g. a CloudFront distribution in front of bedrock-runtime
+    # (reach a US region from places whose source IPs some models refuse, without a proxy)
+    return (b.get("endpoint") or f"https://bedrock-runtime.{b['region']}.amazonaws.com").rstrip("/")
+
+
+async def bedrock_prewarm():
+    """Called when a device opens its channel (= it just woke up): open the TCP+TLS connection now, so the
+    first question does not pay for it. An unauthenticated GET; the 4xx it gets is expected and ignored."""
+    t0 = time.monotonic()
+    try:
+        async with bedrock_http().get(bedrock_base() + "/", proxy=CFG["bedrock"].get("proxy")) as r:
+            await r.read()
+        log.info("bedrock prewarm %.2fs", time.monotonic() - t0)
+    except Exception as e:
+        log.info("bedrock prewarm failed: %r", e)
+
+
 async def bedrock_stream(msgs):
     """Bedrock ConverseStream with a Bedrock API key (bearer token) -> text pieces.
     Response is AWS eventstream: [total_len u32][headers_len u32][prelude crc][headers][payload][crc]."""
-    global BEDROCK_HTTP
-    b = CFG["bedrock"]
-    if BEDROCK_HTTP is None:  # bedrock.proxy: optional HTTP proxy (Anthropic models refuse some regions' source IPs)
-        BEDROCK_HTTP = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30, sock_connect=3))
+    b = CFG["bedrock"]   # bedrock.proxy: optional HTTP proxy
     claude = "anthropic" in b["model"]
     body = {"system": [{"text": msgs[0]["content"]}] + ([{"cachePoint": {"type": "default"}}] if claude else []),
             "messages": [{"role": m["role"], "content": [{"text": m["content"]}]} for m in msgs[1:] if m["content"]],
@@ -144,11 +169,8 @@ async def bedrock_stream(msgs):
             # no thinking: it ate the whole budget and doubled the first-token time
             "additionalModelRequestFields": {"thinking": {"type": "disabled"}} if claude else {"reasoning": {"effort": "none"}}}
     body.update(b.get("extra", {}))
-    # bedrock.endpoint: optional base URL, e.g. a CloudFront distribution in front of bedrock-runtime
-    # (reach a US region from places whose source IPs some models refuse, without a proxy)
-    base = b.get("endpoint") or f"https://bedrock-runtime.{b['region']}.amazonaws.com"
-    url = f"{base.rstrip('/')}/model/{b['model']}/converse-stream"
-    async with BEDROCK_HTTP.post(url, json=body, headers={"Authorization": "Bearer " + b["api_key"]},
+    url = f"{bedrock_base()}/model/{b['model']}/converse-stream"
+    async with bedrock_http().post(url, json=body, headers={"Authorization": "Bearer " + b["api_key"]},
                                  proxy=b.get("proxy")) as r:
         if r.status != 200:
             raise RuntimeError(f"bedrock http {r.status}: {(await r.text())[:300]}")
@@ -282,6 +304,7 @@ class Session:
     async def on_text(self, m):
         t = m.get("type")
         if t == "hello":
+            asyncio.create_task(bedrock_prewarm())   # the device just woke up: warm the LLM connection meanwhile
             await self.send({"type": "hello", "transport": "websocket", "audio_params": {
                 "format": "opus", "sample_rate": OUT_RATE, "channels": 1, "frame_duration": FRAME_MS}})
             if (m.get("features") or {}).get("mcp"):
