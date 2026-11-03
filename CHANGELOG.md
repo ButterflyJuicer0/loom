@@ -14,6 +14,29 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **A device's sessions**: Devices → **sessions** on an online Mac or Linux
+  box lists the Claude Code and Codex sessions on it, the running ones on
+  top (busy or idle, pid), each with its folder, model, size and last reply;
+  pick one to read its latest turns, followed live while it runs. Read on
+  the device through loom-node by a read-only script
+  (`priv/device_sessions/sessions.py`); nothing is kept on the host.
+- **Continue a device session in Loom**: from any of them, **Continue in
+  Loom** opens a new session whose brief carries that session's gist and
+  recent turns, and which works where it did — on the device, in its folder,
+  through loom-node (resuming the original there with `claude --resume`
+  when the whole history matters). With a next step written it starts at
+  once; without, it opens on the brief.
+- **Smart pick**: describe the task and the sessions most likely to be that
+  work come first, with a score and a reason each (a one-shot model call;
+  matching words when no model answers).
+
+### Fixed
+- One-shot model calls (filing a session into a project, reading a described
+  schedule, smart pick) on a gateway that refuses `haiku` now retry on the
+  CLI's default model. `LOOM_ONESHOT_MODEL` sets the model (empty for the CLI
+  default).
+
 ### Changed
 - **Taps answer at once**: New chat opens immediately and the server makes
   the session in the background (the first message waits for it, retrying on

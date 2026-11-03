@@ -13,13 +13,43 @@ defmodule Loom.OneShot do
   `~/.claude/settings.json`), and the service's own environment has none of
   it. Without them every call answered "Not logged in" and each new session
   was quietly left out of its project.
+
+  The model is `LOOM_ONESHOT_MODEL` (default `haiku`). Some gateways offer
+  only some models (a Bedrock proxy that maps just opus, say), and there
+  `haiku` is refused: then the call is made once more with no `--model`, so
+  the CLI's own default answers, slower but answered.
   """
 
   @doc "The model's reply to `text` under `system`: `{:ok, reply}` or `{:error, reason}`."
   def ask(system, text) do
+    model = model()
+
+    case ask(system, text, model) do
+      {:error, _} = error when not is_nil(model) ->
+        case ask(system, text, nil) do
+          {:ok, _} = ok -> ok
+          _ -> error
+        end
+
+      result ->
+        result
+    end
+  end
+
+  defp model do
+    case Application.get_env(:loom, __MODULE__, [])[:model] do
+      nil -> "haiku"
+      "" -> nil
+      m -> m
+    end
+  end
+
+  defp ask(system, text, model) do
     with {:ok, exe} <- executable(),
-         {out, 0} <- System.cmd(exe, args(system, text), cd: System.tmp_dir!(), env: env()),
-         {:ok, %{"result" => reply}} when is_binary(reply) <- Jason.decode(out) do
+         {out, 0} <-
+           System.cmd(exe, args(system, text, model), cd: System.tmp_dir!(), env: env()),
+         {:ok, %{"result" => reply} = answer} when is_binary(reply) <- Jason.decode(out),
+         false <- answer["is_error"] == true do
       {:ok, reply}
     else
       {:error, reason} -> {:error, reason}
@@ -29,23 +59,22 @@ defmodule Loom.OneShot do
     error -> {:error, error}
   end
 
-  defp args(system, text) do
-    [
-      "-p",
-      "--model",
-      "haiku",
-      "--no-session-persistence",
-      "--tools",
-      "",
-      "--strict-mcp-config",
-      "--setting-sources",
-      "",
-      "--output-format",
-      "json",
-      "--system-prompt",
-      system,
-      text
-    ]
+  defp args(system, text, model) do
+    if(model, do: ["--model", model], else: []) ++
+      [
+        "-p",
+        "--no-session-persistence",
+        "--tools",
+        "",
+        "--strict-mcp-config",
+        "--setting-sources",
+        "",
+        "--output-format",
+        "json",
+        "--system-prompt",
+        system,
+        text
+      ]
   end
 
   defp executable do

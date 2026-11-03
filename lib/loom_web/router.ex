@@ -97,6 +97,10 @@ defmodule LoomWeb.Router do
     patch "/devices/:id", DevicesController, :update
     delete "/devices/:id", DevicesController, :delete
     post "/devices/:id/install", DevicesController, :install
+    get "/devices/:id/sessions", DeviceSessionsController, :index
+    get "/devices/:id/sessions/transcript", DeviceSessionsController, :show
+    post "/devices/:id/sessions/continue", DeviceSessionsController, :continue
+    post "/devices/:id/sessions/pick", DeviceSessionsController, :pick
 
     get "/notices", NoticeController, :index
     post "/notices/:id/read", NoticeController, :read

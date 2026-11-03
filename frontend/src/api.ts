@@ -815,6 +815,79 @@ export function deviceInstallCode(id: string): Promise<{ code: string }> {
   return apiCall(`/api/devices/${id}/install`, { method: "POST" })
 }
 
+/** One Claude Code or Codex session found on a device (see `LoomWeb.DeviceSessionsController`). */
+export type DeviceSession = {
+  agent: "claude" | "codex"
+  id: string
+  file: string
+  title: string | null
+  first: string | null
+  last: string | null
+  cwd: string | null
+  model: string | null
+  branch: string | null
+  messages: number
+  started: string | null
+  updated: string
+  live: boolean
+  // For a running Claude Code session, from its own record on the device.
+  pid?: number
+  status?: string
+  status_at?: string
+  name?: string
+  kind?: string
+}
+
+export type DeviceSessions = {
+  host: string
+  home: string
+  sessions: DeviceSession[]
+  totals: Record<string, number>
+}
+
+export type DeviceTranscriptMessage = {
+  role: "user" | "assistant"
+  text: string
+  tools?: string[]
+  at: string | null
+}
+
+/** Scans the device, so it takes a second or two; the device has to be online. */
+export function deviceSessions(id: string, limit = 40): Promise<DeviceSessions> {
+  return apiCall(`/api/devices/${id}/sessions?limit=${limit}`, { method: "GET" })
+}
+
+export function deviceTranscript(
+  id: string,
+  session: Pick<DeviceSession, "agent" | "file">,
+  limit = 150,
+): Promise<{ messages: DeviceTranscriptMessage[]; total: number; updated: string }> {
+  const q = new URLSearchParams({ agent: session.agent, file: session.file, limit: String(limit) })
+  return apiCall(`/api/devices/${id}/sessions/transcript?${q}`, { method: "GET" })
+}
+
+/**
+ * Carry a device session on in a new Loom session, which works on the device
+ * through loom-node. With an `instruction` it starts on it at once; without,
+ * it opens on the brief and waits.
+ */
+export function continueDeviceSession(
+  id: string,
+  session: Pick<DeviceSession, "agent" | "file">,
+  instruction: string,
+): Promise<{ id: string; started: boolean }> {
+  return apiCall(`/api/devices/${id}/sessions/continue`, {
+    method: "POST",
+    body: JSON.stringify({ agent: session.agent, file: session.file, instruction }),
+  })
+}
+
+/** Which sessions on the device a described task most likely is, best first. */
+export type SessionPick = { file: string; score: number | null; reason: string | null }
+export function pickDeviceSession(id: string, task: string): Promise<{ picks: SessionPick[]; by: "model" | "words" }> {
+  return apiCall(`/api/devices/${id}/sessions/pick`, { method: "POST", body: JSON.stringify({ task }) })
+}
+
 /**
  * What to paste into a terminal on the device, per kind of system. One code:
  * whichever is run first uses it up.

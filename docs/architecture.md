@@ -687,6 +687,16 @@ agent ──zsh──> loom-node exec mac -- '…'      CLI, on this host
   Writes land in a temporary file beside the target, which is renamed into
   place. Every request is logged on the device in
   `~/.local/state/loom-node/log`.
+- **A device's agent sessions.** `LoomWeb.DeviceSessionsController` (the
+  Devices dialog's **sessions**) runs `priv/device_sessions/sessions.py` on
+  the device over the same channel, as `python3 -c` with the script
+  base64'd in its argument, and returns the JSON it prints: the Claude Code
+  sessions in `~/.claude/projects` (running ones known by
+  `~/.claude/sessions/<pid>.json` and a live pid) and the Codex ones in
+  `~/.codex/sessions`, or the last turns of one of those files — it reads
+  nothing else. *Continue* starts a Loom session seeded with that session's
+  gist and recent turns, told to work on the device through loom-node;
+  *pick* asks `Loom.OneShot` which sessions a described task is.
 - **Skill.** `rel/deploy.sh` builds every target with `make -C node`,
   installs the CLI at `~/.local/bin/loom-node`, and copies `node/SKILL.md`
   into the skill directories of both backends.

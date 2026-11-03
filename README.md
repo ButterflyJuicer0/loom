@@ -179,6 +179,10 @@ phone, and agents in any session can work on that machine as you.
   `irm … | iex` on Windows. A per-user service reconnects after sleep and
   reboot; no administrator needed.
 - **Outbound only**: the device dials Loom, so it works behind NAT.
+- **Its sessions**: the Devices dialog lists the Claude Code and Codex
+  sessions on a Mac or Linux device — running ones first — shows their
+  latest turns, picks the one a described task belongs to, and continues any
+  of them in a new Loom session that works on the device.
 - **Safe defaults**: each device has its own token, stored only as a hash.
   Install codes last a day, and 20 wrong codes in 2 minutes void them all.
   Removing a device makes `loom-node` uninstall itself and delete its scratch
