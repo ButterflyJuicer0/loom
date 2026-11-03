@@ -26,6 +26,9 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   attendees and rounds.
 - loom-home: the Bedrock connection is warmed when a device opens its channel
   and kept alive for 75 s, so the first reply comes sooner.
+- loom-home: the reply starts sooner — it begins at a short pause and plays
+  once the sentence is clearly complete (longer wait if it ends mid-thought);
+  at most one filler, only when the reply is late.
 
 ## [0.5.0] – 2026-11-03
 
