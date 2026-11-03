@@ -12,6 +12,7 @@ import {
   HatGlasses,
   Keyboard,
   KeyboardOff,
+  MessagesSquare,
   MonitorSmartphone,
   MoreHorizontal,
   PanelLeft,
@@ -27,6 +28,8 @@ import type { AgentBackend, AgentInfo, Device, Employee, Notice, Project } from 
 import { Avatar, BudgetRing, short, STATUS, StatusIcon } from "./Employees"
 import { BellButton } from "./Notices"
 import { RenameInput } from "./Confirm"
+import { DeviceIcon, deviceIcon } from "./DeviceIcon"
+import { DeviceSessionsDialog } from "./DeviceSessions"
 import { DevicesDialog } from "./Devices"
 import { SessionMenu } from "./SessionMenu"
 import { MoonButton, scopeOf } from "./Sleep"
@@ -45,6 +48,8 @@ export const SESSIONS_SECTION = "section:sessions"
 export const WORKING_SECTION = "section:working"
 export const PINNED_SECTION = "section:pinned"
 export const EMPLOYEES_SECTION = "section:employees"
+// The agent sessions on the user's devices: a row per device. Starts folded.
+export const DEVICE_SESSIONS_SECTION = "section:device-sessions"
 // The foot's switches: a list, or folded to a row of their icons.
 export const FOOT_SECTION = "section:foot"
 
@@ -220,6 +225,9 @@ export function Sidebar({
     return () => clearInterval(timer)
   }, [])
   const [devicesOpen, setDevicesOpen] = useState(false)
+  // The device whose sessions are open, picked from the top of the sidebar.
+  const [sessionsOf, setSessionsOf] = useState<string | null>(null)
+  const sessionsDevice = devices.find((d) => d.id === sessionsOf) ?? null
   // A chat or an incognito one, on which engine: behind the arrow beside
   // New chat, whose own click just makes one.
   const [newMenu, setNewMenu] = useState<DOMRect | null>(null)
@@ -444,6 +452,47 @@ export function Sidebar({
           <span className="nav-label">Tasks</span>
         </div>
 
+        {/* The Claude Code and Codex sessions on a device: pick the device. */}
+        <div
+          className={"nav-item" + (open(DEVICE_SESSIONS_SECTION) ? " open" : "")}
+          role="button"
+          aria-expanded={open(DEVICE_SESSIONS_SECTION)}
+          onClick={() => onToggle(DEVICE_SESSIONS_SECTION)}
+          title="Claude Code and Codex sessions on your devices"
+        >
+          <MessagesSquare className="nav-icon" />
+          <span className="nav-label">Device sessions</span>
+          <ChevronRight className="nav-chevron" />
+        </div>
+        {open(DEVICE_SESSIONS_SECTION) && (
+          <div className="nav-children">
+            {devices.map((d) => {
+              const unsupported = d.os === "windows" || d.os === "android"
+              const usable = d.online && !unsupported
+              return (
+                <div
+                  key={d.id}
+                  className={"project-row device-session-row" + (usable ? "" : " disabled") + (d.id === sessionsOf ? " current" : "")}
+                  role="button"
+                  aria-disabled={!usable}
+                  onClick={() => usable && setSessionsOf(d.id)}
+                  title={unsupported ? "Sessions are read on macOS and Linux only" : d.online ? `Sessions on ${d.name}` : `${d.name} is offline`}
+                >
+                  <span className="project-icon device-session-icon">
+                    <DeviceIcon icon={deviceIcon(d)} />
+                  </span>
+                  <span className="session-label">{d.name}</span>
+                  <span className={"dot" + (d.online ? " online" : "")} />
+                </div>
+              )
+            })}
+            <button className="project-row project-new-row" onClick={() => setDevicesOpen(true)}>
+              <MonitorSmartphone className="project-icon" />
+              <span className="session-label">{devices.length ? "Manage devices" : "Add a device"}</span>
+            </button>
+          </div>
+        )}
+
         {pinned.length > 0 && (
           <>
             <Heading label="Pinned" open={open(PINNED_SECTION)} onToggle={() => onToggle(PINNED_SECTION)} />
@@ -588,6 +637,16 @@ export function Sidebar({
             onCreate(backend, undefined, incognito, model)
           }}
           onClose={() => setNewMenu(null)}
+        />
+      )}
+      {sessionsDevice && (
+        <DeviceSessionsDialog
+          device={sessionsDevice}
+          onClose={() => setSessionsOf(null)}
+          onOpenSession={(id) => {
+            setSessionsOf(null)
+            onSelect(id)
+          }}
         />
       )}
       {devicesOpen && (

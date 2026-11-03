@@ -30,6 +30,8 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 - **Smart pick**: describe the task and the sessions most likely to be that
   work come first, with a score and a reason each (a one-shot model call;
   matching words when no model answers).
+- **Device sessions** at the top of the sidebar, under Tasks: unfold it,
+  tap a device, and its sessions open — no trip through the Devices dialog.
 
 ### Fixed
 - One-shot model calls (filing a session into a project, reading a described
