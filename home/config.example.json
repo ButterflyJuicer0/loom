@@ -10,7 +10,8 @@
     "threads": 2,
     "speed": 1.1
   },
-  "vad_silence_seconds": 0.6,
+  "endpoint": {"early": 0.25, "complete": 0.3, "incomplete": 1.0},
+  "filler_after": 1.6,
   "idle_close_seconds": 20,
   "asr_language": "zh",
   "utc_offset_hours": 8,

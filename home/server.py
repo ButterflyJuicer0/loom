@@ -9,7 +9,7 @@ Run:  python server.py   (config.json next to it; see config.example.json)
 Local control (127.0.0.1 only): POST /api/say {"text"}, POST /api/tool {"name","arguments"},
 GET /api/status.
 """
-import asyncio, io, json, logging, random, re, time, uuid, wave
+import asyncio, io, json, logging, re, time, uuid, wave
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -47,11 +47,25 @@ def _sense_voice(lang):
 ASR_AUTO, ASR_ZH = _sense_voice("auto"), _sense_voice("zh")
 
 
+# End of turn. The VAD cuts after `early` s of silence and the reply starts right away (ASR + LLM + TTS),
+# but nothing is heard or done until the silence reaches `complete` (text reads as a whole sentence) or
+# `incomplete` (it ends on 把/然后/因为/，… - the user is probably still going). More speech before the
+# first word is played merges with the utterance and restarts the reply. Pattern: LiveKit's turn detector
+# and OpenAI's semantic_vad, here as a rule instead of a model.
+EP = {"early": 0.25, "complete": 0.3, "incomplete": 1.0, **CFG.get("endpoint", {})}
+UNFINISHED = re.compile(r"(?:[，,、]|把|的|和|跟|或者|还有|然后|那个|这个|就是|因为|所以|但是|不过|如果|要是|而且|可是"
+                        r"|我想|我要|帮我|给我|让|被|从|往|向|对于|关于|嗯|呃|额)[。.!！]?$")
+
+
+def unfinished(text):
+    return bool(UNFINISHED.search(text.strip()))
+
+
 def new_vad():
     c = sherpa_onnx.VadModelConfig()
     c.silero_vad.model = str(MODELS / "silero_vad.onnx")
     c.silero_vad.threshold = 0.5
-    c.silero_vad.min_silence_duration = CFG.get("vad_silence_seconds", 0.6)
+    c.silero_vad.min_silence_duration = EP["early"]
     c.silero_vad.min_speech_duration = 0.25
     c.silero_vad.max_speech_duration = 20
     c.sample_rate = 16000
@@ -79,8 +93,18 @@ def dump_wav(samples, keep=30):
 
 
 MUSIC = ROOT / "music"
-THINK = CFG.get("fillers", [])  # e.g. ["嗯，"]: said the moment ASR is done, for a slow LLM/TTS; off by default
+# Fillers only when the reply is late: nothing ready `filler_after` s after the turn ended -> one short
+# pre-synthesized phrase that fits what was said. Fast replies (the usual case) get none. {} turns them off.
+FILLERS = CFG.get("fillers", {"question": "嗯，我想想。", "command": "收到。", "other": "嗯，"})
+FILLER_AFTER = CFG.get("filler_after", 1.6)  # after the turn end; replies normally start 1.0-1.5 s after it
 FILLER_PCM = {}
+QUESTION = re.compile(r"([吗呢么嘛]|什么|怎么|为什么|为啥|几|多少|哪|谁|是不是|能不能|可不可以|有没有)[。？?！!]*$|[？?]$")
+COMMAND = re.compile(r"^(请|帮我|给我|麻烦|你)?(把|打开|关|开|调|放|播|停|暂停|设|定|提醒)")
+
+
+def filler_for(text):
+    kind = "question" if QUESTION.search(text) else "command" if COMMAND.search(text) else "other"
+    return FILLERS.get(kind)
 
 
 def load_audio(path):
@@ -283,6 +307,7 @@ class Session:
         self.tools = []
         self.mcp_id, self.mcp_wait = 10, {}
         self.reply_task, self.act_task, self.pending_song, self.failed = None, None, False, []
+        self.gate = None  # future of the current reply: True = the turn is over, play/act; False = dropped
         self.calling = False
         self.history = HISTORY.setdefault(device_id, {"msgs": [], "at": 0})
         self.last_activity = time.monotonic()
@@ -319,7 +344,7 @@ class Session:
             elif st == "stop":
                 self.listening = False
                 self.vad.flush()
-                await self.drain_vad()
+                await self.drain_vad(final=True)
             elif st == "detect":
                 log.info("wake word: %s", m.get("text"))
         elif t == "abort":
@@ -349,11 +374,12 @@ class Session:
             self.last_activity = time.monotonic()
         await self.drain_vad()
 
-    async def drain_vad(self):
+    async def drain_vad(self, final=False):
         while not self.vad.empty():
             seg = self.vad.front
             seg_start, seg_end = seg.start, seg.start + len(seg.samples)
             self.vad.pop()
+            cut_at = time.monotonic()  # ~EP["early"] s after the speech ended
             merging = bool(self.reply_task and not self.reply_task.done() and not self.speaking)
             if not merging:
                 self.utt = max(self.cut, seg_start - 24000, self.pcm_base)
@@ -367,7 +393,31 @@ class Session:
             if len(re.sub(r"[\W_嗯啊哦呃]", "", text)) < 1:
                 continue
             await self.stop_reply()
-            self.reply_task = asyncio.create_task(self.reply(text))
+            self.gate = gate = asyncio.get_running_loop().create_future()
+            hold = 0.0 if final else EP["incomplete" if unfinished(text) else "complete"] - EP["early"]
+            asyncio.create_task(self.end_of_turn(gate, cut_at + hold, hold))
+            self.reply_task = asyncio.create_task(self.reply(text, gate))
+
+    async def end_of_turn(self, gate, deadline, hold):
+        """Open the gate once the silence is long enough and the user is not speaking again. If they are,
+        their next VAD segment merges with this one and replaces the reply (stop_reply drops this gate)."""
+        quiet_needed = EP["early"] + 0.2  # speech that never became a segment (< 0.25 s) must end first
+        last_voice = None
+        while not gate.done():
+            now = time.monotonic()
+            if self.vad.is_speech_detected():
+                last_voice = now
+            if now >= deadline and (last_voice is None or now - last_voice > quiet_needed):
+                log.info("turn end: hold %.2fs%s", hold, ", waited for speech to stop" if last_voice else "")
+                gate.set_result(True)
+                return
+            await asyncio.sleep(0.03)
+
+    async def gated(self, gate, coro):
+        if gate is None or await gate:
+            await coro
+        else:
+            coro.close()
 
     # ---------- MCP (server is the client; device is the MCP server) ----------
     async def mcp(self, method, params=None, timeout=5.0):
@@ -455,6 +505,8 @@ class Session:
 
     # ---------- reply: LLM -> sentences -> TTS -> paced Opus ----------
     async def stop_reply(self):
+        if self.gate and not self.gate.done():
+            self.gate.set_result(False)  # its pending tags and emotions are dropped, not run
         if self.reply_task and not self.reply_task.done():
             self.reply_task.cancel()
             try:
@@ -465,20 +517,20 @@ class Session:
                 await self.send({"type": "tts", "state": "stop"})
             self.speaking = False
 
-    async def reply(self, text):
-        await self.send({"type": "stt", "text": text})
+    async def reply(self, text, gate=None):
+        """Started speculatively at the first pause; plays and acts only once `gate` says the turn is over."""
         self.failed, self.calling = [], False
-        filler = random.choice(THINK) if THINK else ""  # pre-synthesized, plays the moment ASR is done
         h = self.history
         if time.monotonic() - h["at"] > 1800:
             h["msgs"].clear()
-        h["at"] = time.monotonic()
         sentences = asyncio.Queue()
-        if filler in FILLER_PCM:
-            await sentences.put((filler, FILLER_PCM[filler]))
-        speaker = asyncio.create_task(self.speak(sentences))
+        speaker = asyncio.create_task(self.speak(sentences, gate, filler_for(text)))
         try:
-            content = await self.llm(text, sentences, said=filler if filler in FILLER_PCM else "")
+            content = await self.llm(text, sentences, gate)
+            if gate is not None and not await gate:
+                return
+            await self.send({"type": "stt", "text": text})
+            h["at"] = time.monotonic()
             # tags stay in history: they show the model its own working pattern
             h["msgs"][:] = (h["msgs"] + [{"role": "user", "content": text},
                                          {"role": "assistant", "content": content}])[-12:]
@@ -503,12 +555,12 @@ class Session:
         if BYE.search(text):
             asyncio.get_running_loop().call_later(1.0, lambda: asyncio.create_task(self.ws.close()))
 
-    async def llm(self, text, sentences, said=""):
-        """Stream one LLM reply; run [emotion]/[do:x]/[vol:n] tags as they complete, queue clean sentences."""
+    async def llm(self, text, sentences, gate=None):
+        """Stream one LLM reply; run [emotion]/[do:x]/[vol:n] tags as they complete (once `gate` opens),
+        queue clean sentences."""
         now = datetime.now(TZ).strftime("%m月%d日 %A %H:%M")
         msgs = [{"role": "system", "content": self.system_prompt()}] + self.history["msgs"] + \
-               [{"role": "user", "content": f"（现在{now}）{text}" + (
-                   f"（你已经先说了“{said}”，接着往下说，别重复）" if said else "")}]
+               [{"role": "user", "content": f"（现在{now}）{text}"}]
         content, buf, spoke, t0 = "", "", False, time.monotonic()
         actions, actions_run = [], False  # run sequentially, without blocking speech
         async for piece in bedrock_stream(msgs):
@@ -524,13 +576,13 @@ class Session:
                         actions.append(("call", (m.group(3), m.group(4), m.group(5))))
                         self.calling = True
                     elif kind is None and arg in EMOTIONS:
-                        await self.send({"type": "llm", "emotion": arg})
+                        asyncio.create_task(self.gated(gate, self.send({"type": "llm", "emotion": arg})))
                     elif kind:
                         actions.append((kind, arg))
                     buf = buf[:m.start()] + buf[m.end():]
                 actions_run = actions_run or bool(actions)
                 if actions:  # chain after earlier tags so the dog moves in the order written
-                    self.act_task = asyncio.create_task(self._run_tags(actions, after=self.act_task))
+                    self.act_task = asyncio.create_task(self._run_tags(actions, after=self.act_task, gate=gate))
                     actions = []
                 if re.search(r"[\[【][^\]】]*$", buf):
                     continue  # an unfinished tag: wait before cutting sentences
@@ -552,29 +604,54 @@ class Session:
             await sentences.put("好的。")
         return content
 
-    async def _run_tags(self, todo, after=None):
+    async def _run_tags(self, todo, after=None, gate=None):
+        if gate is not None and not await gate:
+            return  # speculative reply replaced: never switch a light for words the user had not finished
         if after:
             await asyncio.gather(after, return_exceptions=True)
         for kind, arg in todo:
             await self.run_tag(kind, arg)
 
-    async def speak(self, sentences):
-        """Start TTS for every sentence as soon as the LLM emits it; send them in order, in real time."""
+    async def speak(self, sentences, gate=None, filler=None):
+        """Start TTS for every sentence as soon as the LLM emits it; send them in order, in real time.
+        With a gate: silent until the turn is over; a filler only if the first sentence is still not ready
+        FILLER_AFTER s later."""
         jobs = asyncio.Queue()
 
         async def producer():
             while (s := await sentences.get()) is not None:
-                if isinstance(s, tuple):  # (text, ready pcm): pre-synthesized filler
-                    fut = asyncio.get_running_loop().create_future(); fut.set_result(s[1])
-                    await jobs.put((s[0], fut))
-                else:
-                    await jobs.put((s, asyncio.create_task(synth(s))))
+                await jobs.put((s, asyncio.create_task(synth(s))))
             await jobs.put(None)
 
-        prod, started = asyncio.create_task(producer()), False
+        async def first_ready():
+            item = await jobs.get()
+            if item:
+                await asyncio.wait([item[1]])
+            return item
+
+        prod, started, first = asyncio.create_task(producer()), False, None
         try:
-            while (item := await jobs.get()) is not None:
+            if gate is not None:
+                if not await gate:
+                    return
+                first = asyncio.ensure_future(first_ready())
+                done, _ = await asyncio.wait([first], timeout=FILLER_AFTER)
+                if not done and filler in FILLER_PCM:
+                    log.info("filler after %.1fs: %s", FILLER_AFTER, filler)
+                    self.speaking, started = True, True
+                    await self.send({"type": "tts", "state": "start"})
+                    await self.send({"type": "tts", "state": "sentence_start", "text": filler})
+                    await self.send_pcm(FILLER_PCM[filler])
+            while (item := await (first if first else jobs.get())) is not None:
+                first = None
                 s, job = item
+                if not started:  # the user started talking again in the meantime: let them finish
+                    until, waited = time.monotonic() + 3, False
+                    while self.vad.is_speech_detected() and time.monotonic() < until and not self.ws.closed:
+                        waited = True
+                        await asyncio.sleep(0.03)
+                    if waited:  # that speech, once cut and transcribed, replaces this reply (we get cancelled)
+                        await asyncio.sleep(EP["early"] + 1.0)
                 t0 = time.monotonic()
                 try:
                     pcm = await job
@@ -591,6 +668,8 @@ class Session:
                 await self.send_pcm(pcm)
         finally:
             prod.cancel()
+            if first:
+                first.cancel()
             while not jobs.empty():
                 item = jobs.get_nowait()
                 if item:
@@ -764,7 +843,7 @@ async def health(req):
 
 async def main():
     home_task = asyncio.create_task(HOME.run())  # noqa: F841 (kept so it is not garbage-collected)
-    for f in set(THINK):  # pre-synthesize fillers so they play ~0 ms after ASR
+    for f in set(FILLERS.values()):  # pre-synthesize fillers so they play without a TTS wait
         try:
             FILLER_PCM[f] = await synth(f)
         except Exception as e:
