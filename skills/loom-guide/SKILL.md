@@ -21,6 +21,23 @@ Then read the file that fits the question, rather than answering from memory:
 - `docs/backends.md` — the Claude Code, Codex and Kiro backends.
 - `docs/keys.md` — API keys and credentials.
 
+Some features are told only in the skill that uses them and in
+`CHANGELOG.md`, not yet in the docs above:
+
+- **Sessions talking to each other.** A message can be written into a
+  session that already exists, without opening it: by the user from that
+  session's … menu → *Send a message…*, or by an agent with
+  `loom-session send ID --text "…"` (`POST /api/tidy/send`, one path for both
+  in `Loom.Agent.Relay`). It waits for that session's turn to end, then is
+  its next turn. Only the user's own sessions take one — not an employee's,
+  Dream's or the bell's, nor the sender's own. An agent's message shows as
+  "↪ From <session>", and the receiving agent treats it as a request from
+  that session, not the user, and checks with the user before acting on it.
+  An agent sends only with the user's yes. How to find the id and write the
+  message: the loom-sessions skill (`skills/loom-sessions/SKILL.md`, "Sending
+  into another session"). To start a new session with a brief instead, that
+  is loom-handoff.
+
 If the docs don't settle it, read the code: `lib/` (Elixir server),
 `frontend/src/` (UI), `node/` (loom-node). Say which you checked.
 
