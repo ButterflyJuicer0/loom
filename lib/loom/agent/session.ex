@@ -729,8 +729,9 @@ defmodule Loom.Agent.Session do
 
     case Backend.impl(state.backend).steer(state.handle, text) do
       {:ok, handle} ->
+        # `sent`: the queue emptied into the turn, not dropped.
         state = cancel_release(%{state | handle: handle, queue: []})
-        {:reply, :ok, persist_and_broadcast_queue(state)}
+        {:reply, :ok, persist_and_broadcast_queue(state, %{sent: true})}
 
       {:error, reason} ->
         # Refused (the turn ended under us, or Kiro): it stays queued and
@@ -1182,26 +1183,37 @@ defmodule Loom.Agent.Session do
 
   # A submitted message, once its attachments have been vouched for.
   defp accept(state, text, files, opts) do
+    # What the backend receives differs from what is displayed: it needs the
+    # paths, the user does not want to read them. A caller with a long prompt
+    # of its own (`Loom.Dream`) shows a line and sends the whole of it.
+    message = Keyword.get(opts, :prompt) || Files.prompt(text, files)
+
+    # Typed in the chat mid-turn, it waits for the turn: `:queued`, with the
+    # queue entry it became (`queued_as`), so the chat can hold its bubble
+    # back until it goes out — with the next turn, or by `steer_queued/1`.
+    waits? =
+      state.classifying == nil and state.status in [:starting, :running] and
+        Keyword.get(opts, :mode, :steer) == :queue
+
     state =
       state
       |> maybe_title(if String.trim(text) == "", do: Files.title(files), else: text)
       # Writing in it again means it is not done after all, and its recap
       # is out of date.
       |> Map.merge(%{done_at: nil, recap: nil})
-      |> emit(:user, %{
-        text: text,
-        # Structured rather than folded into `text`, so a bubble can show
-        # `shot.png` as a chip instead of an absolute path.
-        files: files,
-        origin: Keyword.get(opts, :origin, "unknown"),
-        client_msg_id: Keyword.get(opts, :client_msg_id),
-        status: :sent
-      })
-
-    # What the backend receives differs from what is displayed: it needs the
-    # paths, the user does not want to read them. A caller with a long prompt
-    # of its own (`Loom.Dream`) shows a line and sends the whole of it.
-    message = Keyword.get(opts, :prompt) || Files.prompt(text, files)
+      |> emit(
+        :user,
+        %{
+          text: text,
+          # Structured rather than folded into `text`, so a bubble can show
+          # `shot.png` as a chip instead of an absolute path.
+          files: files,
+          origin: Keyword.get(opts, :origin, "unknown"),
+          client_msg_id: Keyword.get(opts, :client_msg_id),
+          status: if(waits?, do: :queued, else: :sent)
+        }
+        |> Map.merge(if waits?, do: %{queued_as: message}, else: %{})
+      )
 
     cond do
       state.classifying != nil ->
@@ -1209,7 +1221,7 @@ defmodule Loom.Agent.Session do
         state = Map.update!(state, :queue, &(&1 ++ [message]))
         {:reply, {:ok, :queued}, persist_and_broadcast_queue(state)}
 
-      state.status in [:starting, :running] and Keyword.get(opts, :mode, :steer) == :queue ->
+      waits? ->
         # Typed in the chat: it waits for the turn to end, as in Claude Code,
         # rather than cutting into the work. `steer_queued/1` sends it now.
         state = Map.update!(state, :queue, &(&1 ++ [message]))
@@ -1615,8 +1627,10 @@ defmodule Loom.Agent.Session do
 
   # Queue changes are not status changes, but clients still have to see them —
   # a queued bubble has to stop looking pending once it goes out.
-  defp persist_and_broadcast_queue(state) do
-    state = emit(state, :queue, %{queued: length(state.queue), messages: state.queue})
+  defp persist_and_broadcast_queue(state, extra \\ %{}) do
+    state =
+      emit(state, :queue, Map.merge(%{queued: length(state.queue), messages: state.queue}, extra))
+
     persist_meta(state)
     state
   end

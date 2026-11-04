@@ -208,6 +208,40 @@ defmodule Loom.Agent.SessionTest do
       BackendStub.refute_turn()
     end
 
+    test "a message that waits is marked queued, so the chat holds its bubble back" do
+      id = new_session()
+      Agent.submit(id, "first")
+      BackendStub.await_turn()
+      Phoenix.PubSub.subscribe(Loom.PubSub, Agent.topic(id))
+
+      Agent.submit(id, "then this", mode: :queue)
+      assert_receive {:agent_event, ^id, %{kind: :user, payload: payload}}, 500
+      assert payload.status == :queued
+      assert payload.queued_as == "then this"
+
+      # Send now: the queue empties into the turn, and says so.
+      assert :ok = Agent.steer_queued(id)
+
+      assert_receive {:agent_event, ^id, %{kind: :queue, payload: %{messages: [], sent: true}}},
+                     500
+    end
+
+    test "a steered message is shown as sent, and a dropped one leaves without sent" do
+      id = new_session()
+      Agent.submit(id, "first")
+      BackendStub.await_turn()
+      Phoenix.PubSub.subscribe(Loom.PubSub, Agent.topic(id))
+
+      Agent.submit(id, "now", mode: :steer)
+      assert_receive {:agent_event, ^id, %{kind: :user, payload: %{status: :sent} = sent}}, 500
+      refute Map.has_key?(sent, :queued_as)
+
+      Agent.submit(id, "later", mode: :queue)
+      assert :ok = Agent.drop_queued(id, 0)
+      assert_receive {:agent_event, ^id, %{kind: :queue, payload: %{messages: []} = dropped}}, 500
+      refute Map.has_key?(dropped, :sent)
+    end
+
     test "a refused steer_queued keeps the messages queued" do
       id = new_session()
       Agent.submit(id, "first")
@@ -1027,6 +1061,7 @@ defmodule Loom.Agent.SessionTest do
   end
 
   defmodule Recap do
-    def recap(messages), do: Enum.map_join(messages, " / ", fn {who, text} -> "#{who}: #{text}" end)
+    def recap(messages),
+      do: Enum.map_join(messages, " / ", fn {who, text} -> "#{who}: #{text}" end)
   end
 end
