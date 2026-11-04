@@ -161,7 +161,7 @@ export function Chat({
   project,
   onSwitch,
 }: Props) {
-  const { transcript, joinError, submit, resend, discard, interrupt, dropQueued, rename, draft: remoteDraft } = useAgent(
+  const { transcript, joinError, submit, resend, discard, interrupt, dropQueued, steerQueued, rename, draft: remoteDraft } = useAgent(
     session.id,
     (event) => {
       if (event.kind === "output_files") {
@@ -422,6 +422,7 @@ export function Chat({
             messages={transcript.queue}
             interrupted={transcript.status === "interrupted"}
             onDrop={dropQueued}
+            onSteer={busy ? steerQueued : undefined}
           />
         )}
 
@@ -1393,28 +1394,39 @@ function Title({
 /**
  * Messages waiting for the current turn, or parked by an interrupt.
  *
- * Showing them matters most in the interrupted case: they were written for a
- * trajectory that no longer exists, so the user needs to see what is about to
- * be sent and be able to drop a line that no longer applies.
+ * A message typed mid-turn waits here rather than cutting into the work, as in
+ * Claude Code: the turn finishes and they all go out together as the next one.
+ * "Send now" is for when it should land before the work is done after all.
+ *
+ * In the interrupted case they were written for a trajectory that no longer
+ * exists, so the user needs to see what is about to be sent and be able to
+ * drop a line that no longer applies.
  */
 function QueuePanel({
   messages,
   interrupted,
   onDrop,
+  onSteer,
 }: {
   messages: string[]
   interrupted: boolean
   onDrop: (index: number) => void
+  onSteer?: () => void
 }) {
+  const n = messages.length
   return (
     <div className={"queue-panel" + (interrupted ? " parked" : "")}>
       <div className="queue-head">
-        {/* Only reachable when the backend refused to take the message into the
-            running turn, or when the session was stopped. A message typed
-            mid-turn normally goes straight in. */}
-        {interrupted
-          ? `${messages.length} message${messages.length > 1 ? "s" : ""} parked — they go out with your next one`
-          : `${messages.length} waiting — the turn would not take it`}
+        <span>
+          {interrupted
+            ? `${n} message${n > 1 ? "s" : ""} parked — they go out with your next one`
+            : `${n} queued — sent when this turn ends`}
+        </span>
+        {onSteer && !interrupted && (
+          <button className="queue-steer" title="Put them into the running turn now" onClick={onSteer}>
+            Send now
+          </button>
+        )}
       </div>
       {messages.map((text, i) => (
         <div className="queue-item" key={i}>

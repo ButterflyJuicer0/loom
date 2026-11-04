@@ -164,6 +164,7 @@ defmodule Loom.Agent do
   defdelegate submit(id, text, opts \\ []), to: Session
   defdelegate interrupt(id), to: Session
   defdelegate drop_queued(id, index), to: Session
+  defdelegate steer_queued(id), to: Session
   defdelegate rename(id, title), to: Session
   defdelegate retitle(id, title), to: Session
   defdelegate pin(id, pinned?), to: Session

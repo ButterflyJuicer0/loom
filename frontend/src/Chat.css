@@ -808,9 +808,28 @@ pre.code {
 }
 
 .queue-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding-bottom: 4px;
   color: var(--fg-dim);
   font-size: 0.846rem;
+}
+
+.queue-steer {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg);
+  font-size: 0.846rem;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.queue-steer:hover {
+  border-color: var(--fg-dim);
 }
 
 .queue-item {

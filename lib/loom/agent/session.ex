@@ -9,7 +9,13 @@ defmodule Loom.Agent.Session do
   window and the system prompt all belong to the backend now — see
   `docs/backends.md`.
 
-  ## A message typed mid-turn joins that turn
+  ## A message typed mid-turn waits for the turn — or joins it
+
+  Typed in the chat (`mode: :queue`), it waits: the turn finishes what it was
+  doing and the queue goes out as the next one, as in Claude Code. The user
+  can send it into the running turn after all (`steer_queued/1`). Other
+  callers — cron, notices — still steer, as described below.
+
 
   Both backends inject a mid-turn message into the running turn — Claude Code at
   the next tool-result boundary, Codex immediately via `turn/steer` (both
@@ -137,6 +143,10 @@ defmodule Loom.Agent.Session do
   `{:ok, :queued}` if it is waiting for the current turn — or for the user to
   continue, when the session is `:interrupted`.
 
+  A message that arrives mid-turn is steered into that turn by default
+  (`{:ok, :steered}`); with `mode: :queue` it waits for the turn to end
+  instead, which is what the chat asks for.
+
   `opts` accepts `:origin` (which device sent it), `:client_msg_id` (so the
   sender can reconcile its optimistic bubble with the broadcast one) and
   `:files` — paths of this session's uploaded attachments, which are appended to
@@ -159,6 +169,13 @@ defmodule Loom.Agent.Session do
   send it anyway.
   """
   def drop_queued(id, index), do: GenServer.call(via(id), {:drop_queued, index})
+
+  @doc """
+  Send the queued messages now, into the turn that is running, instead of
+  after it. A message typed in the chat mid-turn waits (`mode: :queue`); this
+  is the user changing their mind about that.
+  """
+  def steer_queued(id), do: GenServer.call(via(id), :steer_queued)
 
   @doc """
   Rename the session.
@@ -700,6 +717,33 @@ defmodule Loom.Agent.Session do
     end
   end
 
+  # The queue, all of it, into the turn that is running: "send it now" for
+  # messages that were waiting their turn. With no turn running there is
+  # nothing to join, so it starts one — unless interrupted, where the queue
+  # stays parked until the user types.
+  def handle_call(:steer_queued, _from, %{queue: []} = state), do: {:reply, :ok, state}
+
+  def handle_call(:steer_queued, _from, %{status: status, classifying: nil} = state)
+      when status in [:starting, :running] do
+    text = Enum.join(state.queue, "\n\n")
+
+    case Backend.impl(state.backend).steer(state.handle, text) do
+      {:ok, handle} ->
+        state = cancel_release(%{state | handle: handle, queue: []})
+        {:reply, :ok, persist_and_broadcast_queue(state)}
+
+      {:error, reason} ->
+        # Refused (the turn ended under us, or Kiro): it stays queued and
+        # goes out when the turn ends.
+        {:reply, {:error, reason}, state}
+    end
+  end
+
+  def handle_call(:steer_queued, _from, %{status: :idle, classifying: nil} = state),
+    do: {:reply, :ok, drain(state)}
+
+  def handle_call(:steer_queued, _from, state), do: {:reply, :ok, state}
+
   def handle_call({:drop_queued, index}, _from, state) do
     if index >= 0 and index < length(state.queue) do
       state = Map.update!(state, :queue, &List.delete_at(&1, index))
@@ -1165,10 +1209,15 @@ defmodule Loom.Agent.Session do
         state = Map.update!(state, :queue, &(&1 ++ [message]))
         {:reply, {:ok, :queued}, persist_and_broadcast_queue(state)}
 
+      state.status in [:starting, :running] and Keyword.get(opts, :mode, :steer) == :queue ->
+        # Typed in the chat: it waits for the turn to end, as in Claude Code,
+        # rather than cutting into the work. `steer_queued/1` sends it now.
+        state = Map.update!(state, :queue, &(&1 ++ [message]))
+        {:reply, {:ok, :queued}, persist_and_broadcast_queue(state)}
+
       state.status in [:starting, :running] ->
         # Hand it straight over: both backends inject it into the turn that is
-        # running. Queuing it would waste the one thing that makes typing
-        # mid-turn useful. It only joins the queue if steering is refused.
+        # running. It only joins the queue if steering is refused.
         steer(state, message)
 
       true ->

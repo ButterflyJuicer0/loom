@@ -96,6 +96,8 @@ type Agent = {
   discard: (clientMsgId: string) => void
   interrupt: () => void
   dropQueued: (index: number) => void
+  // Messages waiting for the turn to end: into the running turn now instead.
+  steerQueued: () => void
   rename: (title: string) => void
   // The composer's draft as last written from any device, while this one has
   // the session open; a fresh object each time. See `useDraft`.
@@ -374,9 +376,13 @@ export function useAgent(
     channelRef.current?.push("drop_queued", { index })
   }, [])
 
+  const steerQueued = useCallback(() => {
+    channelRef.current?.push("steer_queued", {})
+  }, [])
+
   const rename = useCallback((title: string) => {
     channelRef.current?.push("rename", { title })
   }, [])
 
-  return { transcript, joinError, submit, resend, discard, interrupt, dropQueued, rename, draft }
+  return { transcript, joinError, submit, resend, discard, interrupt, dropQueued, steerQueued, rename, draft }
 }
