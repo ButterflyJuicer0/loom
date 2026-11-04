@@ -258,27 +258,21 @@ defmodule Loom.Agent.Store do
   same id can be deleted twice. Nothing is ever removed: getting a session back
   is a `mv` away, and emptying the trash is left to a human.
 
-  Refuses anything that is not a single plain path segment. `Path.join(dir, "")`
-  is `dir`, so an empty id once took every session down with it.
+  Anything not shaped like a session id raises, as `session_dir/1` does:
+  `Path.join(dir, "")` is `dir`, so an empty id once took every session down
+  with it.
   """
   def delete_session(id) do
-    if valid_id?(id) do
-      trash = trash_dir()
-      File.mkdir_p!(trash)
-      target = Path.join(trash, "#{id}.#{System.system_time(:millisecond)}")
+    dir = session_dir(id)
+    trash = trash_dir()
+    File.mkdir_p!(trash)
+    target = Path.join(trash, "#{id}.#{System.system_time(:millisecond)}")
 
-      case File.rename(session_dir(id), target) do
-        :ok -> :ok
-        {:error, :enoent} -> :ok
-        {:error, reason} -> {:error, reason}
-      end
-    else
-      {:error, :invalid_id}
+    case File.rename(dir, target) do
+      :ok -> :ok
+      {:error, :enoent} -> :ok
+      {:error, reason} -> {:error, reason}
     end
-  end
-
-  defp valid_id?(id) do
-    is_binary(id) and id != "" and not String.starts_with?(id, ".") and Path.basename(id) == id
   end
 
   # ── Append-only logs ──────────────────────────────────────────────────────
