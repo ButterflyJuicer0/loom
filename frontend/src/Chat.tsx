@@ -2056,7 +2056,7 @@ function Composer({
           rows={1}
           placeholder={
             busy
-              ? "Steer the agent mid-turn…"
+              ? "Queue a message for when this turn ends…"
               : interrupted
                 ? "Stopped — type to continue"
                 : "Message the agent…"

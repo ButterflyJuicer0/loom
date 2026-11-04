@@ -424,6 +424,17 @@ export function buildTimeline(t: Transcript): TimelineItem[] {
   // tool_use id → index in `items`, so its result can be attached to the card
   // rather than floating as a separate bubble.
   const toolIndex = new Map<string, number>()
+  // Typed mid-turn and waiting (`status: "queued"`): shown in the queue panel,
+  // not here, until it goes out — with the next turn, or into this one by
+  // Send now. Then it lands where it was sent, not where it was typed. One
+  // dropped from the queue never appears.
+  type Held = { item: TimelineItem; as: string }
+  let held: Held[] = []
+  let interrupted = false
+  const release = () => {
+    for (const h of held) items.push(h.item)
+    held = []
+  }
 
   for (const event of t.events) {
     const p = event.payload
@@ -431,6 +442,24 @@ export function buildTimeline(t: Transcript): TimelineItem[] {
 
     switch (event.kind) {
       case "user":
+        if (p.status === "queued") {
+          held.push({
+            as: String(p.queued_as ?? p.text ?? ""),
+            item: {
+              key,
+              kind: "user",
+              text: String(p.text ?? ""),
+              files: (p.files as AgentFile[] | undefined) ?? [],
+              origin: p.origin as string | undefined,
+              at: event.at,
+              queued: false,
+              pending: false,
+            },
+          })
+          break
+        }
+        // Continuing a stopped session sends what was parked first.
+        if (interrupted) release()
         items.push({
           key,
           kind: "user",
@@ -580,9 +609,22 @@ export function buildTimeline(t: Transcript): TimelineItem[] {
       case "renamed":
         break
 
-      case "queue":
-        // Queue depth is header state, not a transcript entry.
+      case "queue": {
+        // Queue depth is header state, not a transcript entry. But it says
+        // what became of the held messages: sent into the turn, or dropped.
+        if (p.sent) {
+          release()
+        } else {
+          const left = [...((p.messages as string[] | undefined) ?? [])]
+          held = held.filter((h) => {
+            const i = left.indexOf(h.as)
+            if (i < 0) return false
+            left.splice(i, 1)
+            return true
+          })
+        }
         break
+      }
 
       case "turn_done":
         items.push({
@@ -597,6 +639,9 @@ export function buildTimeline(t: Transcript): TimelineItem[] {
         break
 
       case "status": {
+        // A turn starting takes the whole queue with it.
+        if (p.status === "starting") release()
+        interrupted = p.status === "interrupted"
         // Running states drive the header indicator, not the transcript. Only
         // a stop is worth a line, because it explains why the output ends
         // mid-thought — and the server says why it stopped.
