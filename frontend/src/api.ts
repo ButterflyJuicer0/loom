@@ -894,6 +894,14 @@ export function continueDeviceSession(
 }
 
 /**
+ * Write into one of the user's sessions without opening it (its `…` menu).
+ * Queued if it is mid-turn; see `Loom.Agent.Relay`.
+ */
+export function relaySession(id: string, text: string): Promise<{ ok: true; status: "queued" | "started" }> {
+  return apiCall(`/api/agents/${id}/relay`, { method: "POST", body: JSON.stringify({ text }) })
+}
+
+/**
  * Move a device session's files to the trash on that machine (nothing is
  * erased). Refused while it runs. One of Loom's own goes to Loom's trash too.
  */

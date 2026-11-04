@@ -1444,6 +1444,33 @@
   color: var(--fg-dim);
 }
 
+.session-menu-send {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(20rem, calc(100vw - 32px));
+}
+
+.session-menu-send textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 5rem;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}
+
+.session-menu-send-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .session-menu {
   position: fixed;
   z-index: 60;

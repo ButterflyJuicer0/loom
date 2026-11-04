@@ -145,6 +145,18 @@ defmodule LoomWeb.AgentSessionController do
   # now rejects anything that is not shaped like a session id; this guard
   # turns that rejection into a 404 instead of a 500 and matches the behaviour
   # of every other `:id`-bearing route.
+  # POST /api/agents/:id/relay — `text`: the user writes into this session from
+  # elsewhere (its `…` menu), without opening it. Queued if it is mid-turn.
+  def relay(conn, %{"id" => id, "text" => text}) when is_binary(text) do
+    case Loom.Agent.Relay.deliver(id, text, :user) do
+      {:ok, how} -> json(conn, %{ok: true, status: how})
+      {:error, reason} -> conn |> put_status(:unprocessable_entity) |> json(%{error: reason})
+    end
+  end
+
+  def relay(conn, _params),
+    do: conn |> put_status(:bad_request) |> json(%{error: "relay takes text"})
+
   def delete(conn, %{"id" => id}) do
     if Loom.Agent.Store.valid_id?(id) and Agent.exists?(id) do
       Agent.delete_session(id)

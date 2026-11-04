@@ -1,7 +1,8 @@
-import { Archive, ArchiveRestore, Check, ChevronLeft, ChevronRight, CornerDownRight, Folder, FolderInput, FolderMinus, Pencil, Pin, PinOff, Trash2 } from "lucide-react"
+import { Archive, ArchiveRestore, Check, ChevronLeft, ChevronRight, CornerDownRight, Folder, FolderInput, FolderMinus, Pencil, Pin, PinOff, Send, Trash2 } from "lucide-react"
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom"
-import { isArchived, type AgentBackend, type AgentInfo, type Project } from "./api"
+import { isArchived, relaySession, type AgentBackend, type AgentInfo, type Project } from "./api"
+import { isComposing } from "./ime"
 import { BackendIcon } from "./BackendIcon"
 import { BACKENDS } from "./NewMenu"
 
@@ -16,6 +17,10 @@ import { BACKENDS } from "./NewMenu"
  *
  * A move is refused mid-turn (the backend cannot change directory then), so
  * it is offered only between turns, and a refusal is shown here.
+ *
+ * "Send a message" writes into this session without opening it (see
+ * `Loom.Agent.Relay`): the user's own words, queued if it is mid-turn. Only
+ * the user's own chats take one.
  */
 export function SessionMenu({
   session,
@@ -45,7 +50,27 @@ export function SessionMenu({
   onDelete: () => void
   onClose: () => void
 }) {
-  const [view, setView] = useState<"main" | "move" | "continue">("main")
+  const [view, setView] = useState<"main" | "move" | "continue" | "send">("main")
+  const [message, setMessage] = useState("")
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState<string | null>(null)
+  const ownChat = session.kind == null && !session.employee_id
+  const sendIt = async () => {
+    const text = message.trim()
+    if (!text || sending) return
+    setSending(true)
+    setError(null)
+    try {
+      const r = await relaySession(session.id, text)
+      setSent(r.status === "queued" ? "Queued: it goes in when this turn ends." : "Sent.")
+      setMessage("")
+      setTimeout(onClose, 1200)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSending(false)
+    }
+  }
   const [error, setError] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const [place, setPlace] = useState<{ top: number; left: number } | null>(null)
@@ -132,6 +157,11 @@ export function SessionMenu({
               </button>
             </div>
           )}
+          {ownChat && (
+            <button role="menuitem" onClick={() => setView("send")}>
+              <Send /> <span className="session-menu-label">Send a message…</span>
+            </button>
+          )}
           <div className="session-menu-sep" />
           <button
             role="menuitem"
@@ -165,6 +195,32 @@ export function SessionMenu({
             <Trash2 /> Delete
           </button>
         </>
+      ) : view === "send" ? (
+        <div className="session-menu-send">
+          <button role="menuitem" className="session-menu-back" onClick={() => setView("main")}>
+            <ChevronLeft /> Send to <Scrolling text={session.title ?? session.id} />
+          </button>
+          <div className="session-menu-sep" />
+          <textarea
+            autoFocus
+            rows={4}
+            value={message}
+            placeholder={busy ? "It is working: this waits for the turn to end." : "Write to this session without opening it."}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !isComposing(e)) {
+                e.preventDefault()
+                void sendIt()
+              }
+            }}
+          />
+          <div className="session-menu-send-row">
+            <span className="session-menu-note">{sent ?? "⌘/Ctrl + Enter"}</span>
+            <button className="text-btn" disabled={!message.trim() || sending || !!sent} onClick={() => void sendIt()}>
+              <Send /> {sending ? "Sending…" : "Send"}
+            </button>
+          </div>
+        </div>
       ) : view === "continue" && onContinue ? (
         <>
           <button role="menuitem" className="session-menu-back" onClick={() => setView("main")}>

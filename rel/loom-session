@@ -10,11 +10,14 @@
   loom-session retitle ID TITLE
   loom-session keep ID...
   loom-session handoff --title T --brief-file F [--project ID|home] [--start]
+  loom-session send ID (--text T | --text-file F)
 
 Only the sidebar's Recents can be tidied; nothing is deleted. Archiving hides
 a session from the lists and nothing else. See the loom-tidy skill. A handoff
 is a new session in Recents that begins with a brief, for the user to carry a
-matter on in, once they agreed; see the loom-handoff skill. Search finds the
+matter on in, once they agreed; see the loom-handoff skill. Send writes into a
+session that is already there, also only once the user agreed; it waits for
+that session's turn to end. Search finds the
 session the user means by "that earlier session about X"; see loom-sessions.
 """
 import argparse, json, os, sys, time, urllib.error, urllib.parse, urllib.request
@@ -93,6 +96,11 @@ def main():
     ho.add_argument("--brief-file", required=True, help="the brief, markdown; - for stdin")
     ho.add_argument("--project", help="a project id, or home (default: this session's project)")
     ho.add_argument("--start", action="store_true", help="begin on it now, rather than when the user writes")
+    sd = sub.add_parser("send", help="a message into an existing session of the user's (the user agreed to it)")
+    sd.add_argument("id")
+    g = sd.add_mutually_exclusive_group(required=True)
+    g.add_argument("--text", help="the message")
+    g.add_argument("--text-file", help="the message from a file; - for stdin")
     a = p.parse_args()
 
     if a.cmd == "list":
@@ -140,6 +148,10 @@ def main():
     elif a.cmd == "retitle":
         r = call("POST", "retitle", {"id": a.id, "title": " ".join(a.title)})
         print(f"{r['id']}: {r['title']}")
+    elif a.cmd == "send":
+        text = a.text if a.text is not None else (sys.stdin.read() if a.text_file == "-" else open(a.text_file).read())
+        r = call("POST", "send", {"id": a.id, "text": text})
+        print(f"sent to {r['id']} — {'it started on it' if r['status'] == 'started' else 'queued for its next turn'}")
     elif a.cmd == "handoff":
         brief = sys.stdin.read() if a.brief_file == "-" else open(a.brief_file).read()
         body = {"title": a.title, "brief": brief, "start": a.start}

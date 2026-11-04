@@ -16,9 +16,11 @@
 ## [Unreleased]
 
 ### 新增
+- **往另一个会话发消息**：会话的 `…` 菜单 → **Send a message…**，不用打开就能写进去；agent 经用户同意后也能用 `loom-session send ID --text …` 发（见 loom-sessions skill）。目标会话正在跑时会等这一轮结束。agent 发的消息显示为「↪ From <会话>」，收到的 agent 会被告知这不是用户本人。只能发给用户自己的会话。Claude Code、Codex、Kiro 之间任意方向都能互发。
 - **删除设备上的会话**：在 Sessions 里（某台设备或本服务器）打开一个会话，点垃圾桶按钮，它的文件会移到那台机器的废纸篓——macOS 是废纸篓，Linux 是 XDG Trash，都写不进时放到 `~/.loom-trash`——随时能放回去。会话还在运行时不能删。删的是 Loom 自己的会话时，它也会从侧边栏消失，进 Loom 的回收站。
 
 ### 修复
+- Codex 会话执行的命令里现在有 `LOOM_SESSION_ID`（通过 thread 的 `shell_environment_policy` 传入），`loom-session` 和 `loom-notice` 在 Codex 里也能用了，之前会报「LOOM_SESSION_ID is not set」。
 - 设备会话：传给扫描脚本的参数改用 `json.loads` 解析，`true`、`null` 不会再让脚本出错。
 
 ## [0.6.0] – 2026-11-04
