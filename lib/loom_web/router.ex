@@ -109,6 +109,7 @@ defmodule LoomWeb.Router do
     get "/devices/:id/sessions/transcript", DeviceSessionsController, :show
     post "/devices/:id/sessions/continue", DeviceSessionsController, :continue
     post "/devices/:id/sessions/pick", DeviceSessionsController, :pick
+    delete "/devices/:id/sessions", DeviceSessionsController, :delete
 
     get "/notices", NoticeController, :index
     post "/notices/:id/read", NoticeController, :read

@@ -49,4 +49,75 @@ defmodule LoomWeb.DeviceSessionsControllerTest do
     {_, idle} = C.brief(node, %{}, s, tail, "")
     assert idle =~ "Nothing yet"
   end
+
+  describe "the script's delete op" do
+    # Runs priv/device_sessions/sessions.py for real against a made-up home.
+    defp run_script(home, args) do
+      source = C.source(args)
+
+      {out, 0} =
+        System.cmd("python3", ["-c", source],
+          env: [{"HOME", home}, {"XDG_DATA_HOME", Path.join(home, ".local/share")}]
+        )
+
+      Jason.decode!(out)
+    end
+
+    setup do
+      home = Path.join(System.tmp_dir!(), "dsess-#{System.unique_integer([:positive])}")
+      on_exit(fn -> File.rm_rf(home) end)
+      project = Path.join(home, ".claude/projects/-work")
+      File.mkdir_p!(Path.join(project, "abc/subagents"))
+      file = Path.join(project, "abc.jsonl")
+      File.write!(file, ~s({"type":"user","sessionId":"abc"}\n))
+      %{home: home, path: file}
+    end
+
+    test "moves the transcript and its folder into the trash together", %{home: home, path: file} do
+      assert %{"deleted" => true, "trashed_to" => dest, "files" => ["abc.jsonl", "abc"]} =
+               run_script(home, %{"op" => "delete", "agent" => "claude", "file" => file, "id" => "abc"})
+
+      refute File.exists?(file)
+      refute File.exists?(Path.rootname(file))
+      assert String.starts_with?(dest, Path.join(home, ".local/share/Trash/files/claude-abc-"))
+      assert File.exists?(Path.join(dest, "abc.jsonl"))
+      assert File.dir?(Path.join(dest, "abc/subagents"))
+      assert [info] = Path.wildcard(Path.join(home, ".local/share/Trash/info/*.trashinfo"))
+      assert File.read!(info) =~ "Path=#{Path.dirname(file)}"
+    end
+
+    test "refuses a running session", %{home: home, path: file} do
+      File.mkdir_p!(Path.join(home, ".claude/sessions"))
+      pid = System.pid() |> String.to_integer()
+
+      File.write!(
+        Path.join(home, ".claude/sessions/#{pid}.json"),
+        Jason.encode!(%{sessionId: "abc", pid: pid})
+      )
+
+      assert %{"error" => "that session is still running" <> _} =
+               run_script(home, %{"op" => "delete", "agent" => "claude", "file" => file})
+
+      assert File.exists?(file)
+
+      # Loom vouches for one of its own: it has just stopped it.
+      assert %{"deleted" => true} =
+               run_script(home, %{"op" => "delete", "agent" => "claude", "file" => file, "checked" => true})
+    end
+
+    test "touches nothing outside the agent's own store", %{home: home} do
+      outside = Path.join(home, "notes.jsonl")
+      File.write!(outside, "{}\n")
+
+      assert %{"error" => "not a session file"} =
+               run_script(home, %{"op" => "delete", "agent" => "claude", "file" => outside})
+
+      sneaky = Path.join(home, ".claude/projects/-work/../../../notes.jsonl")
+
+      assert %{"error" => "not a session file"} =
+               run_script(home, %{"op" => "delete", "agent" => "claude", "file" => sneaky})
+
+      assert File.exists?(outside)
+    end
+  end
 end

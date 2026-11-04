@@ -3,9 +3,14 @@
 #
 #   ARGS["op"] == "list":       the agent sessions on this machine, newest first
 #   ARGS["op"] == "transcript": the last messages of one session file
+#   ARGS["op"] == "delete":     move one session's files to the trash
 #
-# Read-only: it opens files under ~/.claude, ~/.codex and ~/.kiro and nothing else.
-import glob, json, os, socket, sys, time
+# "list" and "transcript" only read, under ~/.claude, ~/.codex and ~/.kiro.
+# "delete" moves a session's files from there to the system trash (macOS
+# ~/.Trash, the XDG Trash elsewhere; ~/.loom-trash if that cannot be written),
+# together in one folder, so getting it back is a move. A running session is
+# refused.
+import glob, json, os, shutil, socket, sys, time
 
 HOME = os.path.expanduser("~")
 CLAUDE = os.path.join(HOME, ".claude")
@@ -353,26 +358,113 @@ def list_sessions(limit):
     return {"host": socket.gethostname(), "home": HOME, "sessions": sessions, "totals": counts}
 
 
-def transcript(agent, path, limit):
+def session_file(agent, path):
+    """The real path of a session transcript, or an error: only files under the agent's own store."""
     real = os.path.realpath(path)
     roots = {"claude": os.path.join(CLAUDE, "projects"), "codex": os.path.join(CODEX, "sessions"),
              "kiro": os.path.join(KIRO, "sessions")}
     if agent not in roots:
-        return {"error": "unknown agent"}
+        return None, {"error": "unknown agent"}
     root = os.path.realpath(roots[agent])
     if not real.startswith(root + os.sep) or not real.endswith(".jsonl"):
-        return {"error": "not a session file"}
+        return None, {"error": "not a session file"}
     if not os.path.isfile(real):
-        return {"error": "that session file is gone"}
+        return None, {"error": "that session file is gone"}
+    return real, None
+
+
+def transcript(agent, path, limit):
+    real, err = session_file(agent, path)
+    if err:
+        return err
     msgs, total = {"claude": claude_transcript, "codex": codex_transcript, "kiro": kiro_transcript}[agent](real, limit)
     return {"messages": msgs, "total": total,
             "updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(os.path.getmtime(real)))}
+
+
+def companions(agent, real):
+    """Files that belong to the session beside its transcript."""
+    base = real[:-6]  # without .jsonl
+    if agent == "claude":
+        extra = [base]  # <uuid>/: subagents, tool results
+    elif agent == "kiro":
+        extra = [base + ".json", base + ".lock", base]
+    else:
+        extra = []
+    return [real] + [p for p in extra if os.path.lexists(p)]
+
+
+def trash_root():
+    """Where the trash is, and whether it wants a .trashinfo (XDG) beside each entry."""
+    if sys.platform == "darwin":
+        return os.path.join(HOME, ".Trash"), False
+    data = os.environ.get("XDG_DATA_HOME") or os.path.join(HOME, ".local", "share")
+    return os.path.join(data, "Trash"), True
+
+
+def to_trash(name, paths):
+    """Move `paths` into one new folder `name` in the trash; the folder's path."""
+    root, xdg = trash_root()
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    for base, info in ((os.path.join(root, "files") if xdg else root, xdg),
+                       (os.path.join(HOME, ".loom-trash"), False)):
+        dest = os.path.join(base, f"{name}-{stamp}")
+        try:
+            os.makedirs(dest)
+        except OSError:
+            continue
+        moved = []
+        try:
+            for p in paths:
+                shutil.move(p, os.path.join(dest, os.path.basename(p)))
+                moved.append(p)
+        except OSError:
+            # Put back what went, then try the next place.
+            for p in moved:
+                shutil.move(os.path.join(dest, os.path.basename(p)), p)
+            shutil.rmtree(dest, ignore_errors=True)
+            continue
+        if info:
+            try:
+                info_dir = os.path.join(root, "info")
+                os.makedirs(info_dir, exist_ok=True)
+                with open(os.path.join(info_dir, os.path.basename(dest) + ".trashinfo"), "w") as f:
+                    f.write("[Trash Info]\nPath=%s\nDeletionDate=%s\n"
+                            % (os.path.dirname(paths[0]), time.strftime("%Y-%m-%dT%H:%M:%S")))
+            except OSError:
+                pass
+        return dest
+    return None
+
+
+def delete(agent, path, session_id, checked=False):
+    real, err = session_file(agent, path)
+    if err:
+        return err
+    # `checked`: Loom has just stopped this one itself (one of its own); its
+    # process may take a moment to exit, and was not mid-turn.
+    if checked:
+        running = False
+    elif agent == "claude":
+        running = os.path.basename(real)[:-6] in claude_live()
+    else:
+        running = time.time() - os.path.getmtime(real) < 120
+    if running:
+        return {"error": "that session is still running; stop it first"}
+    paths = companions(agent, real)
+    sid = "".join(c for c in str(session_id or os.path.basename(real)[:-6]) if c.isalnum() or c in "._-")[:80]
+    dest = to_trash(f"{agent}-{sid}", paths)
+    if not dest:
+        return {"error": "could not move it to the trash"}
+    return {"deleted": True, "trashed_to": dest, "files": [os.path.basename(p) for p in paths]}
 
 
 def main():
     a = ARGS  # noqa: F821 — prepended by Loom
     if a.get("op") == "transcript":
         res = transcript(a.get("agent"), a.get("file", ""), int(a.get("limit", 120)))
+    elif a.get("op") == "delete":
+        res = delete(a.get("agent"), a.get("file", ""), a.get("id"), bool(a.get("checked")))
     else:
         res = list_sessions(int(a.get("limit", 40)))
     sys.stdout.write(json.dumps(res, ensure_ascii=False))

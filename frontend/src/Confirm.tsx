@@ -11,6 +11,7 @@ export function Confirm({
   title,
   detail,
   action = "Delete",
+  busyAction,
   danger = true,
   onYes,
   onClose,
@@ -18,6 +19,8 @@ export function Confirm({
   title: string
   detail?: string
   action?: string
+  /** The button while `onYes` runs, e.g. "Deleting…"; `action…` if not given. */
+  busyAction?: string
   /** Red, for what cannot be had back; a plain button otherwise. */
   danger?: boolean
   onYes: () => Promise<void> | void
@@ -25,15 +28,21 @@ export function Confirm({
 }) {
   const [error, setError] = useState<string | null>(null)
   const busy = useRef(false)
+  // Shown, not only guarded: a slow `onYes` (a device across the internet)
+  // must not look like a dead button.
+  const [working, setWorking] = useState(false)
   const yes = async () => {
     if (busy.current) return
     busy.current = true
+    setWorking(true)
+    setError(null)
     try {
       await onYes()
       onClose()
     } catch (e) {
       setError((e as Error).message)
       busy.current = false
+      setWorking(false)
     }
   }
   const latest = useRef({ yes, onClose })
@@ -64,11 +73,11 @@ export function Confirm({
           {detail && <p>{detail}</p>}
           {error && <p className="confirm-error">{error}</p>}
           <div className="confirm-actions">
-            <button className="text-btn" onClick={onClose}>
+            <button className="text-btn" onClick={onClose} disabled={working}>
               Cancel <kbd>n</kbd>
             </button>
-            <button className={"text-btn" + (danger ? " danger" : "")} onClick={() => void yes()}>
-              {action} <kbd>y</kbd>
+            <button className={"text-btn" + (danger ? " danger" : "")} onClick={() => void yes()} disabled={working}>
+              {working ? (busyAction ?? `${action}…`) : <>{action} <kbd>y</kbd></>}
             </button>
           </div>
         </div>

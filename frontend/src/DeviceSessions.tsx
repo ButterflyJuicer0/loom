@@ -1,4 +1,5 @@
-import { ArrowLeft, CornerDownRight, RefreshCw, Sparkles, X } from "lucide-react"
+import { ArrowLeft, CornerDownRight, RefreshCw, Sparkles, Trash2, X } from "lucide-react"
+import { Confirm } from "./Confirm"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { DeviceIcon, deviceIcon } from "./DeviceIcon"
@@ -6,6 +7,7 @@ import { Markdown } from "./markdown"
 import { useNarrow } from "./useNarrow"
 import {
   continueDeviceSession,
+  deleteDeviceSession,
   deviceSessions,
   pickDeviceSession,
   deviceTranscript,
@@ -40,6 +42,8 @@ export function DeviceSessionsDialog({
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [picked, setPicked] = useState<DeviceSession | null>(null)
+  // The session the trash was pressed on, from its card or its open view.
+  const [doomed, setDoomed] = useState<DeviceSession | null>(null)
   const [filter, setFilter] = useState<"all" | "live" | "claude" | "codex" | "kiro">("all")
   const busy = useRef(false)
   // Smart pick: the task as typed, and what came back for it.
@@ -210,11 +214,11 @@ export function DeviceSessionsDialog({
 
               {live.length > 0 && <div className="dsess-group">Running now</div>}
               {live.map((s) => (
-                <SessionCard onHost={device.id === "host"} key={keyOf(s)} s={s} home={data?.home} on={(!!picked && keyOf(picked) === keyOf(s))} onPick={() => setPicked(s)} />
+                <SessionCard onHost={device.id === "host"} key={keyOf(s)} s={s} home={data?.home} on={(!!picked && keyOf(picked) === keyOf(s))} onPick={() => setPicked(s)} onDelete={() => setDoomed(s)} />
               ))}
               {rest.length > 0 && <div className="dsess-group">Recent</div>}
               {rest.map((s) => (
-                <SessionCard onHost={device.id === "host"} key={keyOf(s)} s={s} home={data?.home} on={(!!picked && keyOf(picked) === keyOf(s))} onPick={() => setPicked(s)} />
+                <SessionCard onHost={device.id === "host"} key={keyOf(s)} s={s} home={data?.home} on={(!!picked && keyOf(picked) === keyOf(s))} onPick={() => setPicked(s)} onDelete={() => setDoomed(s)} />
               ))}
             </div>
           )}
@@ -230,6 +234,7 @@ export function DeviceSessionsDialog({
                   reason={reasonOf(picked)?.reason ?? null}
                   draft={picks && reasonOf(picked) ? picks.task : ""}
                   onOpenSession={onOpenSession}
+                  onDelete={() => setDoomed(picked)}
                 />
               ) : (
                 <div className="dsess-placeholder">Pick a session to see its conversation.</div>
@@ -238,21 +243,48 @@ export function DeviceSessionsDialog({
           )}
         </div>
       </div>
+      {doomed && (
+        <Confirm
+          title={`Delete this ${LONG[doomed.agent]} session from ${placeOf(doomed, device)}?`}
+          detail={
+            doomed.loom_id
+              ? "It is one of Loom's own: it leaves the sidebar too. Its files go to the trash, here and in Loom."
+              : `“${doomed.title || doomed.first || doomed.id}” — its files go to the trash on ${placeOf(doomed, device)}, so it can be put back from there.`
+          }
+          onYes={async () => {
+            await deleteDeviceSession(doomed.source ?? device.id, doomed)
+            // Off the list now, without waiting for the next scan.
+            setData((d) => d && { ...d, sessions: d.sessions.filter((x) => keyOf(x) !== keyOf(doomed)) })
+            setPicked((p) => (p && keyOf(p) === keyOf(doomed) ? null : p))
+            void load()
+          }}
+          busyAction={`Deleting from ${placeOf(doomed, device)}…`}
+          onClose={() => setDoomed(null)}
+        />
+      )}
     </div>,
     document.body,
   )
 }
+
+const placeOf = (s: DeviceSession, device: Device) =>
+  (s.source ?? device.id) === "host" ? "this server" : device.name
+
+/** Running ones cannot be deleted; Loom's own say for themselves whether they are mid-turn. */
+const deletable = (s: DeviceSession) => !s.live || !!s.loom_id
 
 function SessionCard({
   s,
   home,
   on,
   onPick,
+  onDelete,
   reason,
   score,
   onHost,
 }: {
   onHost?: boolean
+  onDelete?: () => void
   s: DeviceSession
   home?: string
   on: boolean
@@ -262,6 +294,12 @@ function SessionCard({
 }) {
   const state = s.live ? (s.status === "idle" ? "idle" : "busy") : "off"
   return (
+    <div className="dsess-card-wrap">
+    {onDelete && deletable(s) && (
+      <button className="icon-btn dsess-card-delete" onClick={onDelete} title="Delete">
+        <Trash2 />
+      </button>
+    )}
     <button className={"dsess-card" + (on ? " on" : "")} onClick={onPick}>
       <div className="dsess-card-top">
         <span className={"dsess-dot " + state} title={s.live ? (s.status ?? "running") : "not running"} />
@@ -281,6 +319,7 @@ function SessionCard({
         s.last && <div className="dsess-card-last">{s.last}</div>
       )}
     </button>
+    </div>
   )
 }
 
@@ -291,6 +330,7 @@ function Transcript({
   reason,
   draft,
   onOpenSession,
+  onDelete,
 }: {
   device: Device
   session: DeviceSession
@@ -298,6 +338,7 @@ function Transcript({
   reason: string | null
   draft: string
   onOpenSession: (id: string) => void
+  onDelete: () => void
 }) {
   const [instruction, setInstruction] = useState(draft)
   const [going, setGoing] = useState(false)
@@ -369,7 +410,17 @@ function Transcript({
           <span>{session.messages} msgs</span>
           <span>updated {ago(session.updated)}</span>
         </div>
-        <code className="dsess-id" title="Session id">{session.id}</code>
+        <div className="dsess-id-row">
+          <code className="dsess-id" title="Session id">{session.id}</code>
+          <button
+            className="icon-btn dsess-delete"
+            onClick={onDelete}
+            disabled={!deletable(session)}
+            title={deletable(session) ? `Delete from ${place}` : "Still running — stop it first"}
+          >
+            <Trash2 />
+          </button>
+        </div>
         {reason && (
           <div className="dsess-card-reason">
             <Sparkles /> {reason}

@@ -893,6 +893,18 @@ export function continueDeviceSession(
   })
 }
 
+/**
+ * Move a device session's files to the trash on that machine (nothing is
+ * erased). Refused while it runs. One of Loom's own goes to Loom's trash too.
+ */
+export function deleteDeviceSession(
+  id: string,
+  session: Pick<DeviceSession, "agent" | "file" | "id">,
+): Promise<{ deleted: true; trashed_to: string; files: string[]; loom_id: string | null }> {
+  const q = new URLSearchParams({ agent: session.agent, file: session.file, session: session.id })
+  return apiCall(`/api/devices/${id}/sessions?${q}`, { method: "DELETE" })
+}
+
 /** Which sessions on the device a described task most likely is, best first. */
 export type SessionPick = {
   file: string
