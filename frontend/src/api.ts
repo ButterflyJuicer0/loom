@@ -1339,3 +1339,35 @@ export async function deleteTodo(id: string): Promise<void> {
 export async function bellSession(): Promise<string> {
   return (await apiCall<{ session: string }>("/api/notices/session", { method: "POST" })).session
 }
+
+/** An authenticated file's bytes, e.g. an output to share or inline. */
+export async function fetchBlob(url: string): Promise<Blob> {
+  const res = await fetch(url, { headers: authHeaders() })
+  if (res.status === 401) throw unauthorized()
+  if (res.status === 404) throw new Error("the file is no longer there")
+  if (!res.ok) throw new Error(`could not fetch the file: ${res.status}`)
+  return res.blob()
+}
+
+/** Where one output directory is fetched as a zip. */
+export function zipUrl(id: string, path: string): string {
+  return `/api/agents/${id}/zip/${path.split("/").map(encodeURIComponent).join("/")}`
+}
+
+/**
+ * Print a rendered page of the conversation to PDF on the server (headless
+ * Chrome; no script, no network — images come inlined). See `Loom.Pdf`.
+ */
+export async function printPdf(id: string, html: string, css: string, title: string): Promise<Blob> {
+  const body = new FormData()
+  body.append("title", title)
+  body.append("css", css)
+  body.append("page", new Blob([html], { type: "text/html" }), "page.html")
+  const res = await fetch(`/api/agents/${id}/pdf`, { method: "POST", headers: authHeaders(), body })
+  if (res.status === 401) throw unauthorized()
+  if (!res.ok) {
+    const err = await res.json().catch(() => null)
+    throw new Error(err?.error ?? `PDF failed: ${res.status}`)
+  }
+  return res.blob()
+}

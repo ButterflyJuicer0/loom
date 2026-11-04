@@ -52,6 +52,7 @@ defmodule LoomWeb.Router do
     get "/agents/:id/zip/*path", AgentOutputController, :zip
     get "/agents/:id/tree", AgentOutputController, :tree
     get "/agents/:id/workspace/*path", AgentOutputController, :workspace
+    post "/agents/:id/pdf", AgentPdfController, :create
 
     get "/tasks", TaskController, :index
     post "/tasks", TaskController, :create

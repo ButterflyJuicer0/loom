@@ -20,6 +20,7 @@ import {
   PanelLeft,
   Plus,
   RotateCw,
+  Share as ShareIcon,
   Square,
   SquareTerminal,
   X,
@@ -64,6 +65,7 @@ import { BACKENDS } from "./NewMenu"
 import { formatBytes } from "./format"
 import { isComposing } from "./ime"
 import { Markdown, MessageCopy, OutputLink } from "./markdown"
+import { ShareView } from "./Share"
 import { useNarrow } from "./useNarrow"
 import { useAgent } from "./useAgent"
 import { useDraft } from "./useDraft"
@@ -207,6 +209,9 @@ export function Chat({
   const replies = useMemo(() => (busy ? null : currentReplies(items)), [items, busy])
   const [draft, setDraft] = useDraft(session.id, remoteDraft)
   const narrow = useNarrow()
+  // "Share…": picking what of the conversation goes into a PDF (Share.tsx).
+  const [sharing, setSharing] = useState(false)
+  useEffect(() => setSharing(false), [session.id])
 
   // Stable, because a context change re-renders every message that links a
   // file — memoised or not — and this would otherwise change with each delta.
@@ -267,7 +272,7 @@ export function Chat({
   return (
     <div
       ref={chatRef}
-      className={"chat" + (bare ? " bare" : "") + (drop.dragging ? " dragging" : "")}
+      className={"chat" + (bare ? " bare" : "") + (drop.dragging ? " dragging" : "") + (sharing ? " sharing" : "")}
       {...drop.handlers}
     >
       {drop.dragging && (
@@ -313,6 +318,7 @@ export function Chat({
               onToggleCanvas={onToggleCanvas}
               onContinue={onContinue}
               onKeep={incognito?.onKeep}
+              onShare={() => setSharing(true)}
             />
           ) : (
             <>
@@ -346,6 +352,7 @@ export function Chat({
             onToggleCanvas={onToggleCanvas}
             onContinue={onContinue}
             onKeep={incognito?.onKeep}
+            onShare={() => setSharing(true)}
           />
             </>
           )}
@@ -423,7 +430,16 @@ export function Chat({
         </OutputLink.Provider>
         </Unsent.Provider>
 
-        <div className="dock" ref={dockRef}>
+        {sharing && (
+          <ShareView
+            items={items}
+            sessionId={session.id}
+            title={session.title ?? "Loom"}
+            onClose={() => setSharing(false)}
+          />
+        )}
+
+        <div className="dock" ref={dockRef} hidden={sharing}>
         {transcript.queue.length > 0 && (
           <QueuePanel
             messages={transcript.queue}
@@ -748,6 +764,7 @@ function PaneMenu({
   onToggleCanvas,
   onContinue,
   onKeep,
+  onShare,
   panes = true,
 }: {
   session: AgentInfo
@@ -760,6 +777,7 @@ function PaneMenu({
   onToggleCanvas: () => void
   onContinue?: (backend?: AgentBackend) => Promise<void>
   onKeep?: () => void
+  onShare?: () => void
 }) {
   const [at, setAt] = useState<{ top: number; right: number } | null>(null)
   const [view, setView] = useState<"main" | "model" | "continue">("main")
@@ -853,6 +871,12 @@ function PaneMenu({
                   <ChevronRight />
                 </button>
               </div>
+            )}
+            {onShare && (
+              <button role="menuitem" onClick={() => pick(onShare)}>
+                <ShareIcon />
+                Share…
+              </button>
             )}
             {onKeep && (
               <button role="menuitem" onClick={() => pick(onKeep)}>

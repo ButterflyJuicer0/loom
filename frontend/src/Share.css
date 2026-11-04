@@ -1,0 +1,214 @@
+/* "Share…": the conversation as exchanges to pick, over the timeline's place.
+   See Share.tsx. */
+/* Over the timeline, under the header, so the conversation keeps its place
+   for when picking is done; the composer is hidden meanwhile. */
+.share-view {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.chat.sharing .to-bottom {
+  display: none;
+}
+
+.share-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: calc(var(--top-h, 0px) + 8px) 14px calc(96px + env(safe-area-inset-bottom));
+}
+
+.share-inner {
+  max-width: var(--measure);
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.share-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--fg-dim);
+  font-size: 0.923rem;
+}
+
+.share-seg {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  opacity: 0.38;
+  transition: opacity 0.15s;
+}
+
+.share-seg.on {
+  opacity: 1;
+}
+
+.share-check {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.share-check svg {
+  width: 22px;
+  height: 22px;
+}
+
+.share-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+}
+
+/* Long exchanges stay readable but do not take the screen: picking is the job. */
+.share-body > .bubble.assistant {
+  max-height: 14rem;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 75%, transparent);
+  mask-image: linear-gradient(to bottom, #000 75%, transparent);
+}
+
+.share-user {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.share-user > .bubble.user {
+  white-space: pre-wrap;
+  max-height: 8rem;
+  overflow: hidden;
+}
+
+.share-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.share-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 0.923rem;
+  cursor: pointer;
+}
+
+.share-file.on {
+  color: var(--fg);
+  border-color: color-mix(in srgb, var(--fg) 40%, transparent);
+}
+
+.share-file svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+}
+
+.share-file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-bar-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 6px 14px max(14px, env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+
+/* The composer's glass, in the composer's place. */
+.share-bar {
+  pointer-events: auto;
+  max-width: var(--measure);
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 1.75rem;
+  background: color-mix(in srgb, var(--composer) 18%, transparent);
+  -webkit-backdrop-filter: blur(4px) saturate(1.4);
+  backdrop-filter: blur(4px) saturate(1.4);
+  border: 1px solid color-mix(in srgb, var(--fg) 26%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent),
+    0 8px 28px var(--shadow);
+}
+
+.share-cancel,
+.share-go {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 2.5rem;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.share-cancel {
+  background: none;
+  color: var(--fg);
+}
+
+.share-go {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.share-go:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.share-go svg {
+  width: 16px;
+  height: 16px;
+}
+
+.share-count {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  color: var(--fg-dim);
+  font-size: 0.923rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-count .failed {
+  color: var(--red);
+}
