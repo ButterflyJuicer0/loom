@@ -28,12 +28,11 @@ defmodule Loom.Agent.Backend do
       race-safe: if the turn has already ended the call fails instead of
       being misdelivered.
 
-  So a message typed while the agent is working reaches it *during* that turn.
-  Holding it in a queue until the turn ended would throw that away — the whole
-  point of typing "no, not like that" is that it lands before the work is done.
-
-  The session still keeps a queue, but only for `:interrupted`: there is no
-  running turn to join, so those messages wait for the user to continue.
+  So a message *can* reach the agent during the turn. The chat does not do that
+  by default: a message typed there waits in the session's queue for the turn to
+  end, as in Claude Code, and "Send now" steers it in (`Session.steer_queued/1`).
+  Cron, notices and employees still steer. The queue also holds what was typed
+  while `:interrupted`, where no turn is running to join.
 
   ## Two very different process models, one contract
 

@@ -92,7 +92,10 @@ See the [changelog](CHANGELOG.md) for what came in which version.
 - **Every device sees the same session.** Start a turn on the laptop, watch it
   finish on the phone. A reconnecting tab replays only what it missed, and a
   phone back from sleep reconnects by itself.
-- **Talk while it works.** A message sent mid-turn joins the running turn.
+- **Messages queue while it works.** A message sent mid-turn waits above the
+  composer and goes out as the next turn, as in Claude Code — several at once
+  go together. **Send now** puts them into the running turn instead; ✕ drops
+  one.
 - **Turns survive restarts.** A Claude Code or Kiro turn keeps running while
   Loom is down, even after a crash, and is picked up where it was. Only a
   Codex turn is waited for before a restart.
