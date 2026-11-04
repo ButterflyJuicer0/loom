@@ -70,6 +70,13 @@ for cli in loom-notice loom-session loom-guard; do
   cp "rel/$cli" "$HOME/.local/bin/.$cli.new"
   mv "$HOME/.local/bin/.$cli.new" "$HOME/.local/bin/$cli"
 done
+# A skill's own CLIs (skills/<name>/bin/*), e.g. loomctl from loom-cli.
+for cli in skills/*/bin/*; do
+  [ -f "$cli" ] || continue
+  cp "$cli" "$HOME/.local/bin/.$(basename "$cli").new"
+  chmod +x "$HOME/.local/bin/.$(basename "$cli").new"
+  mv "$HOME/.local/bin/.$(basename "$cli").new" "$HOME/.local/bin/$(basename "$cli")"
+done
 
 mix release --path "$next" --overwrite
 
