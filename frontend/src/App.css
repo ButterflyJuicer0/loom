@@ -1213,10 +1213,26 @@
   color: var(--bg);
 }
 
+/* The key that does the same, as a small keycap: a capital in the UI face,
+   framed in the button's own colour so it follows hover and danger. */
 .text-btn kbd {
-  margin-left: 6px;
-  opacity: 0.6;
-  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  height: 1.5em;
+  margin-left: 4px;
+  padding: 0 0.3em;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  font-family: var(--ui);
+  font-size: 0.72em;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  vertical-align: 0.1em;
+  opacity: 0.75;
 }
 
 /* A name edited in place, in the session list or the file tree. */
