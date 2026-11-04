@@ -1463,6 +1463,52 @@ body.sidebar-resizing iframe {
   height: 18px;
 }
 
+/* Folded to icons, each still says what it is: its label as a bubble above
+   it on hover or keyboard focus, sooner and plainer than the native title.
+   The ends align to their edge so the bubble stays inside the sidebar. */
+.sidebar-foot.folded .devices-btn {
+  position: relative;
+}
+
+.sidebar-foot.folded .devices-btn > span:first-of-type {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg-card);
+  color: var(--fg);
+  font-size: 0.846rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 35%);
+  pointer-events: none;
+}
+
+.sidebar-foot.folded .devices-btn:hover > span:first-of-type,
+.sidebar-foot.folded .devices-btn:focus-visible > span:first-of-type {
+  display: block;
+}
+
+.sidebar-foot.folded > .devices-btn:first-child > span:first-of-type {
+  left: 0;
+  transform: none;
+}
+
+.sidebar-foot.folded .foot-fold > span:first-of-type {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+/* The fold's bubble only: unfolded, the chevron needs no words. */
+.sidebar-foot:not(.folded) .foot-fold > .fold-tip {
+  display: none;
+}
+
 /* In the drawer the foot runs on under the home indicator. */
 .drawer .sidebar {
   padding-bottom: 0;

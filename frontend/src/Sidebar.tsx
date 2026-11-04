@@ -616,6 +616,7 @@ export function Sidebar({
             title={open(FOOT_SECTION) ? "Fold to icons" : "Unfold"}
           >
             {open(FOOT_SECTION) ? <ChevronDown /> : <ChevronUp />}
+            <span className="fold-tip">Unfold</span>
           </button>
         </div>
       </div>
