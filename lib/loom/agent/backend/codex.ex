@@ -68,7 +68,7 @@ defmodule Loom.Agent.Backend.Codex do
       developer_instructions: Backend.meta_get(meta, :instructions)
     ]
 
-    open_thread(opts[:cwd], opts[:developer_instructions], sandbox(session_id, meta))
+    open_thread(opts[:cwd], opts[:developer_instructions], sandbox(session_id, meta), session_id)
   end
 
   # An incognito session's thread writes its cwd, /tmp and its output only
@@ -78,9 +78,14 @@ defmodule Loom.Agent.Backend.Codex do
       do: [Loom.Agent.Store.output_dir(session_id)]
   end
 
-  defp open_thread(cwd, instructions, sandbox) do
-    case Server.start_thread(cwd: cwd, developer_instructions: instructions, writable_roots: sandbox) do
-      {:ok, thread_id} -> {:ok, new(thread_id, instructions, cwd, sandbox)}
+  defp open_thread(cwd, instructions, sandbox, session_id) do
+    case Server.start_thread(
+           cwd: cwd,
+           developer_instructions: instructions,
+           writable_roots: sandbox,
+           env: env(session_id)
+         ) do
+      {:ok, thread_id} -> {:ok, new(thread_id, instructions, cwd, sandbox, session_id)}
       {:error, reason} -> {:error, describe_error(reason)}
     end
   end
@@ -88,28 +93,28 @@ defmodule Loom.Agent.Backend.Codex do
   @impl Backend
   def resume(session_id, meta) do
     case Backend.meta_get(meta, :codex_thread_id) do
-      id when is_binary(id) -> resume_thread(id, meta, sandbox(session_id, meta))
+      id when is_binary(id) -> resume_thread(id, meta, sandbox(session_id, meta), session_id)
       _ -> {:error, "no codex_thread_id recorded for this session"}
     end
   end
 
-  defp resume_thread(id, meta, sandbox) do
+  defp resume_thread(id, meta, sandbox, session_id) do
     instructions = Backend.meta_get(meta, :instructions)
     cwd = Backend.meta_get(meta, :codex_cwd) || default_cwd()
 
     case Server.resume_thread(
            id,
-           resume_opts(instructions, Backend.meta_get(meta, :codex_cwd), sandbox)
+           resume_opts(instructions, Backend.meta_get(meta, :codex_cwd), sandbox, session_id)
          ) do
       {:ok, ^id} ->
         # A turn id recorded before a restart refers to a turn that is no longer
         # running — the server would reject an interrupt for it anyway.
         {:ok,
-         %{new(id, instructions, cwd, sandbox) | turn_id: Backend.meta_get(meta, :codex_turn_id)}}
+         %{new(id, instructions, cwd, sandbox, session_id) | turn_id: Backend.meta_get(meta, :codex_turn_id)}}
 
       {:error, reason} ->
         if unborn?(reason),
-          do: reopen(id, cwd, instructions, sandbox),
+          do: reopen(id, cwd, instructions, sandbox, session_id),
           else: {:error, describe_error(reason)}
     end
   end
@@ -122,26 +127,40 @@ defmodule Loom.Agent.Backend.Codex do
   defp unborn?(reason) when is_binary(reason), do: reason =~ "no rollout found"
   defp unborn?(_reason), do: false
 
-  defp reopen(id, cwd, instructions, sandbox) do
+  defp reopen(id, cwd, instructions, sandbox, session_id) do
     Logger.warning(
       "Codex: thread #{id} never ran a turn and cannot be resumed; opening a new one"
     )
 
-    open_thread(cwd, instructions, sandbox)
+    open_thread(cwd, instructions, sandbox, session_id)
   end
 
   # Given again on every resume, including the silent one after an app-server
   # respawn, so the thread is never running without them. The cwd only when
   # one is known: a header from before it was kept leaves the thread's own.
-  defp resume_opts(instructions, cwd, sandbox),
-    do: [developer_instructions: instructions, cwd: cwd, writable_roots: roots(sandbox)]
+  defp resume_opts(instructions, cwd, sandbox, session_id),
+    do: [
+      developer_instructions: instructions,
+      cwd: cwd,
+      writable_roots: roots(sandbox),
+      env: env(session_id)
+    ]
+
+  # What every shell command the thread runs is given (`shell_environment_policy.set`):
+  # the one app-server serves every session, so its own environment cannot say
+  # which session a command belongs to. `loom-session` and `loom-notice` read it,
+  # as they do in a Claude Code or Kiro session (`Loom.Agent.Proc`).
+  defp env(session_id) when is_binary(session_id), do: %{"LOOM_SESSION_ID" => session_id}
+  defp env(_session_id), do: nil
 
   defp roots(sandbox) when is_list(sandbox), do: sandbox
   defp roots(_sandbox), do: nil
 
-  defp new(thread_id, instructions, cwd, sandbox) do
+  defp new(thread_id, instructions, cwd, sandbox, session_id) do
     %{
       thread_id: thread_id,
+      # For `env/1` on every resume and reopen.
+      session_id: session_id,
       instructions: instructions,
       # An incognito session's writable roots; false once it is kept, and
       # given again on every resume, like the instructions.
@@ -179,14 +198,14 @@ defmodule Loom.Agent.Backend.Codex do
 
     case Server.resume_thread(
            handle.thread_id,
-           resume_opts(handle.instructions, cwd(handle), sandbox)
+           resume_opts(handle.instructions, cwd(handle), sandbox, Map.get(handle, :session_id))
          ) do
       {:ok, _} ->
         run_turn(%{handle | stale?: false}, text)
 
       {:error, reason} ->
         with true <- unborn?(reason),
-             {:ok, fresh} <- reopen(handle.thread_id, cwd(handle), handle.instructions, sandbox) do
+             {:ok, fresh} <- reopen(handle.thread_id, cwd(handle), handle.instructions, sandbox, Map.get(handle, :session_id)) do
           run_turn(fresh, text)
         else
           false -> {:error, describe_error(reason)}
