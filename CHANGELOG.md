@@ -7,6 +7,7 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 
 | Version | Date | Theme |
 | --- | --- | --- |
+| [0.6.0](#060--2026-11-04) | 2026-11-04 | Message queue, device sessions, reference a chat, share as image, trash, security fixes |
 | [0.5.0](#050--2026-11-03) | 2026-11-03 | Meeting mode, hiring in a chat, hard employee permissions, only the bell rings, loom-home |
 | [0.4.0](#040--2026-11-02) | 2026-11-02 | Model picker, Continue, incognito, Working, Android |
 | [0.3.0](#030--2026-10-31) | 2026-10-31 | The bell, tidy, employee workstations, safer devices |
@@ -14,6 +15,8 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 | [0.1.0](#010--2026-10-28) | 2026-10-28 | Upstream base |
 
 ## [Unreleased]
+
+## [0.6.0] – 2026-11-04
 
 ### Added
 - **Message queue**: a message typed while the agent is working no longer
@@ -64,9 +67,20 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   schedule, smart pick) on a gateway that refuses `haiku` now retry on the
   CLI's default model. `LOOM_ONESHOT_MODEL` sets the model (empty for the CLI
   default).
-
+- Sidebar: a Working row's dot sits level with the engine icon beside it.
 
 ### Changed
+- **Deleting a session moves it to the trash** (`~/.loom/sessions/.trash/
+  <id>.<ms>`) instead of removing it; nothing is ever removed, and getting a
+  session back is a `mv`. (From EthanLLL/loom.)
+- The queue panel is a card as wide as the composer; folded to icons, the
+  sidebar foot shows each button's label as a bubble on hover. A queued
+  message shows only in the queue until it goes out, then lands where it
+  was sent.
+- Slash-command menu: the picked command is clearly highlighted and hover
+  picks it; a phone keyboard's return key says send. (From EthanLLL/loom.)
+- `rel/systemd/loom.service`: an OOM kill takes only its victim, not Loom.
+  (From EthanLLL/loom.)
 - **Each bell notice has a session of its own**: posting one starts a session
   that opens on the brief its source wrote (now up to 6000 characters,
   markdown; `loom-notice post --detail-file`). Tapping the card or the push
