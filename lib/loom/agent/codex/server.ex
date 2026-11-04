@@ -240,7 +240,8 @@ defmodule Loom.Agent.Codex.Server do
 
   # An incognito thread (`Loom.Agent.Sandbox`) writes only its cwd, /tmp and
   # `writable_roots`, with the network open as usual.
-  defp access(opts) do
+  @doc false
+  def access(opts) do
     case opts[:writable_roots] do
       roots when is_list(roots) ->
         %{
@@ -254,7 +255,18 @@ defmodule Loom.Agent.Codex.Server do
       _ ->
         @access
     end
+    |> with_env(opts[:env])
   end
+
+  # `env`: variables set for every shell command of this thread, on top of
+  # what it inherits (`shell_environment_policy.set`) — the session's id, which
+  # the shared app-server's own environment cannot carry.
+  defp with_env(params, env) when is_map(env) and map_size(env) > 0 do
+    config = Map.get(params, "config", %{})
+    Map.put(params, "config", Map.put(config, "shell_environment_policy", %{"set" => env}))
+  end
+
+  defp with_env(params, _env), do: params
 
   @impl GenServer
   def handle_call(:available?, _from, state), do: {:reply, state.port != nil, state}

@@ -51,4 +51,23 @@ defmodule Loom.Agent.Codex.ServerTest do
     Process.sleep(50)
     assert Process.alive?(pid)
   end
+
+  describe "a thread's access and environment" do
+    test "the session id reaches the thread's shell commands" do
+      params = Server.access(env: %{"LOOM_SESSION_ID" => "a_1"})
+      assert params["sandbox"] == "danger-full-access"
+      assert params["config"]["shell_environment_policy"] == %{"set" => %{"LOOM_SESSION_ID" => "a_1"}}
+    end
+
+    test "an incognito thread keeps its sandbox alongside it" do
+      params = Server.access(writable_roots: ["/out"], env: %{"LOOM_SESSION_ID" => "a_1"})
+      assert params["sandbox"] == "workspace-write"
+      assert params["config"]["sandbox_workspace_write"]["writable_roots"] == ["/out"]
+      assert params["config"]["shell_environment_policy"]["set"]["LOOM_SESSION_ID"] == "a_1"
+    end
+
+    test "without one, nothing is added" do
+      refute Map.has_key?(Server.access([]), "config")
+    end
+  end
 end
