@@ -51,7 +51,8 @@ config :loom, Loom.Dream,
 config :loom, Loom.Notices,
   path: Path.join(System.tmp_dir!(), "loom-test-#{System.pid()}/notices.json"),
   tick: :timer.hours(24),
-  ring: fn _, _, _, _ -> :ok end
+  ring: fn _, _, _, _ -> :ok end,
+  chat: fn _, _ -> nil end
 
 # Nor employees waking on their own; the tests drive them by hand.
 config :loom, Loom.Employees,

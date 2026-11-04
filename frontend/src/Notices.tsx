@@ -1,13 +1,11 @@
-import { ArrowUp, Bell, Check, CheckCircle2, Circle, Clock, History, MessageSquare, Moon, Reply, X } from "lucide-react"
-import { useEffect, useState, type ReactNode } from "react"
+import { ArrowUp, Bell, Check, CheckCircle2, Circle, Clock, History, MessageSquare, Moon, X } from "lucide-react"
+import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import {
   addTodo,
-  answerNotice,
   deleteTodo,
   dismissNotice,
   laterNotice,
-  replyNotice,
   updateTodo,
   type Notice,
   type Todo,
@@ -16,20 +14,19 @@ import "./Notices.css"
 
 /**
  * The bell (`Loom.Notices`): what the agents working for the user want them
- * to see, most urgent first. One list; a card is who, one line, and its
- * priority. Approving takes a tap here; anything else is answered where it
- * came from, which tapping the card opens. A card carries what is needed to
- * answer it there: the background, and the answers its source foresees as
- * buttons. An urgent or important one can be put off until later.
+ * to see, most urgent first. One list; a card is who, one line, the start
+ * of its brief, and its priority. Nothing is answered on the card: tapping
+ * it opens the notice's own session, which opens on the whole brief and
+ * passes the user's decision to where it came from. On the card, only Done,
+ * and Later for an urgent or important one.
  *
  * The bands, by priority: 0–2 urgent and 3–5 important (notified at once,
  * one each; only 0 between 00:00 and 07:00), 6–10 the rest.
  *
- * Beside the notices, the user's to-dos, and a chat with the bell's own
- * session to go through both in plain words.
+ * Beside the notices, the user's to-dos.
  */
 
-type Tab = "notices" | "todos" | "chat"
+type Tab = "notices" | "todos"
 
 /** Put off by the user, and not yet back. */
 export const putOff = (n: Notice) => (n.later_until ?? 0) > Date.now()
@@ -62,17 +59,12 @@ export function BellButton({ notices, onClick }: { notices: Notice[]; onClick: (
 export function NoticesSheet({
   notices,
   todos,
-  chat,
-  onWantChat,
   onOpen,
   onAnswered,
   onClose,
 }: {
   notices: Notice[]
   todos: Todo[]
-  // The bell's chat, once its session exists; asked for whenever it is opened.
-  chat: ReactNode | null
-  onWantChat: () => void
   onOpen: (n: Notice) => void
   onAnswered: (n: Notice) => void
   onClose: () => void
@@ -85,14 +77,9 @@ export function NoticesSheet({
   const settled = notices.filter((n) => n.status !== "open").sort((a, b) => (b.done_at ?? 0) - (a.done_at ?? 0))
   const openTodos = todos.filter((t) => !t.done).length
 
-  // Each time, not just the first: the server starts the chat afresh each day.
-  useEffect(() => {
-    if (tab === "chat") onWantChat()
-  }, [tab])
-
   return createPortal(
     <div className="search-sheet" onClick={onClose}>
-      <div className={"search-panel bell-panel" + (tab === "chat" ? " chatting" : "")} onClick={(e) => e.stopPropagation()}>
+      <div className={"search-panel bell-panel"} onClick={(e) => e.stopPropagation()}>
         <div className="bell-head">
           <div className="bell-tabs" role="tablist">
             <button role="tab" aria-selected={tab === "notices"} className={tab === "notices" ? "on" : ""} onClick={() => setTab("notices")}>
@@ -100,9 +87,6 @@ export function NoticesSheet({
             </button>
             <button role="tab" aria-selected={tab === "todos"} className={tab === "todos" ? "on" : ""} onClick={() => setTab("todos")}>
               To-do{openTodos > 0 && <span className="bell-tab-n">{openTodos}</span>}
-            </button>
-            <button role="tab" aria-selected={tab === "chat"} className={tab === "chat" ? "on" : ""} onClick={() => setTab("chat")}>
-              Chat
             </button>
           </div>
           {tab === "notices" && (
@@ -118,9 +102,7 @@ export function NoticesSheet({
             <X />
           </button>
         </div>
-        {tab === "chat" ? (
-          <div className="bell-chat">{chat ?? <div className="bell-empty">Starting…</div>}</div>
-        ) : tab === "todos" ? (
+        {tab === "todos" ? (
           <TodoList todos={todos} />
         ) : (
           <div className="search-results bell-list">
@@ -269,7 +251,11 @@ function TodoList({ todos: given }: { todos: Todo[] }) {
   )
 }
 
-/** One notice, as the bell shows it; also under the turn it came from. */
+/**
+ * One notice, as the bell shows it; also under the turn it came from. Who,
+ * one line, the start of its brief; tapping it opens the notice's own
+ * session, where it is asked about and decided. Here only Later and Done.
+ */
 export function Card({
   n,
   onOpen,
@@ -280,58 +266,37 @@ export function Card({
   onAnswered: (n: Notice) => void
 }) {
   const [busy, setBusy] = useState(false)
-  const [replying, setReplying] = useState(false)
   const [choosingLater, setChoosingLater] = useState(false)
-  const [more, setMore] = useState(false)
-  const [text, setText] = useState("")
   const [error, setError] = useState<string | null>(null)
   // What a tap will make of it, shown at once; the server's answer replaces
   // it, a refusal puts the card back as it was, with why.
   const [guess, setGuess] = useState<Partial<Notice> | null>(null)
-  const given = n
   n = guess ? { ...n, ...guess } : n
   const tone = n.priority <= 2 ? "urgent" : n.priority <= 5 ? "important" : "other"
-  const options = n.status === "open" && n.session ? (n.options ?? []) : []
   const act = async (call: () => Promise<Notice>, shown: Partial<Notice> = {}) => {
     setBusy(true)
     setError(null)
     setGuess(shown)
-    setReplying(false)
     setChoosingLater(false)
     try {
       onAnswered(await call())
-      return true
     } catch (err) {
       setError((err as Error).message)
-      return false
     } finally {
       setGuess(null)
       setBusy(false)
     }
   }
-  const settled = (answer: string, note: string): Partial<Notice> => ({ status: "done", answer, note })
-  const send = () => {
-    const what = text.trim()
-    if (!what) return
-    setText("")
-    void act(() => replyNotice(given.id, what), settled(what, "Answered in the bell")).then((ok) => {
-      // What was typed comes back, to send again.
-      if (!ok) {
-        setText(what)
-        setReplying(true)
-      }
-    })
-  }
-  // What the user wrote back from here, beside "Answered in the bell".
+  // What the user decided, beside "Approved in its chat" and the like.
   const said = n.answer && n.answer !== "approve" && n.answer !== "reject" ? `: ${n.answer}` : ""
-  const canReply = n.session && (n.needs === "reply" || options.length > 0)
   const canLater = n.status === "open" && n.priority <= 5 && !putOff(n)
+  const opens = onOpen && (n.chat || n.session)
 
   return (
     <div
-      className={"bell-card " + tone + (n.status === "open" ? "" : " settled") + (onOpen ? "" : " inline")}
-      role={onOpen ? "button" : undefined}
-      onClick={() => !replying && n.session && onOpen?.(n)}
+      className={"bell-card " + tone + (n.status === "open" ? "" : " settled") + (opens ? "" : " inline")}
+      role={opens ? "button" : undefined}
+      onClick={() => opens && onOpen?.(n)}
     >
       <div className="bell-card-head">
         <SourceMark n={n} />
@@ -340,17 +305,7 @@ export function Card({
         <span className={"bell-p " + tone}>P{n.priority}</span>
       </div>
       <div className="bell-summary">{n.summary}</div>
-      {n.detail && (
-        <div
-          className={"bell-detail" + (more ? " open" : "")}
-          onClick={(e) => {
-            e.stopPropagation()
-            setMore((m) => !m)
-          }}
-        >
-          {n.detail}
-        </div>
-      )}
+      {n.detail && <div className="bell-detail">{plain(n.detail)}</div>}
       {n.note && (
         <div className="bell-note">
           {n.note}
@@ -358,17 +313,7 @@ export function Card({
         </div>
       )}
       {n.status === "open" && putOff(n) && <div className="bell-note">Later · back at {clock(n.later_until!)}</div>}
-      {/* Its answers, foreseen: one tap answers it. */}
-      {options.length > 0 && !replying && (
-        <div className="bell-options" onClick={(e) => e.stopPropagation()}>
-          {options.map((o) => (
-            <button key={o} className="bell-option" disabled={busy} onClick={() => act(() => replyNotice(n.id, o), settled(o, "Answered in the bell"))}>
-              {o}
-            </button>
-          ))}
-        </div>
-      )}
-      {/* Handled here, without going there: approve, a line back, later, or done. */}
+      {/* Put off, or done with: the rest is decided in its own session. */}
       {n.status === "open" && (
         <div className="bell-acts" onClick={(e) => e.stopPropagation()}>
           {choosingLater ? (
@@ -387,54 +332,15 @@ export function Card({
                 <X />
               </button>
             </>
-          ) : replying ? (
-            <form
-              className="bell-reply"
-              onSubmit={(e) => {
-                e.preventDefault()
-                void send()
-              }}
-            >
-              <input
-                autoFocus
-                value={text}
-                placeholder={`Reply to ${n.source.name}`}
-                enterKeyHint="send"
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => e.key === "Escape" && setReplying(false)}
-              />
-              <button className="bell-send" type="submit" disabled={busy || !text.trim()} title="Send">
-                <ArrowUp />
-              </button>
-            </form>
           ) : (
             <>
-              {n.needs === "approve" && (
-                <>
-                  <button className="bell-btn pri" disabled={busy} onClick={() => act(() => answerNotice(n.id, true), settled("approve", "Approved in the bell"))}>
-                    <Check /> Approve
-                  </button>
-                  <button className="bell-btn" disabled={busy} onClick={() => act(() => answerNotice(n.id, false), settled("reject", "Rejected in the bell"))}>
-                    Reject
-                  </button>
-                </>
-              )}
-              {canReply && (
-                <button
-                  className={"bell-btn" + (n.needs === "reply" && options.length === 0 ? " pri" : "")}
-                  disabled={busy}
-                  onClick={() => setReplying(true)}
-                >
-                  <Reply /> {options.length > 0 ? "Other…" : "Reply"}
-                </button>
-              )}
               {canLater && (
                 <button className="bell-btn" disabled={busy} onClick={() => setChoosingLater(true)}>
                   <Clock /> Later
                 </button>
               )}
               <button className="bell-btn" disabled={busy} onClick={() => act(() => dismissNotice(n.id), { status: "done", note: "Dismissed" })}>
-                Done
+                <Check /> Done
               </button>
             </>
           )}
@@ -462,6 +368,15 @@ function laterChoices(): [string, number][] {
   if (now.getHours() < 19) choices.push(["Tonight", at(0, 20)])
   choices.push(["Tomorrow", at(1, 9)])
   return choices
+}
+
+/** The brief is markdown; on the card, only its words. */
+function plain(md: string): string {
+  return md
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/[*_`#>|]+/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
 }
 
 function clock(ms: number): string {

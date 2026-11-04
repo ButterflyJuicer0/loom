@@ -204,6 +204,13 @@ defmodule Loom.Agent.Session do
     do: GenServer.call(via(id), {:seed, display, prompt, origin})
 
   @doc """
+  Show `display` as the agent's own message, without a turn, and send
+  `prompt` to the backend ahead of the next message: how a bell notice's
+  session opens on the brief its source wrote (`Loom.Notices`).
+  """
+  def brief(id, display, prompt), do: GenServer.call(via(id), {:brief, display, prompt})
+
+  @doc """
   Something the agent should know, sent ahead of its next message and not
   shown: how an employee's chat hears that the boss profile changed.
   """
@@ -405,6 +412,9 @@ defmodule Loom.Agent.Session do
   # renamed project or edited instructions are what the backend is told next.
   defp instructions(id, project, {_, "bell"}),
     do: instructions(id, project, nil) <> "\n" <> Loom.Notices.Prompt.system()
+
+  defp instructions(id, project, {_, "notice"}),
+    do: instructions(id, project, nil) <> "\n" <> Loom.Notices.Prompt.notice()
 
   defp instructions(id, project, {_, "employee_setup"}),
     do: instructions(id, project, nil) <> "\n" <> Loom.Employees.Prompt.setup()
@@ -771,6 +781,18 @@ defmodule Loom.Agent.Session do
       persist_meta(state)
       {:reply, :ok, state}
     end
+  end
+
+  def handle_call({:brief, display, prompt}, _from, state) do
+    state = emit(state, :assistant_text, %{block_id: "brief-#{state.seq + 1}", text: display})
+
+    state = %{
+      state
+      | notice: if(state.notice, do: state.notice <> "\n\n" <> prompt, else: prompt)
+    }
+
+    persist_meta(state)
+    {:reply, :ok, state}
   end
 
   def handle_call({:note, text}, _from, state) do

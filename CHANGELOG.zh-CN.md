@@ -23,6 +23,7 @@
   新会话可以换一个后端跑，不必沿用旧会话的。
 
 ### 改动
+- **每条铃铛通知自带一个 session**：通知一发出就新建一个 session，开头就是发通知的 agent 写的完整说明（上限放宽到 6000 字，markdown；`loom-notice post --detail-file`）。点卡片或推送都进这个 session，在里面问清楚、做决定，它的 agent 把决定传回原 session。你在里面说过话，它才出现在 Recents。卡片只剩 Later、Done 和说明的前两行；预设答案、Approve/Reject、卡片内回复都去掉了，铃铛的 Chat 标签页也去掉了。
 - 员工页标签："更新"排第一。
 - 会议栏：去掉人头图标和单独的行数，它们容易被看成参会人数和轮数。
 - loom-home：设备打开通道时就预热 Bedrock 连接，保持 75 秒，首句回复更快。

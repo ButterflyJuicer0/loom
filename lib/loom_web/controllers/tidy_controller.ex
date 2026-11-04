@@ -65,8 +65,8 @@ defmodule LoomWeb.TidyController do
   # turn's last. Tool calls and thinking are left out; `files` adds what the
   # tool calls left behind, as paths (`Loom.Agent.Manifest`).
   def read(conn, %{"id" => id} = params) do
-    with {:ok, _caller} <- caller(conn),
-         {:ok, info} <- tidyable(id) do
+    with {:ok, caller} <- caller(conn),
+         {:ok, info} <- readable(id, caller) do
       json(conn, %{
         id: id,
         title: info.title,
@@ -322,6 +322,18 @@ defmodule LoomWeb.TidyController do
 
   defp tidyable?(info),
     do: info.kind == nil and info[:employee_id] == nil and info.pinned != true
+
+  # A bell notice's own session may read the session the notice came from,
+  # employee's or Dream's though it be: that is what it is there to explain.
+  defp readable(id, caller) do
+    with "notice" <- caller[:kind],
+         %{"session" => ^id} <- Loom.Notices.of_chat(caller.id),
+         {:ok, meta} <- Loom.Agent.Store.read_meta(id) do
+      {:ok, safe_info(id) || %{title: meta[:title]}}
+    else
+      _ -> tidyable(id)
+    end
+  end
 
   defp tidyable(id) do
     case safe_info(id) do

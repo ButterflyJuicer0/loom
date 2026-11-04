@@ -40,7 +40,6 @@ import {
   onUnauthorized,
   openDream,
   readNotice,
-  bellSession,
   employeeSetup,
   type AgentBackend,
   type Employee,
@@ -153,8 +152,9 @@ function App() {
   )
   // The sleep sessions stay out of every list; the moons open them. See Sleep.tsx.
   // A virtual employee's two sessions likewise; its page opens them.
-  // And the bell's chat, which lives in the bell; and a task's own session,
-  // opened from the task (Tasks.tsx). What is left is the
+  // And the bell's chat, which lives in the bell; a task's own session,
+  // opened from the task (Tasks.tsx); and a notice's own, until the user
+  // writes in it (opened from its card). What is left is the
   // user's, and the archived of those are in Settings instead.
   const ordinary = useMemo(
     () =>
@@ -164,7 +164,8 @@ function App() {
           !isEmployeeSession(s) &&
           s.kind !== "bell" &&
           s.kind !== "task" &&
-          s.kind !== "incognito",
+          s.kind !== "incognito" &&
+          !(s.kind === "notice" && s.turns === 0 && s.status === "idle"),
       ),
     [everything],
   )
@@ -437,14 +438,18 @@ function App() {
     select(id)
   }
 
-  // The bell. Opening a notice goes to where it is answered: the turn it came
-  // from, with the notice under it.
+  // The bell. Opening a notice goes to its own session, which opens on its
+  // brief; an older one without, to the turn it came from, with the notice
+  // under it.
   const [bellOpen, setBellOpen] = useState(false)
   const [focusId, setFocusId] = useState<string | null>(null)
   const focusNotice = focusId ? notices.find((n) => n.id === focusId) : undefined
   const openNotice = (n: Notice) => {
     if (n.status === "open" && n.needs === "read") readNotice(n.id).then(upsertNotice, () => {})
-    if (n.session) {
+    if (n.chat && everything.some((s) => s.id === n.chat)) {
+      select(n.chat)
+      setFocusId(null)
+    } else if (n.session) {
       select(n.session)
       setFocusId(n.id)
     }
@@ -705,8 +710,6 @@ function App() {
   const active = everything.find((s) => s.id === activeId) ?? null
   const shownProject = projects.find((p) => p.id === projectPage) ?? null
   const activeProject = active?.project_id ? projects.find((p) => p.id === active.project_id) : undefined
-  // The newest: it starts afresh each day.
-  const bellChat = everything.filter((s) => s.kind === "bell").sort((a, b) => b.created_at - a.created_at)[0]
   // By its sessions rather than `employee_id`: a summary from an older
   // server, or an older route, may not carry it.
   const activeEmployee =
@@ -1096,25 +1099,6 @@ function App() {
         <NoticesSheet
           notices={notices}
           todos={todos}
-          chat={
-            bellChat && (
-              <Chat
-                key={bellChat.id}
-                session={bellChat}
-                bare
-                sidebarOpen
-                onToggleSidebar={() => {}}
-                terminalOpen={false}
-                terminalCount={0}
-                onToggleTerminal={() => {}}
-                canvasOpen={false}
-                onToggleCanvas={() => {}}
-                onOpenCanvas={() => {}}
-                onFilesChanged={() => {}}
-              />
-            )
-          }
-          onWantChat={() => void bellSession().catch(() => {})}
           onOpen={openNotice}
           onAnswered={upsertNotice}
           onClose={() => setBellOpen(false)}

@@ -27,6 +27,13 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   backend instead of the old one's.
 
 ### Changed
+- **Each bell notice has a session of its own**: posting one starts a session
+  that opens on the brief its source wrote (now up to 6000 characters,
+  markdown; `loom-notice post --detail-file`). Tapping the card or the push
+  opens it; ask there and decide, and its agent passes the decision to the
+  source session. It shows in Recents once you write in it. The card keeps
+  only Later and Done, plus two lines of the brief: the one-tap answers,
+  Approve/Reject and the inline reply are gone, and so is the bell's Chat tab.
 - Employee page tabs: Updates comes first.
 - Meeting bar: the people icon and the bare line count are gone; they read as
   attendees and rounds.

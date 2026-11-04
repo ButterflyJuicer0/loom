@@ -171,6 +171,7 @@ defmodule Loom.Agent do
   defdelegate promote(id), to: Session
   defdelegate archive(id, archived?), to: Session
   defdelegate seed(id, display, prompt, origin \\ "tidy"), to: Session
+  defdelegate brief(id, display, prompt), to: Session
   defdelegate tell(id, text), to: Session
   defdelegate note(id, text), to: Session
 

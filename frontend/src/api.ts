@@ -158,9 +158,10 @@ export type AgentInfo = {
   // "dream" for a scope's sleep session, which the lists leave out and the
   // moon opens; see `Sleep.tsx`. "employee_chat" and "employee_work" for a
   // virtual employee's, opened from its page; see `Employees.tsx`. "bell" for
-  // the bell's chat; "task" for a task's own session, opened from the task.
+  // the bell's chat; "task" for a task's own session, opened from the task;
+  // "notice" for a bell notice's own, listed once the user wrote in it.
   // Older servers do not send it.
-  kind?: "dream" | "employee_chat" | "employee_work" | "employee_setup" | "bell" | "task" | "incognito" | null
+  kind?: "dream" | "employee_chat" | "employee_work" | "employee_setup" | "bell" | "task" | "incognito" | "notice" | null
   employee_id?: string | null
   // When a safety classifier stopped the model here (ms), and why; a session
   // kept for a fixed job is then carried on in a fresh one. See
@@ -1256,8 +1257,11 @@ export function deleteBossLine(id: string): Promise<BossLine[]> {
 export type Notice = {
   id: string
   source: { kind: "employee" | "dream" | "session"; id: string; name: string }
-  // The session it points to, where it is answered.
+  // The session it came from, which its decision is passed to.
   session: string | null
+  // Its own session, which opens on its brief: where it is asked about and
+  // decided. Older notices have none, and open where they came from.
+  chat?: string | null
   summary: string
   priority: number
   key: string | null
@@ -1267,10 +1271,8 @@ export type Notice = {
   note: string | null
   // "approve", "reject", or what the user wrote back from the bell.
   answer?: string
-  // The background, beyond the one line.
+  // Its brief, markdown: what its own session opens on.
   detail?: string | null
-  // The answers its source foresees, each a button.
-  options?: string[]
   // The `seq` of the message that started the turn it came from.
   anchor?: number | null
   // Put off until then (ms); back in the list after.
@@ -1287,11 +1289,6 @@ export function readNotice(id: string): Promise<Notice> {
   return notice(apiCall(`/api/notices/${id}/read`, { method: "POST" }))
 }
 
-/** Answered in the bell: the text goes to its session as the user's. */
-export function replyNotice(id: string, text: string): Promise<Notice> {
-  return notice(apiCall(`/api/notices/${id}/reply`, { method: "POST", body: JSON.stringify({ text }) }))
-}
-
 /** Put off until `until` (ms): out of the list until then, then notified again. */
 export function laterNotice(id: string, until: number): Promise<Notice> {
   return notice(apiCall(`/api/notices/${id}/later`, { method: "POST", body: JSON.stringify({ until }) }))
@@ -1300,11 +1297,6 @@ export function laterNotice(id: string, until: number): Promise<Notice> {
 /** Settled by hand: nothing more to do about it. */
 export function dismissNotice(id: string): Promise<Notice> {
   return notice(apiCall(`/api/notices/${id}/dismiss`, { method: "POST" }))
-}
-
-/** Approved or rejected from the bell; its session is told. */
-export function answerNotice(id: string, approve: boolean): Promise<Notice> {
-  return notice(apiCall(`/api/notices/${id}/answer`, { method: "POST", body: JSON.stringify({ approve }) }))
 }
 
 /** The user's own list, beside the bell: added by them, or by an agent they told to. */
@@ -1333,11 +1325,6 @@ export function updateTodo(id: string, attrs: Partial<Pick<Todo, "done" | "text"
 
 export async function deleteTodo(id: string): Promise<void> {
   await apiCall(`/api/todos/${id}`, { method: "DELETE" })
-}
-
-/** The bell's chat session, made on first use. */
-export async function bellSession(): Promise<string> {
-  return (await apiCall<{ session: string }>("/api/notices/session", { method: "POST" })).session
 }
 
 /** An authenticated file's bytes, e.g. an output to share or inline. */

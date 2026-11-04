@@ -235,4 +235,70 @@ defmodule Loom.NoticesTest do
     assert [%{"status" => "expired"}] = Notices.list(s)
     assert File.read!(path) =~ n["id"]
   end
+
+  describe "a session of its own" do
+    setup %{path: path} do
+      test = self()
+      name = :"notices_chat_#{System.unique_integer([:positive])}"
+
+      start_supervised!(
+        {Notices,
+         name: name,
+         path: path <> ".chat",
+         tick: :timer.hours(24),
+         clock: fn -> @ten end,
+         notify: fn title, body, session -> send(test, {:notified, title, body, session}) end,
+         submit: fn session, text -> send(test, {:submitted, session, text}) end,
+         ring: fn _, _, _, _ -> :ok end,
+         chat: fn n, chat ->
+           send(test, {:chat, n["summary"], chat})
+           chat || "a_chat_" <> n["id"]
+         end},
+        id: name
+      )
+
+      on_exit(fn -> File.rm(path <> ".chat") end)
+      %{c: name}
+    end
+
+    test "a new notice gets one, the push opens it, an update reuses it", %{c: c} do
+      {:ok, n} =
+        post(c, %{summary: "要批准", priority: 3, needs: "approve", session: "a_src", key: "k"})
+
+      chat = "a_chat_" <> n["id"]
+      assert n["chat"] == chat
+      assert_received {:chat, "要批准", nil}
+      assert_received {:notified, _, "要批准", ^chat}
+
+      {:ok, m} =
+        post(c, %{summary: "要批准，更急了", priority: 2, needs: "approve", session: "a_src", key: "k"})
+
+      assert m["id"] == n["id"] and m["chat"] == chat
+      assert_received {:chat, "要批准，更急了", ^chat}
+      assert Notices.of_chat(chat, c)["id"] == n["id"]
+    end
+
+    test "writing in it does not settle it; its relay does, and tells the source", %{c: c} do
+      {:ok, n} = post(c, %{summary: "换供应商？", priority: 4, needs: "reply", session: "a_src"})
+      Notices.replied(n["chat"], c)
+      assert [%{"status" => "open"}] = Notices.list(c)
+
+      assert {:error, _} = Notices.relay(n["id"], "a_other", "reply", "好", c)
+      refute_received {:submitted, _, _}
+
+      {:ok, d} = Notices.relay(n["id"], n["chat"], "reply", "换成 B，周一开始", c)
+      assert d["status"] == "done" and d["answer"] == "换成 B，周一开始"
+      assert_received {:submitted, "a_src", "↩ 换供应商？\n\n换成 B，周一开始"}
+    end
+
+    test "a read one opened is done, yet its chat can still pass word on", %{c: c} do
+      {:ok, n} = post(c, %{summary: "日报好了", priority: 4, session: "a_src"})
+      {:ok, %{"status" => "done"}} = Notices.read(n["id"], c)
+      {:ok, _} = Notices.relay(n["id"], n["chat"], "approve", nil, c)
+      assert_received {:submitted, "a_src", "✅ Approved: 日报好了"}
+      assert {:error, _} = Notices.relay(n["id"], n["chat"], "reply", " ", c)
+      {:ok, _} = Notices.relay(n["id"], n["chat"], "done", nil, c)
+      refute_received {:submitted, _, _}
+    end
+  end
 end

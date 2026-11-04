@@ -2,15 +2,15 @@
 """loom-notice: post to the user's bell in Loom, from a Loom session.
 
   loom-notice post --priority N [--key KEY] [--needs read|reply|approve]
-                   [--detail TEXT] [--option ANSWER]... SUMMARY
+                   [--detail TEXT | --detail-file F] SUMMARY
   loom-notice withdraw KEY
   loom-notice list                       your notices still open
   loom-notice todos                      the user's to-do list
   loom-notice todo add TEXT [--due DATE] only when the user asked for it
   loom-notice todo done|undo|rm ID
   loom-notice all                        (the bell's chat) every open notice
-  loom-notice act ID approve|reject|done (the bell's chat) for the user
-  loom-notice act ID reply TEXT
+  loom-notice act ID approve|reject|done (the bell's chat, or the notice's
+  loom-notice act ID reply TEXT           own session) for the user
 
 The session is LOOM_SESSION_ID, which Loom sets for every session it starts;
 the address and key are in LOOM_CLI (default ~/.loom/node-cli.json), as for
@@ -71,9 +71,9 @@ def main():
     post.add_argument("--priority", "-p", type=int, required=True, help="0 most urgent … 10")
     post.add_argument("--key", "-k", help="to update or withdraw it later")
     post.add_argument("--needs", choices=["read", "reply", "approve"])
-    post.add_argument("--detail", "-d", help="the background, a few sentences")
-    post.add_argument("--option", "-o", action="append", default=[],
-                      help="an answer the user can tap; repeat, up to 10")
+    post.add_argument("--detail", "-d", help="the brief its own session opens on (markdown)")
+    post.add_argument("--detail-file", help="the brief, from a file ('-' for stdin)")
+    post.add_argument("--option", "-o", action="append", default=[], help=argparse.SUPPRESS)
     post.add_argument("summary", nargs="+")
     w = sub.add_parser("withdraw", help="take back your open notice with KEY")
     w.add_argument("key")
@@ -84,7 +84,7 @@ def main():
     td.add_argument("what", nargs="+", help="the text to add, or the to-do's id")
     td.add_argument("--due", help="YYYY-MM-DD")
     sub.add_parser("all", help="every open notice (the bell's chat only)")
-    act = sub.add_parser("act", help="act on a notice for the user (the bell's chat only)")
+    act = sub.add_parser("act", help="act on a notice for the user (the bell's chat, or the notice's own session)")
     act.add_argument("id")
     act.add_argument("action", choices=["approve", "reject", "reply", "done"])
     act.add_argument("text", nargs="*")
@@ -92,7 +92,11 @@ def main():
 
     if a.cmd == "post":
         body = {"summary": " ".join(a.summary), "priority": a.priority}
-        if a.detail: body["detail"] = a.detail
+        if a.detail_file:
+            with (sys.stdin if a.detail_file == "-" else open(a.detail_file)) as f:
+                body["detail"] = f.read()
+        elif a.detail:
+            body["detail"] = a.detail
         if a.option: body["options"] = a.option
         if a.key: body["key"] = a.key
         if a.needs: body["needs"] = a.needs

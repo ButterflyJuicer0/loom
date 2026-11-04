@@ -365,23 +365,37 @@ for 3–5.
   Bark: `~/.claude/skills/bark/ring`, a critical alert to the iPhone through
   the self-hosted bark-server, which sounds through silent mode and Focus;
   no script or no key, no ring. Volume 10; a 0 rings for 30 s (`--call`).
-- **Done** when the user writes in the notice's session (`AgentChannel`'s
-  submit calls `replied/1`), approves or rejects it in the bell (told to the
-  session as a message, `origin: "notice"`), or opens one that only asks to be
-  read. 6–10 expire after a week unread; settled ones are kept 30 days.
+- **A session of its own** (2026-11-04, the user's call: the card is too
+  little to answer on). A new notice starts a Claude Code session,
+  `kind: "notice"`, in its source's project, id in the notice's `chat`; it
+  opens on the notice's `detail` — the brief, markdown, up to 6000
+  characters, written by the source — shown as the agent's message without
+  a turn (`Agent.brief/3`), and its agent is told the notice id and the
+  source session (`Loom.Notices.Prompt.notice/0`). An update by key adds
+  the new brief there. Its agent may read the source session
+  (`loom-session read`, even an employee's or Dream's) and act on its own
+  notice (`loom-notice act`, `Notices.relay/4`): the decision goes to the
+  source as the user's message, `origin: "notice"`, even after the notice
+  was settled. The page lists it once the user has written in it; one never
+  written in is deleted with its notice after 30 days. Pushes open it.
+- **Done** when the user writes in the source session (`AgentChannel`'s
+  submit calls `replied/1`), when the notice's session relays a decision,
+  when they tap Done, or when they open one that only asks to be read.
+  Writing in the notice's session alone does not settle it. 6–10 expire
+  after a week unread; settled ones are kept 30 days.
 - **Truth is `~/.loom/notices.json`.** The whole list rides on the lobby
-  join and comes again as `notices` on every change. Each card can be
-  handled where it is (`Notices.tsx`): approve or reject, a line of reply
-  (sent to its session as the user's message), or done; tapping it opens
-  its session instead.
+  join and comes again as `notices` on every change. A card (`Notices.tsx`)
+  shows the summary and two lines of the brief, and has only Later (0–5)
+  and Done; tapping it opens its session. Approve, reject, reply and
+  options on the card were removed the same day: deciding from a card,
+  without the matter in view, was not safe.
 - **To-dos** sit beside the notices, in the same file: added in the bell, or
   by an agent the user told to (`loom-notice todo add`; the skill says only
   when asked — soft). Pushed as `todos`.
-- **The bell's chat** is a hidden Claude Code session, `kind: "bell"`,
-  made on first use (`POST /api/notices/session`) and shown bare inside the
-  bell. Its standing orders are `Loom.Notices.Prompt`; it alone may list
-  every open notice and act on them for the user (`loom-notice all`, `act`).
-  Its turns notify nothing.
+- **The bell's chat** (`kind: "bell"`, `POST /api/notices/session`, standing
+  orders `Loom.Notices.Prompt.system/0`, `loom-notice all` / `act`) is still
+  on the server, but the page no longer shows it since 2026-11-04: each
+  notice has its own session instead.
 - **Sleep** posts its night with the same command, and sleeps in a new
   session each night (`past` keeps the old ones, answerable still).
 
