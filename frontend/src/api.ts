@@ -817,7 +817,12 @@ export function deviceInstallCode(id: string): Promise<{ code: string }> {
 
 /** One Claude Code or Codex session found on a device (see `LoomWeb.DeviceSessionsController`). */
 export type DeviceSession = {
-  agent: "claude" | "codex"
+  agent: "claude" | "codex" | "kiro"
+  // The device id it is on, or "host" for the server Loom runs on.
+  source?: string
+  // On the server, one of Loom's own sessions: it opens as itself.
+  loom_id?: string
+  loom_title?: string | null
   id: string
   file: string
   title: string | null
@@ -883,7 +888,28 @@ export function continueDeviceSession(
 }
 
 /** Which sessions on the device a described task most likely is, best first. */
-export type SessionPick = { file: string; score: number | null; reason: string | null }
+export type SessionPick = {
+  file: string
+  source?: string
+  // The session itself: a pick may come from another source than the one open.
+  session?: DeviceSession
+  score: number | null
+  reason: string | null
+}
+
+/** The server Loom runs on, listed with the devices: its sessions are the main agent's. */
+export const HOST_DEVICE: Device = {
+  id: "host",
+  name: "This server",
+  icon: "linux",
+  online: true,
+  os: "linux",
+  arch: null,
+  hostname: null,
+  version: null,
+  created_at: "",
+  last_seen_at: null,
+}
 export function pickDeviceSession(id: string, task: string): Promise<{ picks: SessionPick[]; by: "model" | "words" }> {
   return apiCall(`/api/devices/${id}/sessions/pick`, { method: "POST", body: JSON.stringify({ task }) })
 }

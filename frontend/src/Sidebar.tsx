@@ -24,7 +24,7 @@ import {
   X,
 } from "lucide-react"
 import { useEffect, useState, type MouseEvent } from "react"
-import type { AgentBackend, AgentInfo, Device, Employee, Notice, Project } from "./api"
+import { HOST_DEVICE, type AgentBackend, type AgentInfo, type Device, type Employee, type Notice, type Project } from "./api"
 import { Avatar, BudgetRing, short, STATUS, StatusIcon } from "./Employees"
 import { BellButton } from "./Notices"
 import { RenameInput } from "./Confirm"
@@ -227,7 +227,7 @@ export function Sidebar({
   const [devicesOpen, setDevicesOpen] = useState(false)
   // The device whose sessions are open, picked from the top of the sidebar.
   const [sessionsOf, setSessionsOf] = useState<string | null>(null)
-  const sessionsDevice = devices.find((d) => d.id === sessionsOf) ?? null
+  const sessionsDevice = sessionsOf === HOST_DEVICE.id ? HOST_DEVICE : (devices.find((d) => d.id === sessionsOf) ?? null)
   // A chat or an incognito one, on which engine: behind the arrow beside
   // New chat, whose own click just makes one.
   const [newMenu, setNewMenu] = useState<DOMRect | null>(null)
@@ -466,6 +466,19 @@ export function Sidebar({
         </div>
         {open(DEVICE_SESSIONS_SECTION) && (
           <div className="nav-children">
+            {/* The server Loom runs on: the main agent's own history. */}
+            <div
+              className={"project-row device-session-row" + (sessionsOf === HOST_DEVICE.id ? " current" : "")}
+              role="button"
+              onClick={() => setSessionsOf(HOST_DEVICE.id)}
+              title="Sessions on the server Loom runs on, Loom's own among them"
+            >
+              <span className="project-icon device-session-icon">
+                <DeviceIcon icon="linux" />
+              </span>
+              <span className="session-label">This server</span>
+              <span className="dot online" />
+            </div>
             {devices.map((d) => {
               const unsupported = d.os === "windows" || d.os === "android"
               const usable = d.online && !unsupported
