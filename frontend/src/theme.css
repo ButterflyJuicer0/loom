@@ -373,11 +373,8 @@ samp,
   padding-block: 6px;
 }
 
-/* The dot by the title, not halfway down the two lines. */
-.sidebar .session.working .dot {
-  align-self: flex-start;
-  margin-top: 0.55em;
-}
+/* The dot stays centred on the two lines, level with the engine icon
+   beside it, which centres too. */
 
 .sidebar .session.working + .session.working {
   margin-top: 2px;
