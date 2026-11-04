@@ -32,6 +32,7 @@ defmodule LoomWeb.Router do
     post "/agents", AgentSessionController, :create
     patch "/agents/:id", AgentSessionController, :update
     post "/agents/:id/continue", AgentSessionController, :continue
+    post "/agents/:id/relay", AgentSessionController, :relay
     delete "/agents/:id", AgentSessionController, :delete
     get "/agents/:id/meeting", MeetingController, :show
     post "/agents/:id/meeting", MeetingController, :update
@@ -171,6 +172,7 @@ defmodule LoomWeb.Router do
     post "/retitle", TidyController, :retitle
     post "/keep", TidyController, :keep
     post "/handoff", TidyController, :handoff
+    post "/send", TidyController, :send_message
   end
 
   # A device joining: the install script (its one-time code is the credential)

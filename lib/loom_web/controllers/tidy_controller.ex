@@ -18,8 +18,11 @@ defmodule LoomWeb.TidyController do
   the bell, and a merge across projects. A retitle may be of any of them,
   mid-turn or the caller, but never of a title the user gave.
 
+  `send` writes a message into a session that is already there
+  (`Loom.Agent.Relay`); it tidies nothing either.
+
   A handoff (the `loom-handoff` skill) is the one call here that tidies
-  nothing: a new session in Recents that begins with a brief from the caller,
+  nothing besides `send`: a new session in Recents that begins with a brief from the caller,
   so the user carries a matter on there. That the boss agreed is the skill's
   rule, as an employee's "ask first" is; Loom only names who handed it off.
   """
@@ -236,6 +239,20 @@ defmodule LoomWeb.TidyController do
       {:error, reason} -> {:error, "could not start the session: #{inspect(reason)}"}
     end
   end
+
+  # POST /api/tidy/send — `id` (the session to write to) and `text`: a message
+  # into a session that is already there, from the caller's agent, once the
+  # user agreed (the `loom-sessions` skill). See `Loom.Agent.Relay`.
+  def send_message(conn, %{"id" => id, "text" => text}) when is_binary(id) and is_binary(text) do
+    with {:ok, caller} <- caller(conn),
+         {:ok, how} <- Loom.Agent.Relay.deliver(id, text, {:session, caller}) do
+      json(conn, %{ok: true, id: id, status: how})
+    else
+      error -> reply(conn, error)
+    end
+  end
+
+  def send_message(conn, _params), do: reply(conn, {:error, "send takes id and text"})
 
   # POST /api/tidy/keep — `ids`: looked at, and left as they are.
   def keep(conn, %{"ids" => ids}) when is_list(ids) do

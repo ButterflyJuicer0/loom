@@ -17,6 +17,13 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Send a message into another session**: a session's `…` menu →
+  **Send a message…** writes into it without opening it; an agent does the
+  same with `loom-session send ID --text …`, once the user agreed (the
+  loom-sessions skill). It waits for that session's turn to end. An agent's
+  message arrives as "↪ From <session>", and the receiving agent is told it is
+  not the user. Only the user's own sessions take one. Works between Claude
+  Code, Codex and Kiro sessions in any direction.
 - **Delete a device's sessions**: in Sessions (a device or this server), the
   trash button on an open session moves its files to the trash on that
   machine — macOS Trash, the XDG Trash on Linux, `~/.loom-trash` if neither
@@ -24,6 +31,10 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   of Loom's own leaves the sidebar too, into Loom's trash.
 
 ### Fixed
+- Codex sessions now get `LOOM_SESSION_ID` in their shell commands (through the
+  thread's `shell_environment_policy`), so `loom-session` and `loom-notice` work
+  there as in Claude Code and Kiro; before, they failed with "LOOM_SESSION_ID is
+  not set".
 - Device sessions: arguments reach the scan script through `json.loads`, so a
   `true` or `null` no longer breaks it.
 

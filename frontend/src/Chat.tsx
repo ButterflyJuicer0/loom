@@ -1246,7 +1246,7 @@ function ItemView({ item, sessionId, onAnswer }: ItemProps) {
             {item.failed && item.clientMsgId && <UnsentMark id={item.clientMsgId} reason={item.failed} />}
             {/* A merge's summary is the agent's writing, not the user's words: markdown. */}
             {item.text.trim() !== "" &&
-              (item.origin === "tidy" || item.origin === "handoff" ? <Markdown text={item.text} /> : <Rich text={item.text} />)}
+              (item.origin === "tidy" || item.origin === "handoff" || item.origin === "relay" ? <Markdown text={item.text} /> : <Rich text={item.text} />)}
             {item.files.length > 0 && <SentFiles sessionId={sessionId} files={item.files} />}
             {item.refs.length > 0 && <SentRefs refs={item.refs} />}
             {item.uploads && item.uploads.length > 0 && <LocalFiles files={item.uploads} sending={!item.failed} />}
@@ -1256,6 +1256,7 @@ function ItemView({ item, sessionId, onAnswer }: ItemProps) {
             {item.origin === "dream" && <span className="tag"><Moon /> dream</span>}
             {item.origin === "tidy" && <span className="tag"><Merge /> merged</span>}
             {item.origin === "handoff" && <span className="tag"><Forward /> handed off</span>}
+            {item.origin === "relay" && <span className="tag"><Forward /> sent here</span>}
             {item.at && <Clock at={item.at} />}
           </div>
           {item.text.trim() !== "" && !item.pending && <MessageCopy text={item.text} />}
