@@ -796,15 +796,22 @@ pre.code {
    longer exists, so they are shown and can be dropped before going out with
    the next message. */
 
+/* In the conversation's column, as wide as the composer box below it
+   (which is `--measure` inside the composer's 14px gutters). */
 .queue-panel {
   flex: 0 0 auto;
-  border-top: 1px solid var(--line);
+  width: calc(100% - 28px);
+  max-width: var(--measure);
+  margin: 0 auto;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
   background: var(--bg-raised);
   padding: 6px 14px 8px;
 }
 
 .queue-panel.parked {
-  border-top-color: var(--red);
+  border-color: var(--red);
 }
 
 .queue-head {
