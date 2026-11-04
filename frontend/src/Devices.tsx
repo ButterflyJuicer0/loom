@@ -124,17 +124,22 @@ export function DevicesDialog({
               gives you there, and agents can run commands on it.
             </div>
           )}
-          {devices.map((d) => (
-            <div key={d.id}>
-              <DeviceRow
-                device={d}
-                onRename={(value) => rename(d, value)}
-                onReinstall={() => reinstall(d)}
-                onRemove={() => remove(d)}
-              />
-              {install?.id === d.id && (
-                <InstallBox code={install.code} onDone={() => setInstall(null)} />
-              )}
+          {groupDevices(devices).map((g) => (
+            <div key={g.label} className="device-group">
+              <div className="device-group-label">{g.label}</div>
+              {g.devices.map((d) => (
+                <div key={d.id}>
+                  <DeviceRow
+                    device={d}
+                    onRename={(value) => rename(d, value)}
+                    onReinstall={() => reinstall(d)}
+                    onRemove={() => remove(d)}
+                  />
+                  {install?.id === d.id && (
+                    <InstallBox code={install.code} onDone={() => setInstall(null)} />
+                  )}
+                </div>
+              ))}
             </div>
           ))}
         </div>
@@ -165,6 +170,35 @@ export function DevicesDialog({
     </div>,
     document.body,
   )
+}
+
+// Kinds in the order the list shows them; a device that has not said what it
+// is comes last.
+const KIND_ORDER = ["linux", "windows", "mac", "android", "bot"] as const
+const kindRank = (d: Device) => {
+  const i = deviceIcon(d)
+  return i === null ? KIND_ORDER.length : KIND_ORDER.indexOf(i)
+}
+
+/**
+ * Online devices grouped by kind (Linux, Windows, Mac, Android, Bot, Other),
+ * then every offline one under "Offline" in the same kind order; by name
+ * within a group.
+ */
+function groupDevices(devices: Device[]): { label: string; devices: Device[] }[] {
+  const sorted = [...devices].sort((a, b) => kindRank(a) - kindRank(b) || a.name.localeCompare(b.name))
+  const groups: { label: string; devices: Device[] }[] = []
+  const push = (label: string, d: Device) => {
+    const last = groups[groups.length - 1]
+    if (last?.label === label) last.devices.push(d)
+    else groups.push({ label, devices: [d] })
+  }
+  for (const d of sorted.filter((d) => d.online)) {
+    const i = deviceIcon(d)
+    push(i === null ? "Other" : ICON_LABELS[i], d)
+  }
+  for (const d of sorted.filter((d) => !d.online)) push("Offline", d)
+  return groups
 }
 
 /**

@@ -340,6 +340,16 @@
   padding: 6px;
 }
 
+.device-group + .device-group {
+  margin-top: 6px;
+}
+
+.device-group-label {
+  padding: 6px 8px 2px;
+  font-size: 0.8em;
+  color: var(--fg-dim);
+}
+
 .device-empty {
   padding: 12px;
   color: var(--fg-dim);
