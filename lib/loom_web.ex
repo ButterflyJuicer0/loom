@@ -11,11 +11,12 @@ defmodule LoomWeb do
       use LoomWeb, :channel
   """
 
-  # `assets`, `fonts` and `index.html` are the Vite build, copied in by
+  # `assets`, `fonts` and `index.html` are the Vite build (and `meeting`, its
+  # speech workers, from frontend/public), copied in by
   # `mix assets.deploy`. Nothing else in `priv/static` is reachable.
   def static_paths,
     do:
-      ~w(assets fonts icons favicon.ico favicon.svg icons.svg manifest.webmanifest sw.js robots.txt index.html)
+      ~w(assets fonts icons meeting favicon.ico favicon.svg icons.svg manifest.webmanifest sw.js robots.txt index.html)
 
   def router do
     quote do

@@ -66,7 +66,7 @@ defmodule LoomWeb.NoticeController do
   # ── loom-notice ─────────────────────────────────────────────────────────
 
   # POST /api/notice/post — `summary`, `priority`, and optionally `key`,
-  # `needs`, `detail`, `options`.
+  # `needs`, `detail` (the brief its own session opens on), `options`.
   def post(conn, params) do
     with {:ok, session, source} <- source(conn) do
       attrs =
@@ -145,7 +145,17 @@ defmodule LoomWeb.NoticeController do
   end
 
   # POST /api/notice/act — `id`, `action`: approve, reject, reply (`text`) or done.
+  # From a notice's own session, on that notice only, passed to its source.
   def act(conn, %{"id" => id} = params) do
+    with [session | _] <- get_req_header(conn, "x-loom-session"),
+         {:ok, %{kind: "notice"}} <- Loom.Agent.Store.read_meta(session) do
+      reply(conn, Notices.relay(id, session, params["action"], params["text"]))
+    else
+      _ -> act_for_user(conn, id, params)
+    end
+  end
+
+  defp act_for_user(conn, id, params) do
     with {:ok, _session, _source} <- bell(conn) do
       case params["action"] do
         "approve" -> reply(conn, Notices.answer(id, true))
@@ -160,10 +170,13 @@ defmodule LoomWeb.NoticeController do
   end
 
   # Acting for the user is the bell's chat's alone. Soft, like the rest: the
-  # session id is whatever the process says it is.
+  # session id is whatever the process says it is — but it has to be a real
+  # session id whose own header names it, never a path that lands on some
+  # other meta.json.
   defp bell(conn) do
     with [session | _] <- get_req_header(conn, "x-loom-session"),
-         {:ok, %{kind: "bell"} = meta} <- Loom.Agent.Store.read_meta(session) do
+         true <- Loom.Agent.Store.valid_id?(session),
+         {:ok, %{id: ^session, kind: "bell"} = meta} <- Loom.Agent.Store.read_meta(session) do
       {:ok, session, source_of(session, meta)}
     else
       _ -> {:error, "only the bell's own chat can act on notices for the user"}
@@ -172,7 +185,8 @@ defmodule LoomWeb.NoticeController do
 
   defp source(conn) do
     with [session | _] <- get_req_header(conn, "x-loom-session"),
-         {:ok, meta} <- Loom.Agent.Store.read_meta(session) do
+         true <- Loom.Agent.Store.valid_id?(session),
+         {:ok, %{id: ^session} = meta} <- Loom.Agent.Store.read_meta(session) do
       {:ok, session, source_of(session, meta)}
     else
       _ -> {:error, "run this from a Loom session: LOOM_SESSION_ID is missing or unknown"}

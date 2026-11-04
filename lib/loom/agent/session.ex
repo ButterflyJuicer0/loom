@@ -96,6 +96,7 @@ defmodule Loom.Agent.Session do
 
   alias Loom.Agent.Backend
   alias Loom.Agent.Files
+  alias Loom.Agent.Refs
   alias Loom.Agent.Output
   alias Loom.Agent.Store
 
@@ -151,6 +152,8 @@ defmodule Loom.Agent.Session do
   sender can reconcile its optimistic bubble with the broadcast one) and
   `:files` — paths of this session's uploaded attachments, which are appended to
   the message the backend sees but kept out of the one that is displayed.
+  `:refs` — ids of earlier sessions the user pointed at; the backend is told
+  where they are and how to read them (`Loom.Agent.Refs`).
   """
   def submit(id, text, opts \\ []), do: GenServer.call(via(id), {:submit, text, opts})
 
@@ -219,6 +222,13 @@ defmodule Loom.Agent.Session do
   """
   def seed(id, display, prompt, origin \\ "tidy"),
     do: GenServer.call(via(id), {:seed, display, prompt, origin})
+
+  @doc """
+  Show `display` as the agent's own message, without a turn, and send
+  `prompt` to the backend ahead of the next message: how a bell notice's
+  session opens on the brief its source wrote (`Loom.Notices`).
+  """
+  def brief(id, display, prompt), do: GenServer.call(via(id), {:brief, display, prompt})
 
   @doc """
   Something the agent should know, sent ahead of its next message and not
@@ -422,6 +432,12 @@ defmodule Loom.Agent.Session do
   # renamed project or edited instructions are what the backend is told next.
   defp instructions(id, project, {_, "bell"}),
     do: instructions(id, project, nil) <> "\n" <> Loom.Notices.Prompt.system()
+
+  defp instructions(id, project, {_, "notice"}),
+    do: instructions(id, project, nil) <> "\n" <> Loom.Notices.Prompt.notice()
+
+  defp instructions(id, project, {_, "employee_setup"}),
+    do: instructions(id, project, nil) <> "\n" <> Loom.Employees.Prompt.setup()
 
   defp instructions(id, project, {_, "incognito"}),
     do: instructions(id, project, nil) <> "\n" <> Loom.Agent.Sandbox.instructions()
@@ -755,7 +771,15 @@ defmodule Loom.Agent.Session do
   end
 
   def handle_call({:rename, title, by}, _from, state) do
-    title = title |> to_string() |> String.trim() |> String.slice(0, @title_limit)
+    # Collapse any interior whitespace/newlines so a stored title cannot carry
+    # line breaks or control characters into later consumers (e.g. the Dream
+    # prompt). `maybe_title/2` already does this for auto titles.
+    title =
+      title
+      |> to_string()
+      |> String.replace(~r/\s+/u, " ")
+      |> String.trim()
+      |> String.slice(0, @title_limit)
 
     if title == "" do
       {:reply, {:error, :empty}, state}
@@ -813,6 +837,18 @@ defmodule Loom.Agent.Session do
       persist_meta(state)
       {:reply, :ok, state}
     end
+  end
+
+  def handle_call({:brief, display, prompt}, _from, state) do
+    state = emit(state, :assistant_text, %{block_id: "brief-#{state.seq + 1}", text: display})
+
+    state = %{
+      state
+      | notice: if(state.notice, do: state.notice <> "\n\n" <> prompt, else: prompt)
+    }
+
+    persist_meta(state)
+    {:reply, :ok, state}
   end
 
   def handle_call({:note, text}, _from, state) do
@@ -927,19 +963,21 @@ defmodule Loom.Agent.Session do
     # The client sends back paths that `Files.store/2` handed it. Checking them
     # against this session's own directory is the one validation that matters:
     # the model reads whatever path we name. See `Loom.Agent.Files`.
-    case Files.verify(state.id, Keyword.get(opts, :files, [])) do
-      {:error, reason} ->
-        {:reply, {:error, reason}, state}
+    with {:ok, files} <- Files.verify(state.id, Keyword.get(opts, :files, [])),
+         {:ok, refs} <- Refs.verify(state.id, Keyword.get(opts, :refs, [])) do
+      # An attachment on its own is a message. Dragging in a screenshot and
+      # pressing send, with nothing typed, is a normal way to ask about it.
+      # So is a referenced session.
+      bare = files == [] and refs == []
 
-      {:ok, files} ->
-        # An attachment on its own is a message. Dragging in a screenshot and
-        # pressing send, with nothing typed, is a normal way to ask about it.
-        cond do
-          String.trim(text) == "" and files == [] -> {:reply, {:error, :empty}, state}
-          reload?(text) and files == [] -> reload(state, text, opts)
-          command?(text, "/cron") and files == [] -> list_cron(state, text, opts)
-          true -> accept(state, text, files, opts)
-        end
+      cond do
+        String.trim(text) == "" and bare -> {:reply, {:error, :empty}, state}
+        reload?(text) and bare -> reload(state, text, opts)
+        command?(text, "/cron") and bare -> list_cron(state, text, opts)
+        true -> accept(state, text, files, refs, opts)
+      end
+    else
+      {:error, reason} -> {:reply, {:error, reason}, state}
     end
   end
 
@@ -1182,11 +1220,11 @@ defmodule Loom.Agent.Session do
   end
 
   # A submitted message, once its attachments have been vouched for.
-  defp accept(state, text, files, opts) do
+  defp accept(state, text, files, refs, opts) do
     # What the backend receives differs from what is displayed: it needs the
     # paths, the user does not want to read them. A caller with a long prompt
     # of its own (`Loom.Dream`) shows a line and sends the whole of it.
-    message = Keyword.get(opts, :prompt) || Files.prompt(text, files)
+    message = Keyword.get(opts, :prompt) || text |> Files.prompt(files) |> Refs.prompt(refs)
 
     # Typed in the chat mid-turn, it waits for the turn: `:queued`, with the
     # queue entry it became (`queued_as`), so the chat can hold its bubble
@@ -1197,7 +1235,13 @@ defmodule Loom.Agent.Session do
 
     state =
       state
-      |> maybe_title(if String.trim(text) == "", do: Files.title(files), else: text)
+      |> maybe_title(
+        cond do
+          String.trim(text) != "" -> text
+          files != [] -> Files.title(files)
+          true -> "Re: " <> hd(refs).title
+        end
+      )
       # Writing in it again means it is not done after all, and its recap
       # is out of date.
       |> Map.merge(%{done_at: nil, recap: nil})
@@ -1208,6 +1252,7 @@ defmodule Loom.Agent.Session do
           # Structured rather than folded into `text`, so a bubble can show
           # `shot.png` as a chip instead of an absolute path.
           files: files,
+          refs: refs,
           origin: Keyword.get(opts, :origin, "unknown"),
           client_msg_id: Keyword.get(opts, :client_msg_id),
           status: if(waits?, do: :queued, else: :sent)
@@ -1464,7 +1509,7 @@ defmodule Loom.Agent.Session do
     |> schedule_release()
   end
 
-  # For notifications (`Loom.Push`). The reply is the turn's last text, found by
+  # For whoever waits on a turn (`Loom.Dream`, `Loom.Employees`). The reply is the turn's last text, found by
   # reading back to the message that started it; an error after it wins, since
   # that is how the turn actually ended.
   defp announce_turn_end(state) do

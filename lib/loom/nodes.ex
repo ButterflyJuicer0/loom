@@ -307,20 +307,24 @@ defmodule Loom.Nodes do
         state = drop_connection(id, state)
         ref = Process.monitor(pid)
 
-        node =
+        merged =
           Map.merge(node, %{
-            os: info["os"],
-            arch: info["arch"],
-            hostname: info["hostname"],
-            version: info["version"],
+            os: reported(info["os"], 64),
+            arch: reported(info["arch"], 64),
+            hostname: reported(info["hostname"], 255),
+            version: reported(info["version"], 64),
             last_seen_at: now()
           })
 
         state = %{state | online: Map.put(state.online, id, {pid, ref})}
-        state = save(put_in(state.nodes[id], node))
-        announce(node, state)
+        state = put_in(state.nodes[id], merged)
+        # Skip the full-registry re-encode and rewrite when nothing persisted
+        # has actually changed, so a reconnect loop cannot drive one disk
+        # rewrite per join.
+        state = if persisted_changed?(node, merged), do: save(state), else: state
+        announce(merged, state)
         Phoenix.PubSub.broadcast(Loom.PubSub, "nodes", {:node_online, id})
-        {:reply, {:ok, summary(node, state)}, state}
+        {:reply, {:ok, summary(merged, state)}, state}
 
       error ->
         {:reply, error, state}
@@ -425,6 +429,19 @@ defmodule Loom.Nodes do
   defp check_icon(icon) when icon in [nil, ""], do: {:ok, nil}
   defp check_icon(icon) when icon in @icons, do: {:ok, icon}
   defp check_icon(_icon), do: {:error, "no such icon"}
+
+  # Device-reported metadata (`os`, `arch`, `hostname`, `version`) comes from a
+  # less-trusted principal than owner-supplied fields. Accept only valid UTF-8
+  # binaries, truncate to a small bound, and substitute `nil` otherwise, so a
+  # crafted join payload cannot store a non-string (which breaks the typed Go
+  # client that decodes `GET /api/node/list`) or an arbitrarily large value.
+  defp reported(value, max) when is_binary(value) and is_integer(max) and max > 0 do
+    if String.valid?(value), do: String.slice(value, 0, max), else: nil
+  end
+
+  defp reported(_value, _max), do: nil
+
+  defp persisted_changed?(before, after_), do: Map.take(before, @persisted) != Map.take(after_, @persisted)
 
   defp same_name?(a, b) when is_binary(a) and is_binary(b),
     do: String.downcase(a) == String.downcase(b)

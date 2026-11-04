@@ -2016,3 +2016,127 @@ h3.md-h {
     box-shadow: 0 0 0 3px transparent;
   }
 }
+
+/* The composer's + menu: Files, then recent chats to reference. Opens from
+   the box's left edge, like the thinking panel. */
+.plus {
+  position: static;
+}
+
+.composer-btn.attach.open {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+.plus-pop {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 12px);
+  z-index: 5;
+  width: min(20rem, 100%);
+  max-height: min(60vh, 26rem);
+  overflow-y: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border-radius: 18px;
+  background: var(--surface-menu);
+  box-shadow:
+    0 0 0 0.5px color-mix(in srgb, var(--fg) 10%, transparent),
+    0 12px 32px var(--shadow);
+  font-family: var(--ui);
+}
+
+.plus-pop button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.923rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.plus-pop button svg {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  color: var(--fg-dim);
+}
+
+.plus-pop button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+
+.plus-pop button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.plus-head {
+  padding: 10px 10px 4px;
+  color: var(--fg-dim);
+  font-size: 0.8125rem;
+}
+
+/* A referenced chat: one line, in the tray and in the sent bubble. */
+.ref-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 16rem;
+  height: 2rem;
+  padding: 0 6px 0 10px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg);
+  font-family: var(--ui);
+  font-size: 0.8125rem;
+  align-self: flex-end;
+}
+
+.ref-chip.clickable {
+  cursor: pointer;
+}
+
+.ref-chip > svg {
+  flex: 0 0 auto;
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--fg-dim);
+}
+
+.ref-chip-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 4px;
+}
+
+.ref-chip-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.ref-chip-x svg {
+  width: 0.8rem;
+  height: 0.8rem;
+}

@@ -892,3 +892,75 @@
   height: 1rem;
   color: var(--fg-dim);
 }
+
+/* Held to hard permissions (`permissions`): a mark beside its spend, the
+   summary on hover; the same words in Settings. */
+.emp-restricted,
+.emp-permissions {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.emp-restricted svg,
+.emp-permissions svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--fg-dim);
+}
+
+.emp-permissions {
+  align-items: flex-start;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.emp-permissions svg {
+  margin-top: 3px;
+}
+
+.project-form .text-btn.emp-inline-btn {
+  margin-left: 2px;
+  padding: 2px 10px;
+  font-size: 0.8125rem;
+}
+
+/* Hiring: in conversation, above the form. */
+.emp-hire-chat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.emp-hire-chat:hover {
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+
+.emp-hire-chat > svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--fg-dim);
+}
+
+.emp-hire-chat > span {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.emp-hire-or {
+  font-size: 0.8125rem;
+  text-align: center;
+}

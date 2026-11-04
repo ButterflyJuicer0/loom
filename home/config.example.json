@@ -1,0 +1,54 @@
+{
+  "host": "0.0.0.0",
+  "port": 8000,
+  "token": "change-me: the bearer token your robots send",
+  "tls": {
+    "cert_file": null,
+    "key_file": null,
+    "client_ca_file": null
+  },
+  "_comment_local_api_token": "Optional: when set, POST /api/say, POST /api/tool and GET /api/status also need Authorization: Bearer <it>. Empty keeps loopback-only access.",
+  "local_api_token": "",
+  "_comment_device_tokens": "Optional, e.g. {\"aa:bb:cc:dd:ee:ff\": \"token\"}: one token per robot. Values may be plaintext or a sha256 hex digest; the server hashes before compare. When set, the Device-Id header must match the device bound to the presented token, and the shared 'token' above may be left unset.",
+  "device_tokens": {},
+  "_comment_device_ids": "Fallback allowlist when only the shared 'token' is used; connections whose Device-Id is not in this list (or in device_tokens) are rejected. Omit to accept any Device-Id (legacy behaviour).",
+  "device_ids": [],
+  "voice": "zh-CN-XiaoxiaoNeural",
+  "voice_rate": "+10%",
+  "local_tts": {
+    "model_dir": "models/tts/matcha-icefall-zh-baker",
+    "vocoder": "models/tts/vocos-22khz-univ.onnx",
+    "threads": 2,
+    "speed": 1.1
+  },
+  "endpoint": {"early": 0.25, "complete": 0.3, "incomplete": 1.0},
+  "filler_after": 1.6,
+  "idle_close_seconds": 20,
+  "asr_language": "zh",
+  "utc_offset_hours": 8,
+  "bedrock": {
+    "region": "us-west-2",
+    "model": "global.anthropic.claude-haiku-5-5",
+    "api_key": "a Bedrock API key",
+    "endpoint": null,
+    "proxy": null
+  },
+  "mqtt": {
+    "host": "192.168.1.1",
+    "port": 1883,
+    "user": "voice",
+    "password": "change-me",
+    "client_id": "loom-home-voice",
+    "tls": false,
+    "ca_file": null,
+    "server_hostname": null,
+    "insecure": false
+  },
+  "home_ids": {
+    "aa:bb:cc:dd:ee:ff": "dog"
+  },
+  "system_prompt": "You are a small desk robot talking by voice. Keep every answer to one or two short spoken sentences, no lists or markdown. Start each answer with one emotion tag such as [happy], chosen from: {emotions}. Your body can do: {actions}. To move, write an action tag after the emotion, e.g. [happy][do:shake_hand]. Only tags make things happen.",
+  "device_prompts": {
+    "my-other-robot": "A different persona for the device whose Device-Id header is my-other-robot. Same {emotions} and {actions} placeholders."
+  }
+}

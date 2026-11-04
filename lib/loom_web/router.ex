@@ -33,6 +33,12 @@ defmodule LoomWeb.Router do
     patch "/agents/:id", AgentSessionController, :update
     post "/agents/:id/continue", AgentSessionController, :continue
     delete "/agents/:id", AgentSessionController, :delete
+    get "/agents/:id/meeting", MeetingController, :show
+    post "/agents/:id/meeting", MeetingController, :update
+    get "/meeting/models", MeetingController, :models
+    get "/meeting/hotwords", MeetingController, :hotwords
+    post "/meeting/models", MeetingController, :fetch
+    get "/meeting/models/:bundle/:name", MeetingController, :file
     get "/agents/:id/draft", AgentDraftController, :show
     put "/agents/:id/draft", AgentDraftController, :update
 
@@ -46,6 +52,7 @@ defmodule LoomWeb.Router do
     get "/agents/:id/zip/*path", AgentOutputController, :zip
     get "/agents/:id/tree", AgentOutputController, :tree
     get "/agents/:id/workspace/*path", AgentOutputController, :workspace
+    post "/agents/:id/image", AgentImageController, :create
 
     get "/tasks", TaskController, :index
     post "/tasks", TaskController, :create
@@ -63,6 +70,7 @@ defmodule LoomWeb.Router do
 
     get "/employees", EmployeeController, :index
     post "/employees", EmployeeController, :create
+    post "/employees/setup", EmployeeController, :setup
     get "/employees/:id", EmployeeController, :show
     patch "/employees/:id", EmployeeController, :update
     delete "/employees/:id", EmployeeController, :delete

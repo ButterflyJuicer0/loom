@@ -10,27 +10,38 @@ defmodule Loom.Notices do
     `LOOM_SESSION_ID`. How to pick a priority, and when to raise, lower or
     withdraw one, is the agents' judgement, written down in the `loom-notify`
     skill; what is here is only what must not be left to them.
-  - **Three bands.** 0–2 urgent: a notification at once. 3–5 important: one
-    notification at 20:00 for all of them. 6–10 the rest: no notification.
-    Between 22:00 and 07:00 only 0–1 notify; a 2 waits for 07:00.
+  - **Bands.** 0–2 urgent and 3–5 important: a notification at once, one per
+    notice. 6–10 the rest: no notification. Between 00:00 and 07:00 nothing
+    notifies but a 0; what came in waits for 07:00, and goes out then, one by
+    one. A 0–1 also rings Bark (the `bark` skill's `ring`), a critical alert
+    that sounds through silent mode and Focus.
   - **One urgent a day per source.** A second one the same day is posted as a
     3, with a note saying why: the agents decide how urgent things are, but
     one that cries wolf cannot keep waking the user.
-  - **Enough to act on, in the card.** Beside its one-line `summary`, a
-    notice may carry a `detail` (the background, a few sentences) and
-    `options`, the answers it foresees, up to ten: each is a button that
-    answers it, so the user rarely has to type. It remembers the message that
-    started the turn it came from (`anchor`, a `seq`), which opening it
-    scrolls to. A reply from the bell reaches the session with the notice
-    quoted, so the agent knows what it answers.
+  - **A session of its own.** Beside its one-line `summary`, a notice
+    carries a `detail`: the brief its source writes while it has the matter
+    in mind — the background, the specifics, what each choice leads to. A
+    new notice starts a Claude Code session of its own (`kind: "notice"`,
+    its id in `chat`) that opens on that brief, shown as the agent's
+    message, without running a turn; an update by `key` adds the new brief
+    there. That is where the bell's card leads: the user asks and decides in
+    it, and its agent passes the decision to the source session
+    (`relay/4`), with the notice quoted, so the source knows what it
+    answers. It may read the source session, and act on its own notice;
+    nothing else. The page lists it only once the user has written in it;
+    one never written in goes when its notice does. The card itself has no
+    answers: only Later and Done. It remembers the message that started the
+    turn it came from (`anchor`, a `seq`), for the brief to point at.
   - **Later**, for the urgent and important ones: the user puts it off to a
     time they pick; it leaves the list until then, and comes back with a
     notification.
   - **A key per source** makes a notice something to update rather than
     repeat: posting the same key again replaces the open one.
-  - **Done** is the user's: answering in its session (any message they type
-    there), approving or rejecting it in the bell, or, for one that only asks
-    to be read, opening it. The source may withdraw it. 6–10 expire after a
+  - **Done** is the user's: answering in the source session (any message
+    they type there), deciding in the notice's own session (its agent
+    relays it), Done in the bell, or, for one that only asks to be read,
+    opening it. Writing in the notice's session does not settle it by
+    itself: the decision is still to be passed on. The source may withdraw it. 6–10 expire after a
     week unread; anything settled is kept for 30 days.
 
   **To-dos** live here too: the user's own list, beside the bell. The user
@@ -55,13 +66,12 @@ defmodule Loom.Notices do
   @tick :timer.minutes(1)
   # The user's wall clock, as for employees and sleep: Asia/Shanghai.
   @offset 480
-  @digest_hour 20
-  @quiet {22, 7}
+  @quiet {0, 7}
   @fyi_ttl :timer.hours(24 * 7)
   @kept :timer.hours(24 * 30)
   @needs ~w(read reply approve)
   @summary_max 200
-  @detail_max 1200
+  @detail_max 6000
   @options_max 10
   @option_max 80
   # Later is for a while, not for good.
@@ -118,6 +128,18 @@ defmodule Loom.Notices do
 
   def delete_todo(id, server \\ @name), do: GenServer.call(server, {:delete_todo, id})
 
+  @doc """
+  The notice's own session (`chat`) passes the user's decision on:
+  `action` is `approve`, `reject`, `reply` (with `text`) or `done`. Told to
+  the source session even when the notice was already settled — read, say —
+  since the user decided in the chat after; settled if still open.
+  """
+  def relay(id, chat, action, text \\ nil, server \\ @name),
+    do: GenServer.call(server, {:relay, id, chat, action, text})
+
+  @doc "The notice whose own session is `chat`, or nil."
+  def of_chat(chat, server \\ @name), do: GenServer.call(server, {:of_chat, chat})
+
   @doc "The bell's chat session, made on first use."
   def session(server \\ @name), do: GenServer.call(server, :session, 30_000)
 
@@ -143,12 +165,19 @@ defmodule Loom.Notices do
       path: path,
       tick: tick,
       notices: notices,
-      # The days the 20:00 digest and the 07:00 catch-up last went out.
+      # The day the 07:00 catch-up last went out.
       marks: marks,
       todos: todos,
       clock: Keyword.get(opts, :clock, &now/0),
       notify: Keyword.get(opts, :notify, &Loom.Push.notify/3),
-      submit: Keyword.get(opts, :submit, &submit/2)
+      submit: Keyword.get(opts, :submit, &submit/2),
+      # The notice's own session: made for a new one, told of an update.
+      chat:
+        Keyword.get(opts, :chat) ||
+          Application.get_env(:loom, __MODULE__, [])[:chat] || (&chat/2),
+      ring:
+        Keyword.get(opts, :ring) ||
+          Application.get_env(:loom, __MODULE__, [])[:ring] || (&ring/4)
     }
 
     Process.send_after(self(), :tick, tick)
@@ -322,6 +351,21 @@ defmodule Loom.Notices do
     end
   end
 
+  def handle_call({:relay, id, chat, action, text}, _from, state) do
+    text = String.trim(to_string(text || ""))
+
+    case state.notices[id] do
+      %{"chat" => ^chat} = n when is_binary(chat) -> do_relay(state, n, action, text)
+      nil -> {:reply, {:error, :not_found}, state}
+      _ -> {:reply, {:error, "only the notice's own session can act on it"}, state}
+    end
+  end
+
+  def handle_call({:of_chat, chat}, _from, state) do
+    n = Enum.find(Map.values(state.notices), &(is_binary(chat) and &1["chat"] == chat))
+    {:reply, n && view(n), state}
+  end
+
   def handle_call({:later, id, until}, _from, state) do
     now = state.clock.()
 
@@ -378,7 +422,39 @@ defmodule Loom.Notices do
   @impl true
   def handle_info(:tick, state) do
     Process.send_after(self(), :tick, state.tick)
-    {:noreply, state |> expire() |> due_again() |> digest() |> catch_up() |> changed()}
+    {:noreply, state |> expire() |> due_again() |> catch_up() |> changed()}
+  end
+
+  defp do_relay(state, n, action, text) do
+    {message, answer, word} =
+      case action do
+        "approve" -> {"✅ Approved: #{n["summary"]}", "approve", "Approved"}
+        "reject" -> {"❌ Rejected: #{n["summary"]}", "reject", "Rejected"}
+        "reply" when text != "" -> {"↩ #{n["summary"]}\n\n#{text}", text, "Answered"}
+        "reply" -> {:error, "an empty reply", nil}
+        "done" -> {nil, nil, "Done"}
+        _ -> {:error, "action is approve, reject, reply or done", nil}
+      end
+
+    cond do
+      message == :error ->
+        {:reply, {:error, answer}, state}
+
+      message != nil and not is_binary(n["session"]) ->
+        {:reply, {:error, "this notice has no source session to tell"}, state}
+
+      true ->
+        if message, do: state.submit.(n["session"], message)
+        n = if answer, do: Map.put(n, "answer", answer), else: n
+        state = put_in(state.notices[n["id"]], n)
+
+        state =
+          if n["status"] == "open",
+            do: settle(state, n, "done", "#{word} in its chat"),
+            else: state
+
+        {:reply, {:ok, view(state.notices[n["id"]])}, changed(state)}
+    end
   end
 
   defp do_update_todo(state, id, attrs) do
@@ -478,10 +554,20 @@ defmodule Loom.Notices do
 
     # A notification when it is new or has become more urgent than it was;
     # more urgent, it is not put off any longer.
+    n = with_chat(state, n, old)
     rose? = old == nil or priority < old["priority"]
     n = if rose?, do: Map.delete(n, "later_until"), else: n
     n = if rose?, do: alert(state, n, now), else: Map.put(n, "held", old["held"] || false)
     {n, put_in(state.notices[n["id"]], n)}
+  end
+
+  # Its own session: made with the first brief, given each new one. Without
+  # one (it could not start), the card leads to the source as before.
+  defp with_chat(state, n, old) do
+    case state.chat.(n, old && old["chat"]) do
+      id when is_binary(id) -> Map.put(n, "chat", id)
+      _ -> n
+    end
   end
 
   # One urgent a day per source; another the same day is posted as important.
@@ -503,23 +589,35 @@ defmodule Loom.Notices do
 
   defp alert(state, n, now) do
     cond do
-      n["priority"] > 2 ->
+      n["priority"] > 5 ->
         n
 
-      n["priority"] == 2 and quiet?(now) ->
+      n["priority"] > 0 and quiet?(now) ->
         Map.put(n, "held", true)
 
       true ->
-        state.notify.(title(n), n["summary"], n["session"])
+        push(state, title(n), n)
         n
     end
+  end
+
+  # The notification; for a 0–1 also a Bark critical alert, which sounds
+  # through silent mode and Focus.
+  defp push(state, title, n) do
+    # Tapped, it opens the notice's own session.
+    session = n["chat"] || n["session"]
+    state.notify.(title, n["summary"], session)
+    # A 0 keeps ringing for 30 seconds (the user's call, 2026-11-03).
+    if n["priority"] <= 1,
+      do: state.ring.(title, n["summary"], session, n["priority"] == 0)
   end
 
   defp title(n), do: "#{n["source"]["name"]} · #{label(n)}"
 
   defp label(%{"needs" => "approve"}), do: "needs your approval"
   defp label(%{"needs" => "reply"}), do: "needs you"
-  defp label(_), do: "urgent"
+  defp label(%{"priority" => p}) when p <= 2, do: "urgent"
+  defp label(_), do: "important"
 
   # ── The clock ───────────────────────────────────────────────────────────
 
@@ -533,6 +631,7 @@ defmodule Loom.Notices do
           settle(state, n, "expired", "Expired unread after a week")
 
         n["status"] != "open" and now - (n["done_at"] || n["updated_at"]) > @kept ->
+          drop_chat(n["chat"])
           update_in(state.notices, &Map.delete(&1, n["id"]))
 
         true ->
@@ -554,57 +653,36 @@ defmodule Loom.Notices do
 
     state
     |> open()
-    |> Enum.filter(&(is_integer(&1["later_until"]) and &1["later_until"] <= now))
+    # Not at night but a 0: it waits for 07:00 like the rest.
+    |> Enum.filter(
+      &(is_integer(&1["later_until"]) and &1["later_until"] <= now and
+          (&1["priority"] == 0 or not quiet?(now)))
+    )
     |> Enum.reduce(state, fn n, state ->
-      state.notify.("#{n["source"]["name"]} · reminder", n["summary"], n["session"])
-      put_in(state.notices[n["id"]], Map.merge(n, %{"later_until" => nil, "updated_at" => now}))
+      push(state, "#{n["source"]["name"]} · reminder", n)
+
+      put_in(
+        state.notices[n["id"]],
+        Map.merge(n, %{"later_until" => nil, "updated_at" => now, "held" => false})
+      )
     end)
   end
 
   defp later?(n, now), do: is_integer(n["later_until"]) and n["later_until"] > now
 
-  # 20:00: one notification for all the important ones still open.
-  defp digest(state) do
-    now = state.clock.()
-    today = day(now)
-
-    if hour(now) >= @digest_hour and state.marks["digest"] != today do
-      open =
-        state |> open() |> Enum.filter(&(&1["priority"] in 3..5 and not later?(&1, now)))
-
-      if open != [] do
-        body = open |> Enum.map(&"#{&1["source"]["name"]}: #{&1["summary"]}") |> Enum.join(" · ")
-        state.notify.("#{length(open)} important #{plural(length(open))} waiting", body, nil)
-      end
-
-      put_in(state.marks["digest"], today)
-    else
-      state
-    end
-  end
-
-  # 07:00: the urgent ones that came in during the night.
+  # 07:00: what came in during the night, one notification each.
   defp catch_up(state) do
     now = state.clock.()
     today = day(now)
 
     if not quiet?(now) and state.marks["morning"] != today do
-      held = state |> open() |> Enum.filter(& &1["held"])
+      held =
+        state
+        |> open()
+        |> Enum.filter(& &1["held"])
+        |> Enum.sort_by(&{&1["priority"], &1["created_at"]})
 
-      case held do
-        [] ->
-          :ok
-
-        [n] ->
-          state.notify.(title(n), n["summary"], n["session"])
-
-        list ->
-          state.notify.(
-            "#{length(list)} urgent overnight",
-            Enum.map_join(list, " · ", & &1["summary"]),
-            nil
-          )
-      end
+      for n <- held, not later?(n, now), do: push(state, title(n), n)
 
       state = Enum.reduce(held, state, fn n, s -> put_in(s.notices[n["id"]]["held"], false) end)
       put_in(state.marks["morning"], today)
@@ -616,7 +694,7 @@ defmodule Loom.Notices do
   defp quiet?(now) do
     {from, to} = @quiet
     h = hour(now)
-    h >= from or h < to
+    if from < to, do: h >= from and h < to, else: h >= from or h < to
   end
 
   # The bell's chat starts afresh each day: what it goes over is in the lists,
@@ -653,12 +731,19 @@ defmodule Loom.Notices do
          do: {:ok, id}
   end
 
+  # Its session goes with it, unless the user wrote there: then it is theirs.
+  defp drop_chat(chat) when is_binary(chat) do
+    with {:ok, meta} <- Agent.Store.read_meta(chat),
+         true <- meta[:kind] == "notice" and (meta[:turns] || 0) == 0 do
+      Task.start(fn -> Agent.delete_session(chat) end)
+    end
+  end
+
+  defp drop_chat(_), do: :ok
+
   defp local(ms), do: DateTime.from_unix!(div(ms, 1000) + @offset * 60)
   defp hour(ms), do: local(ms).hour
   defp day(ms), do: ms |> local() |> DateTime.to_date() |> Date.to_iso8601()
-
-  defp plural(1), do: "thing"
-  defp plural(_), do: "things"
 
   # ── State ───────────────────────────────────────────────────────────────
 
@@ -727,6 +812,95 @@ defmodule Loom.Notices do
     # Open: what is due first, then the undated, newest first. Done: latest first.
     Enum.sort_by(open, &{&1["due"] || "9999", -&1["created_at"]}) ++
       Enum.sort_by(done, &(-(&1["done_at"] || 0)))
+  end
+
+  # Through the `bark` skill's script, the one place that sends to Bark; not
+  # there or not set up, nothing rings.
+  defp ring(title, body, session, call?) do
+    script = Path.expand("~/.claude/skills/bark/ring")
+    args = if call?, do: ["--call", title, body], else: [title, body]
+
+    if File.exists?(script) do
+      Task.start(fn ->
+        case System.cmd(script, args,
+               env: [{"LOOM_SESSION_ID", session || ""}],
+               stderr_to_stdout: true
+             ) do
+          {_, 0} -> :ok
+          {out, code} -> Logger.warning("Loom.Notices: Bark ring failed (#{code}): #{out}")
+        end
+      end)
+    end
+  end
+
+  # A new notice: a Claude Code session of its own, in the source's project,
+  # opening on the brief. An update: the new brief in the same one.
+  defp chat(n, nil) do
+    id = Agent.new_id()
+
+    project =
+      with s when is_binary(s) <- n["session"],
+           {:ok, m} <- Agent.Store.read_meta(s),
+           do: m[:project_id]
+
+    title = String.slice(n["summary"], 0, 60)
+
+    opts = [backend: :claude_code, kind: "notice", title: title, title_by: "tidy"]
+    opts = if is_binary(project), do: [{:project, project} | opts], else: opts
+
+    with {:ok, _} <- Agent.start_session(id, opts),
+         :ok <- Agent.brief(id, brief(n), about(n, true)) do
+      id
+    else
+      error ->
+        Logger.warning("Loom.Notices: no session for #{n["id"]}: #{inspect(error)}")
+        nil
+    end
+  catch
+    :exit, reason ->
+      Logger.warning("Loom.Notices: no session for #{n["id"]}: #{inspect(reason)}")
+      nil
+  end
+
+  defp chat(n, chat) do
+    with false <- Agent.exists?(chat), do: Agent.restore_session(chat)
+    :ok = Agent.brief(chat, brief(n), about(n, false))
+    chat
+  rescue
+    _ -> chat(n, nil)
+  catch
+    :exit, _ -> chat(n, nil)
+  end
+
+  # What the user sees first: who, what it needs, and the brief.
+  defp brief(n) do
+    head = "**#{n["source"]["name"]}** · P#{n["priority"]} · #{label(n)}"
+    Enum.join(Enum.reject([head, n["summary"], n["detail"]], &is_nil/1), "\n\n")
+  end
+
+  # What the agent is told ahead of the user's first message.
+  defp about(n, new?) do
+    from =
+      case n["session"] do
+        s when is_binary(s) ->
+          "from session #{s}" <>
+            if(is_integer(n["anchor"]),
+              do: " (the turn that starts at seq #{n["anchor"]})",
+              else: ""
+            )
+
+        _ ->
+          "with no session behind it"
+      end
+
+    if new?,
+      do:
+        "[Loom: this session is notice #{n["id"]} in the user's bell, posted by " <>
+          "#{n["source"]["name"]} #{from}; it needs: #{n["needs"]}. The message above " <>
+          "is its brief. Act on it with `loom-notice act #{n["id"]} …`.]",
+      else:
+        "[Loom: #{n["source"]["name"]} updated notice #{n["id"]}; the message above " <>
+          "is its new brief (priority #{n["priority"]}, needs: #{n["needs"]}).]"
   end
 
   defp submit(session, text) do

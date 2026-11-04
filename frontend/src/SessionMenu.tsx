@@ -1,7 +1,9 @@
 import { Archive, ArchiveRestore, Check, ChevronLeft, ChevronRight, CornerDownRight, Folder, FolderInput, FolderMinus, Pencil, Pin, PinOff, Trash2 } from "lucide-react"
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom"
-import { isArchived, type AgentInfo, type Project } from "./api"
+import { isArchived, type AgentBackend, type AgentInfo, type Project } from "./api"
+import { BackendIcon } from "./BackendIcon"
+import { BACKENDS } from "./NewMenu"
 
 /**
  * What can be done to one session, from the `…` on its row: rename, pin,
@@ -36,13 +38,14 @@ export function SessionMenu({
   // Only for a session in the sidebar's Working group: out of it.
   onDone?: () => Promise<void>
   // Only for the user's own chats; an employee's or Dream's carry on by themselves.
-  onContinue?: () => Promise<void>
+  // With a backend, on that one instead of its own.
+  onContinue?: (backend?: AgentBackend) => Promise<void>
   onMove: (projectId: string | null) => Promise<void>
   onArchive: (archived: boolean) => Promise<void>
   onDelete: () => void
   onClose: () => void
 }) {
-  const [view, setView] = useState<"main" | "move">("main")
+  const [view, setView] = useState<"main" | "move" | "continue">("main")
   const [error, setError] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const [place, setPlace] = useState<{ top: number; left: number } | null>(null)
@@ -119,9 +122,15 @@ export function SessionMenu({
             {session.pinned ? <PinOff /> : <Pin />} {session.pinned ? "Unpin" : "Pin"}
           </button>
           {onContinue && (
-            <button role="menuitem" onClick={() => run(onContinue)}>
-              <CornerDownRight /> Continue in new chat
-            </button>
+            // The tap carries it on as it is; the arrow picks another backend.
+            <div className="new-menu-kind">
+              <button role="menuitem" onClick={() => run(() => onContinue())}>
+                <CornerDownRight /> <span className="session-menu-label">Continue in new chat</span>
+              </button>
+              <button className="new-menu-more" title="Continue on another engine" onClick={() => setView("continue")}>
+                <ChevronRight />
+              </button>
+            </div>
           )}
           <div className="session-menu-sep" />
           <button
@@ -155,6 +164,19 @@ export function SessionMenu({
           >
             <Trash2 /> Delete
           </button>
+        </>
+      ) : view === "continue" && onContinue ? (
+        <>
+          <button role="menuitem" className="session-menu-back" onClick={() => setView("main")}>
+            <ChevronLeft /> Continue in new chat
+          </button>
+          <div className="session-menu-sep" />
+          {BACKENDS.map((b) => (
+            <button key={b.id} role="menuitem" onClick={() => run(() => onContinue(b.id))}>
+              <BackendIcon backend={b.id} /> <span className="session-menu-label">{b.label}</span>
+              {b.id === session.backend && <Check className="session-menu-more" />}
+            </button>
+          ))}
         </>
       ) : (
         <>

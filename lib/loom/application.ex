@@ -11,6 +11,8 @@ defmodule Loom.Application do
       LoomWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:loom, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Loom.PubSub},
+      # Brute-force brake for POST /api/login.
+      Loom.Auth.Throttle,
       {Registry, keys: :unique, name: Loom.Terminal.Registry},
       {DynamicSupervisor, strategy: :one_for_one, name: Loom.Terminal.SessionSupervisor},
       Loom.Terminal.Layout,
@@ -57,6 +59,9 @@ defmodule Loom.Application do
       # The bell: what the agents want the user to see, by priority. After the
       # push service it notifies through, before the employees that post to it.
       Loom.Notices,
+      # Meeting mode: the speech-model download, and sentences batched to agents.
+      Loom.Meeting.Models,
+      Loom.Meeting,
       # Sleep: each scope's memory gone over by night. See its doc.
       Loom.Dream,
       # Virtual employees: agents at work on a heartbeat, within a budget.

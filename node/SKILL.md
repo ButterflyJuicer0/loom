@@ -119,3 +119,10 @@ loom-node exec  <device> -- '"$HOME/loom-node" control update'
 First time only, the device must have "install unknown apps" allowed for Loom
 Node: if `control update` returns `{"need":"allow-unknown-sources"}`, it has
 opened that settings screen — ask the user to turn it on once, then retry.
+
+## 5. MQTT broker (optional, per device)
+A daemon can also run a minimal MQTT 3.1.1 broker for LAN devices (robots, sensors). It is off unless asked for, so a plain node opens no port. Turn it on with `loom-node daemon --mqtt HOST:PORT`, or with `"mqtt": {"listen": "HOST:PORT", "users": {"name": "password"}}` in config.json; changes need a daemon restart. Users are required: there is no anonymous login.
+- Each broker stands alone: no bridging between nodes.
+- QoS 0 only: QoS 1/2 publishes are acknowledged, then delivered at QoS 0. No retained messages, wills or persistent sessions.
+- From the device, `loom-node mqtt pub TOPIC MSG` and `loom-node mqtt sub FILTER...` use its own broker as the first user in config.json; `--addr` and `--user` override this. From here: `loom-node exec <device> -- 'loom-node mqtt pub home/x hi'`.
+- Never print config.json: it holds the node token and the MQTT passwords.

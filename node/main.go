@@ -29,8 +29,10 @@ On the loom host (for agents):
   loom-node write <device> <path> < local-file
 
 On a device:
-  loom-node daemon                          stay connected to loom (what the service runs)
-  loom-node install --url URL --token TOKEN [--shell SHELL]
+  loom-node daemon [--mqtt HOST:PORT]       stay connected to loom (what the service runs);
+                                            --mqtt or config mqtt.listen also runs an MQTT broker
+  loom-node mqtt pub|sub ...                talk to this node's MQTT broker
+  loom-node install --url URL --token-stdin [--shell SHELL]  (reads token from stdin)
   loom-node uninstall
   loom-node control <path> [k=v ...]        drive the screen via the app (Android)
   loom-node version
@@ -58,6 +60,8 @@ func main() {
 		code = cliControl(args)
 	case "daemon":
 		code = runDaemon(args)
+	case "mqtt":
+		code = cliMQTT(args)
 	case "install":
 		code = runInstall(args)
 	case "uninstall":

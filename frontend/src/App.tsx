@@ -40,7 +40,7 @@ import {
   onUnauthorized,
   openDream,
   readNotice,
-  bellSession,
+  employeeSetup,
   type AgentBackend,
   type Employee,
   type Notice,
@@ -77,9 +77,12 @@ function SidebarResize() {
     if (!sidebar || e.button !== 0) return
     e.preventDefault()
     const left = sidebar.getBoundingClientRect().left
+    const appStyle = getComputedStyle(sidebar.parentElement!)
+    const available = sidebar.parentElement!.clientWidth
+      - parseFloat(appStyle.paddingLeft) - parseFloat(appStyle.paddingRight)
     let width = 0
     const move = (ev: PointerEvent) => {
-      width = Math.round(Math.min(Math.max(ev.clientX - left, 200), window.innerWidth - 400))
+      width = Math.round(Math.min(Math.max(ev.clientX - left, 200), available - 400))
       setSidebarWidth(width)
     }
     const up = () => {
@@ -149,8 +152,9 @@ function App() {
   )
   // The sleep sessions stay out of every list; the moons open them. See Sleep.tsx.
   // A virtual employee's two sessions likewise; its page opens them.
-  // And the bell's chat, which lives in the bell; and a task's own session,
-  // opened from the task (Tasks.tsx). What is left is the
+  // And the bell's chat, which lives in the bell; a task's own session,
+  // opened from the task (Tasks.tsx); and a notice's own, until the user
+  // writes in it (opened from its card). What is left is the
   // user's, and the archived of those are in Settings instead.
   const ordinary = useMemo(
     () =>
@@ -160,7 +164,8 @@ function App() {
           !isEmployeeSession(s) &&
           s.kind !== "bell" &&
           s.kind !== "task" &&
-          s.kind !== "incognito",
+          s.kind !== "incognito" &&
+          !(s.kind === "notice" && s.turns === 0 && s.status === "idle"),
       ),
     [everything],
   )
@@ -173,6 +178,11 @@ function App() {
   const sessions = useMemo(
     () => [...ordinary.filter((s) => !isArchived(s)), ...incognito.filter((s) => s.pinned)],
     [ordinary, incognito],
+  )
+  // What the composer's + offers to reference: plain conversations, newest first.
+  const recentChats = useMemo(
+    () => ordinary.filter((s) => s.kind == null && !isArchived(s)).sort((a, b) => lastActive(b) - lastActive(a)),
+    [ordinary],
   )
   const archived = useMemo(
     () => ordinary.filter(isArchived).sort((a, b) => (b.archived_at ?? 0) - (a.archived_at ?? 0)),
@@ -347,8 +357,8 @@ function App() {
   // project too: its workspace is the session's working directory for good.
   // "Continue in a new chat", from a row's menu or under an error: the new
   // session opens at once, on its handoff summary. See `Loom.Agent.Carry`.
-  const carryOn = async (id: string) => {
-    const session = await continueAgent(id)
+  const carryOn = async (id: string, backend?: AgentBackend) => {
+    const session = await continueAgent(id, backend)
     if (session.project_id) reveal()
     upsert(session)
     setActiveId(session.id)
@@ -406,6 +416,16 @@ function App() {
     setDrawerOpen(false)
   }
 
+  // A setup chat (`Loom.Employees.setup_chat/1`): to hire in conversation, or
+  // to change an employee, its permissions included. Into Recents, opened.
+  const setupChat = async (employeeId?: string) => {
+    try {
+      select(await employeeSetup(employeeId))
+    } catch (err) {
+      alert((err as Error).message)
+    }
+  }
+
   // A moon: the scope's sleep session, made on first use, on its report.
   // Asked of the server each time: it moves a session a safety classifier
   // stopped to a fresh one. Offline, the one known.
@@ -423,14 +443,18 @@ function App() {
     select(id)
   }
 
-  // The bell. Opening a notice goes to where it is answered: the turn it came
-  // from, with the notice under it.
+  // The bell. Opening a notice goes to its own session, which opens on its
+  // brief; an older one without, to the turn it came from, with the notice
+  // under it.
   const [bellOpen, setBellOpen] = useState(false)
   const [focusId, setFocusId] = useState<string | null>(null)
   const focusNotice = focusId ? notices.find((n) => n.id === focusId) : undefined
   const openNotice = (n: Notice) => {
     if (n.status === "open" && n.needs === "read") readNotice(n.id).then(upsertNotice, () => {})
-    if (n.session) {
+    if (n.chat && everything.some((s) => s.id === n.chat)) {
+      select(n.chat)
+      setFocusId(null)
+    } else if (n.session) {
       select(n.session)
       setFocusId(n.id)
     }
@@ -691,8 +715,6 @@ function App() {
   const active = everything.find((s) => s.id === activeId) ?? null
   const shownProject = projects.find((p) => p.id === projectPage) ?? null
   const activeProject = active?.project_id ? projects.find((p) => p.id === active.project_id) : undefined
-  // The newest: it starts afresh each day.
-  const bellChat = everything.filter((s) => s.kind === "bell").sort((a, b) => b.created_at - a.created_at)[0]
   // By its sessions rather than `employee_id`: a summary from an older
   // server, or an older route, may not carry it.
   const activeEmployee =
@@ -764,7 +786,7 @@ function App() {
         setDrawerOpen(false)
       }}
       activeEmployeeId={view === "chat" ? (activeEmployee?.id ?? null) : null}
-      onOpenEmployee={(id) => openEmployee(id)}
+      onOpenEmployee={(id) => openEmployee(id, "updates")}
       onHire={() => {
         setHiring(true)
         setDrawerOpen(false)
@@ -787,8 +809,13 @@ function App() {
       refreshCanvas(active.id, outputs)
     },
     focus: focusNotice ? { notice: focusNotice, onAnswered: upsertNotice } : null,
-    onContinue: active.kind == null && !active.employee_id ? () => carryOn(active.id) : undefined,
+    onContinue:
+      active.kind == null && !active.employee_id
+        ? (backend?: AgentBackend) => carryOn(active.id, backend)
+        : undefined,
     onSwitch: narrow && working.length > 0 ? () => setSwitching(true) : undefined,
+    recent: recentChats,
+    onOpenSession: select,
   }
 
   return (
@@ -867,6 +894,7 @@ function App() {
               projects={projects}
               devices={devices}
               chat={chatProps}
+              onSetupChat={(id) => void setupChat(id)}
             />
           ) : active && chatProps && isDream(active) ? (
             <Sleep
@@ -1070,6 +1098,7 @@ function App() {
             upsertEmployee(e)
             openEmployee(e)
           }}
+          onChat={() => void setupChat()}
           onClose={() => setHiring(false)}
         />
       )}
@@ -1077,25 +1106,6 @@ function App() {
         <NoticesSheet
           notices={notices}
           todos={todos}
-          chat={
-            bellChat && (
-              <Chat
-                key={bellChat.id}
-                session={bellChat}
-                bare
-                sidebarOpen
-                onToggleSidebar={() => {}}
-                terminalOpen={false}
-                terminalCount={0}
-                onToggleTerminal={() => {}}
-                canvasOpen={false}
-                onToggleCanvas={() => {}}
-                onOpenCanvas={() => {}}
-                onFilesChanged={() => {}}
-              />
-            )
-          }
-          onWantChat={() => void bellSession().catch(() => {})}
           onOpen={openNotice}
           onAnswered={upsertNotice}
           onClose={() => setBellOpen(false)}

@@ -73,6 +73,8 @@ defmodule Loom.OneShot do
         "json",
         "--system-prompt",
         system,
+        # Ends the options: text that starts with "-" is still the prompt.
+        "--",
         text
       ]
   end

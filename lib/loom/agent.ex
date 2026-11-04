@@ -172,6 +172,7 @@ defmodule Loom.Agent do
   defdelegate promote(id), to: Session
   defdelegate archive(id, archived?), to: Session
   defdelegate seed(id, display, prompt, origin \\ "tidy"), to: Session
+  defdelegate brief(id, display, prompt), to: Session
   defdelegate tell(id, text), to: Session
   defdelegate note(id, text), to: Session
 
@@ -206,7 +207,7 @@ defmodule Loom.Agent do
   def lobby_topic, do: "agents"
 
   @doc """
-  The topic turn ends are announced on, for `Loom.Push`: `{:turn_ended, id,
+  The topic turn ends are announced on, for `Loom.Dream` and `Loom.Employees`: `{:turn_ended, id,
   %{title:, outcome:}}` once a turn is over and nothing queued follows it.
   `outcome` is `{:ok, last_reply_or_nil}` or `{:error, message}`.
   """

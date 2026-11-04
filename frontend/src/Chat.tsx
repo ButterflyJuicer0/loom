@@ -14,10 +14,15 @@ import {
   HatGlasses,
   Inbox,
   Merge,
+  MessageSquare,
+  Mic,
+  Paperclip,
+  AudioLines,
   Moon,
   PanelLeft,
   Plus,
   RotateCw,
+  Share as ShareIcon,
   Square,
   SquareTerminal,
   X,
@@ -37,6 +42,8 @@ import {
   type ReactNode,
 } from "react"
 import { Grabber } from "./Switcher"
+import { MeetingBar, MeetingDialog, useMeeting } from "./Meeting"
+import { openMeeting, stopMeeting } from "./meeting"
 import { createPortal } from "react-dom"
 import { EffortButton } from "./Effort"
 import { ModelList, modelLabel } from "./Model"
@@ -51,14 +58,17 @@ import {
   type CronJob,
   type Question,
   type Snapshot,
+  type SessionRef,
   type TimelineItem,
 } from "./agent"
 import { getSocket } from "./socket"
 import { itemForAttachment, itemForOutput, itemForPath, type CanvasItem } from "./canvasItems"
 import { BackendIcon } from "./BackendIcon"
+import { BACKENDS } from "./NewMenu"
 import { formatBytes } from "./format"
 import { isComposing } from "./ime"
 import { Markdown, MessageCopy, OutputLink } from "./markdown"
+import { ShareView } from "./Share"
 import { useNarrow } from "./useNarrow"
 import { useAgent } from "./useAgent"
 import { useDraft } from "./useDraft"
@@ -78,6 +88,7 @@ import {
   downloadAttachment,
   modelName,
   outputUrl,
+  type AgentBackend,
   type AgentFile,
   type AgentInfo,
   type Notice,
@@ -118,8 +129,9 @@ type Props = {
   // turn it came from, and shows it under that turn to be answered.
   focus?: { notice: Notice; onAnswered: (n: Notice) => void } | null
   // Carry it on in a new session ("Continue in a new chat"), offered under a
-  // turn that ended in an error. Only for a plain conversation.
-  onContinue?: () => Promise<void>
+  // turn that ended in an error. Only for a plain conversation. The header's
+  // menu may pass another backend to carry it on there.
+  onContinue?: (backend?: AgentBackend) => Promise<void>
   /** Set only for an incognito session: pin it (it stays incognito), or keep it, into Recents. */
   incognito?: { pinned: boolean; onPin: (pinned: boolean) => void; onKeep: () => void }
   // The project it is in: "‹ name" before the title goes back to its page.
@@ -127,7 +139,15 @@ type Props = {
   // On a phone with sessions in Working: the line under the composer that
   // opens the switcher (Switcher.tsx).
   onSwitch?: () => void
+  // The user's recent conversations, newest first: the + menu offers them as
+  // references for the next message (`Loom.Agent.Refs`).
+  recent?: AgentInfo[]
+  // Open another session: a referenced one's chip.
+  onOpenSession?: (id: string) => void
 }
+
+// How a chip in a message opens the session it points at.
+const OpenSession = createContext<((id: string) => void) | undefined>(undefined)
 
 // How a card or link deep in the transcript opens something in the canvas.
 const OpenCanvas = createContext<(item: CanvasItem) => void>(() => {})
@@ -160,6 +180,8 @@ export function Chat({
   incognito,
   project,
   onSwitch,
+  recent,
+  onOpenSession,
 }: Props) {
   const { transcript, joinError, submit, resend, discard, interrupt, dropQueued, steerQueued, rename, draft: remoteDraft } = useAgent(
     session.id,
@@ -200,6 +222,9 @@ export function Chat({
   const replies = useMemo(() => (busy ? null : currentReplies(items)), [items, busy])
   const [draft, setDraft] = useDraft(session.id, remoteDraft)
   const narrow = useNarrow()
+  // "Share…": picking what of the conversation goes into a PDF (Share.tsx).
+  const [sharing, setSharing] = useState(false)
+  useEffect(() => setSharing(false), [session.id])
 
   // Stable, because a context change re-renders every message that links a
   // file — memoised or not — and this would otherwise change with each delta.
@@ -223,9 +248,14 @@ export function Chat({
   // 40-pixel target is the last thing you want to do.
   const drop = useFileDrop(attachments.add)
 
+  // Earlier sessions picked for the next message; another chat's don't carry over.
+  const [refs, setRefs] = useState<SessionRef[]>([])
+  useEffect(() => setRefs([]), [session.id])
+
   const send = (text: string) => {
-    submit(text, attachments.ready)
+    submit(text, attachments.ready, refs)
     attachments.clear()
+    setRefs([])
     setDraft("")
   }
 
@@ -260,7 +290,7 @@ export function Chat({
   return (
     <div
       ref={chatRef}
-      className={"chat" + (bare ? " bare" : "") + (drop.dragging ? " dragging" : "")}
+      className={"chat" + (bare ? " bare" : "") + (drop.dragging ? " dragging" : "") + (sharing ? " sharing" : "")}
       {...drop.handlers}
     >
       {drop.dragging && (
@@ -306,6 +336,7 @@ export function Chat({
               onToggleCanvas={onToggleCanvas}
               onContinue={onContinue}
               onKeep={incognito?.onKeep}
+              onShare={() => setSharing(true)}
             />
           ) : (
             <>
@@ -339,6 +370,7 @@ export function Chat({
             onToggleCanvas={onToggleCanvas}
             onContinue={onContinue}
             onKeep={incognito?.onKeep}
+            onShare={() => setSharing(true)}
           />
             </>
           )}
@@ -365,6 +397,7 @@ export function Chat({
       {/* `output/…` links in a reply become downloads from this session, and
           attachments, sent or about to be, open in the canvas. */}
       <OpenCanvas.Provider value={onOpenCanvas}>
+      <OpenSession.Provider value={onOpenSession}>
         <Unsent.Provider value={unsent}>
         <OutputLink.Provider value={renderOutput}>
           <Timeline
@@ -416,7 +449,16 @@ export function Chat({
         </OutputLink.Provider>
         </Unsent.Provider>
 
-        <div className="dock" ref={dockRef}>
+        {sharing && (
+          <ShareView
+            items={items}
+            sessionId={session.id}
+            title={session.title ?? "Loom"}
+            onClose={() => setSharing(false)}
+          />
+        )}
+
+        <div className="dock" ref={dockRef} hidden={sharing}>
         {transcript.queue.length > 0 && (
           <QueuePanel
             messages={transcript.queue}
@@ -426,10 +468,15 @@ export function Chat({
           />
         )}
 
+        <MeetingBar sessionId={session.id} />
+        <MeetingDialog />
         <Composer
           busy={busy}
           interrupted={transcript.status === "interrupted"}
           attachments={attachments}
+          refs={refs}
+          setRefs={setRefs}
+          recent={(recent ?? []).filter((s) => s.id !== session.id && s.kind == null)}
           onSubmit={send}
           onInterrupt={interrupt}
           tools={<EffortButton session={session} />}
@@ -438,6 +485,7 @@ export function Chat({
           under={onSwitch && <Grabber onOpen={onSwitch} />}
         />
         </div>
+      </OpenSession.Provider>
       </OpenCanvas.Provider>
     </div>
   )
@@ -686,6 +734,51 @@ function readAnswers(
  * room for the title or for four buttons, not both. And the model, which swaps
  * the list in place, and a reload.
  */
+/** What meeting mode sent the agent, one line until opened. */
+function MeetingFold({ text, at }: { text: string; at?: number }) {
+  const [open, setOpen] = useState(false)
+  const lines = text.split("\n").filter((l) => /^\[[^\]]*\] /.test(l))
+  const summary = text.startsWith("【会议模式开始】")
+    ? "Meeting started"
+    : text.startsWith("【会议取消】")
+      ? "Meeting cancelled"
+      : text.includes("【会议结束】")
+        ? `Meeting ended${lines.length ? ` · ${lines.length} lines` : ""}`
+        : `Transcript · ${lines.length} line${lines.length === 1 ? "" : "s"}`
+  return (
+    <div className={"meeting-fold" + (open ? " open" : "")}>
+      <button className="meeting-fold-head" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <AudioLines />
+        <span>{summary}</span>
+        {typeof at === "number" && <Clock at={at} />}
+        <ChevronDown />
+      </button>
+      {open && <pre className="meeting-fold-body">{text}</pre>}
+    </div>
+  )
+}
+
+/** The menu's "Meeting mode", or "End meeting" while this chat's meeting runs. */
+function MeetingItem({ sessionId, onPick }: { sessionId: string; onPick: () => void }) {
+  const m = useMeeting()
+  const here = m.sessionId === sessionId && m.phase === "running"
+  const elsewhere = m.phase === "running" && !here
+  return (
+    <button
+      role="menuitem"
+      disabled={elsewhere}
+      title={elsewhere ? "A meeting is running in another chat" : undefined}
+      onClick={() => {
+        onPick()
+        void (here ? stopMeeting() : openMeeting(sessionId))
+      }}
+    >
+      {here ? <Square /> : <Mic />}
+      {here ? "End meeting" : "Meeting mode"}
+    </button>
+  )
+}
+
 function PaneMenu({
   session,
   terminalOpen,
@@ -695,6 +788,7 @@ function PaneMenu({
   onToggleCanvas,
   onContinue,
   onKeep,
+  onShare,
   panes = true,
 }: {
   session: AgentInfo
@@ -705,11 +799,12 @@ function PaneMenu({
   onToggleTerminal: () => void
   canvasOpen: boolean
   onToggleCanvas: () => void
-  onContinue?: () => Promise<void>
+  onContinue?: (backend?: AgentBackend) => Promise<void>
   onKeep?: () => void
+  onShare?: () => void
 }) {
   const [at, setAt] = useState<{ top: number; right: number } | null>(null)
-  const [view, setView] = useState<"main" | "model">("main")
+  const [view, setView] = useState<"main" | "model" | "continue">("main")
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -749,6 +844,24 @@ function PaneMenu({
           <div className="session-menu pane-menu" role="menu" ref={ref} style={at}>
             {view === "model" ? (
               <ModelList session={session} onBack={() => setView("main")} onDone={() => setAt(null)} />
+            ) : view === "continue" && onContinue ? (
+              <>
+                <button role="menuitem" className="session-menu-back" onClick={() => setView("main")}>
+                  <ChevronLeft /> Continue in new chat
+                </button>
+                <div className="session-menu-sep" />
+                {BACKENDS.map((b) => (
+                  <button
+                    key={b.id}
+                    role="menuitem"
+                    onClick={() => pick(() => void onContinue(b.id).catch(() => {}))}
+                  >
+                    <BackendIcon backend={b.id} />
+                    <span className="session-menu-label">{b.label}</span>
+                    {b.id === session.backend && <Check className="session-menu-more" />}
+                  </button>
+                ))}
+              </>
             ) : (
             <>
             <button role="menuitem" onClick={() => setView("model")}>
@@ -772,9 +885,21 @@ function PaneMenu({
               </>
             )}
             {onContinue && (
-              <button role="menuitem" onClick={() => pick(() => void onContinue().catch(() => {}))}>
-                <CornerDownRight />
-                Continue in new chat
+              // The tap carries it on as it is; the arrow picks another backend.
+              <div className="new-menu-kind">
+                <button role="menuitem" onClick={() => pick(() => void onContinue().catch(() => {}))}>
+                  <CornerDownRight />
+                  <span className="session-menu-label">Continue in new chat</span>
+                </button>
+                <button className="new-menu-more" title="Continue on another engine" onClick={() => setView("continue")}>
+                  <ChevronRight />
+                </button>
+              </div>
+            )}
+            {onShare && (
+              <button role="menuitem" onClick={() => pick(onShare)}>
+                <ShareIcon />
+                Share…
               </button>
             )}
             {onKeep && (
@@ -783,6 +908,8 @@ function PaneMenu({
                 Keep chat
               </button>
             )}
+            <div className="session-menu-sep" />
+            <MeetingItem sessionId={session.id} onPick={() => setAt(null)} />
             <div className="session-menu-sep" />
             {/* A home-screen app has no reload of its own. */}
             <button role="menuitem" onClick={() => location.reload()}>
@@ -1109,6 +1236,8 @@ function same(a: unknown, b: unknown): boolean {
 function ItemView({ item, sessionId, onAnswer }: ItemProps) {
   switch (item.kind) {
     case "user":
+      // Meeting mode's prompt and transcript batches: folded, on every screen.
+      if (item.origin === "meeting") return <MeetingFold text={item.text} at={item.at} />
       return (
         // The copy button sits under the bubble rather than in it, where it
         // would push the time onto a line of its own on a phone.
@@ -1119,6 +1248,7 @@ function ItemView({ item, sessionId, onAnswer }: ItemProps) {
             {item.text.trim() !== "" &&
               (item.origin === "tidy" || item.origin === "handoff" ? <Markdown text={item.text} /> : <Rich text={item.text} />)}
             {item.files.length > 0 && <SentFiles sessionId={sessionId} files={item.files} />}
+            {item.refs.length > 0 && <SentRefs refs={item.refs} />}
             {item.uploads && item.uploads.length > 0 && <LocalFiles files={item.uploads} sending={!item.failed} />}
             {item.queued && <span className="tag">queued</span>}
             {item.origin === "phone" && <span className="tag">phone</span>}
@@ -1133,6 +1263,8 @@ function ItemView({ item, sessionId, onAnswer }: ItemProps) {
       )
 
     case "assistant":
+      // A meeting turn with nothing worth saying: a dot, not a bubble.
+      if (!item.streaming && item.text.trim() === "·") return <div className="meeting-quiet">·</div>
       // Where markdown is rendered (and a merge's summary, above). Tool output
       // and the user's own words are shown verbatim — see `markdown.tsx`.
       return (
@@ -1567,6 +1699,37 @@ function LocalFiles({ files, sending }: { files: LocalFile[]; sending: boolean }
   )
 }
 
+/** One referenced chat: a one-line pill, its title. */
+function RefChip({ title, onClick, onRemove }: { title: string; onClick?: () => void; onRemove?: () => void }) {
+  return (
+    <span
+      className={"ref-chip" + (onClick ? " clickable" : "")}
+      title={onRemove ? `${title} — the agent reads it if it needs to` : title}
+      onClick={onClick}
+    >
+      <MessageSquare />
+      <span className="ref-chip-title">{title}</span>
+      {onRemove && (
+        <button className="ref-chip-x" title="Remove" onClick={onRemove}>
+          <X />
+        </button>
+      )}
+    </span>
+  )
+}
+
+/** The earlier sessions a message pointed at; a tap opens one. */
+function SentRefs({ refs }: { refs: SessionRef[] }) {
+  const open = useContext(OpenSession)
+  return (
+    <div className="files">
+      {refs.map((r) => (
+        <RefChip key={r.id} title={r.title} onClick={open && (() => open(r.id))} />
+      ))}
+    </div>
+  )
+}
+
 /** The attachments that went out with a message. */
 function SentFiles({ sessionId, files }: { sessionId: string; files: AgentFile[] }) {
   return (
@@ -1904,6 +2067,9 @@ function Composer({
   busy,
   interrupted,
   attachments,
+  refs,
+  setRefs,
+  recent,
   onSubmit,
   onInterrupt,
   tools,
@@ -1914,6 +2080,9 @@ function Composer({
   busy: boolean
   interrupted: boolean
   attachments: Attachments
+  refs: SessionRef[]
+  setRefs: (refs: SessionRef[]) => void
+  recent: AgentInfo[]
   onSubmit: (text: string) => void
   onInterrupt: () => void
   // Beside +: the thinking level.
@@ -1984,7 +2153,7 @@ function Composer({
   // An attachment on its own is a message: dragging in a screenshot and
   // pressing send, with nothing typed, is a normal way to ask about it.
   const sendable =
-    (text.trim() !== "" || attachments.items.length > 0) && !attachments.preparing
+    (text.trim() !== "" || attachments.items.length > 0 || refs.length > 0) && !attachments.preparing
 
   const send = () => {
     if (!sendable) return
@@ -1994,8 +2163,11 @@ function Composer({
 
   return (
     <div className="composer">
-      {attachments.items.length > 0 && (
+      {(attachments.items.length > 0 || refs.length > 0) && (
         <div className="tray">
+          {refs.map((r) => (
+            <RefChip key={r.id} title={r.title} onRemove={() => setRefs(refs.filter((x) => x.id !== r.id))} />
+          ))}
           {attachments.items.map((item) => (
             <AttachmentChip
               key={item.key}
@@ -2039,13 +2211,15 @@ function Composer({
           }}
         />
         <div className="composer-tools">
-          <button
-            className="composer-btn attach"
-            title="Attach files — or drop them anywhere in the conversation"
-            onClick={() => picker.current?.click()}
-          >
-            <Plus />
-          </button>
+          <PlusMenu
+            recent={recent}
+            picked={refs}
+            onFiles={() => picker.current?.click()}
+            onRef={(r) => {
+              setRefs([...refs, r])
+              ref.current?.focus()
+            }}
+          />
           {tools}
         </div>
 
@@ -2167,6 +2341,83 @@ function Composer({
         </div>
       </div>
       {under}
+    </div>
+  )
+}
+
+// How many recent chats the + menu offers, and how many one message may name.
+const RECENT_SHOWN = 8
+const MAX_REFS = 5
+
+/**
+ * The composer's +: attach files, or point the message at a recent chat. The
+ * chat is not loaded into the message — the agent is told where it is and
+ * reads it if it needs to (`Loom.Agent.Refs`).
+ */
+function PlusMenu({
+  recent,
+  picked,
+  onFiles,
+  onRef,
+}: {
+  recent: AgentInfo[]
+  picked: SessionRef[]
+  onFiles: () => void
+  onRef: (ref: SessionRef) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const root = useRef<HTMLDivElement>(null)
+
+  // Closed by a tap anywhere else, or Escape.
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: PointerEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false)
+    document.addEventListener("pointerdown", onDown)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("pointerdown", onDown)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [open])
+
+  const taken = new Set(picked.map((r) => r.id))
+  const shown = recent.filter((s) => !taken.has(s.id)).slice(0, RECENT_SHOWN)
+  const full = picked.length >= MAX_REFS
+
+  return (
+    <div className="plus" ref={root}>
+      <button
+        className={"composer-btn attach" + (open ? " open" : "")}
+        title="Attach files or a recent chat — or drop files anywhere in the conversation"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <Plus />
+      </button>
+      {open && (
+        <div className="plus-pop" role="menu">
+          <button role="menuitem" onClick={() => (setOpen(false), onFiles())}>
+            <Paperclip />
+            <span className="session-menu-label">Files</span>
+          </button>
+          {shown.length > 0 && <div className="plus-head">Recent chats</div>}
+          {shown.map((s) => (
+            <button
+              key={s.id}
+              role="menuitem"
+              disabled={full}
+              title={full ? `At most ${MAX_REFS} chats per message` : (s.title ?? "")}
+              onClick={() => (setOpen(false), onRef({ id: s.id, title: s.title ?? "Untitled" }))}
+            >
+              <MessageSquare />
+              <span className="session-menu-label">{s.title ?? "Untitled"}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
