@@ -90,6 +90,7 @@ defmodule Loom.Agent.Session do
 
   alias Loom.Agent.Backend
   alias Loom.Agent.Files
+  alias Loom.Agent.Refs
   alias Loom.Agent.Output
   alias Loom.Agent.Store
 
@@ -141,6 +142,8 @@ defmodule Loom.Agent.Session do
   sender can reconcile its optimistic bubble with the broadcast one) and
   `:files` — paths of this session's uploaded attachments, which are appended to
   the message the backend sees but kept out of the one that is displayed.
+  `:refs` — ids of earlier sessions the user pointed at; the backend is told
+  where they are and how to read them (`Loom.Agent.Refs`).
   """
   def submit(id, text, opts \\ []), do: GenServer.call(via(id), {:submit, text, opts})
 
@@ -907,19 +910,21 @@ defmodule Loom.Agent.Session do
     # The client sends back paths that `Files.store/2` handed it. Checking them
     # against this session's own directory is the one validation that matters:
     # the model reads whatever path we name. See `Loom.Agent.Files`.
-    case Files.verify(state.id, Keyword.get(opts, :files, [])) do
-      {:error, reason} ->
-        {:reply, {:error, reason}, state}
+    with {:ok, files} <- Files.verify(state.id, Keyword.get(opts, :files, [])),
+         {:ok, refs} <- Refs.verify(state.id, Keyword.get(opts, :refs, [])) do
+      # An attachment on its own is a message. Dragging in a screenshot and
+      # pressing send, with nothing typed, is a normal way to ask about it.
+      # So is a referenced session.
+      bare = files == [] and refs == []
 
-      {:ok, files} ->
-        # An attachment on its own is a message. Dragging in a screenshot and
-        # pressing send, with nothing typed, is a normal way to ask about it.
-        cond do
-          String.trim(text) == "" and files == [] -> {:reply, {:error, :empty}, state}
-          reload?(text) and files == [] -> reload(state, text, opts)
-          command?(text, "/cron") and files == [] -> list_cron(state, text, opts)
-          true -> accept(state, text, files, opts)
-        end
+      cond do
+        String.trim(text) == "" and bare -> {:reply, {:error, :empty}, state}
+        reload?(text) and bare -> reload(state, text, opts)
+        command?(text, "/cron") and bare -> list_cron(state, text, opts)
+        true -> accept(state, text, files, refs, opts)
+      end
+    else
+      {:error, reason} -> {:reply, {:error, reason}, state}
     end
   end
 
@@ -1162,10 +1167,16 @@ defmodule Loom.Agent.Session do
   end
 
   # A submitted message, once its attachments have been vouched for.
-  defp accept(state, text, files, opts) do
+  defp accept(state, text, files, refs, opts) do
     state =
       state
-      |> maybe_title(if String.trim(text) == "", do: Files.title(files), else: text)
+      |> maybe_title(
+        cond do
+          String.trim(text) != "" -> text
+          files != [] -> Files.title(files)
+          true -> "Re: " <> hd(refs).title
+        end
+      )
       # Writing in it again means it is not done after all, and its recap
       # is out of date.
       |> Map.merge(%{done_at: nil, recap: nil})
@@ -1174,6 +1185,7 @@ defmodule Loom.Agent.Session do
         # Structured rather than folded into `text`, so a bubble can show
         # `shot.png` as a chip instead of an absolute path.
         files: files,
+        refs: refs,
         origin: Keyword.get(opts, :origin, "unknown"),
         client_msg_id: Keyword.get(opts, :client_msg_id),
         status: :sent
@@ -1182,7 +1194,7 @@ defmodule Loom.Agent.Session do
     # What the backend receives differs from what is displayed: it needs the
     # paths, the user does not want to read them. A caller with a long prompt
     # of its own (`Loom.Dream`) shows a line and sends the whole of it.
-    message = Keyword.get(opts, :prompt) || Files.prompt(text, files)
+    message = Keyword.get(opts, :prompt) || text |> Files.prompt(files) |> Refs.prompt(refs)
 
     cond do
       state.classifying != nil ->

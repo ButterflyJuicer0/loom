@@ -14,7 +14,9 @@ import {
   HatGlasses,
   Inbox,
   Merge,
+  MessageSquare,
   Mic,
+  Paperclip,
   AudioLines,
   Moon,
   PanelLeft,
@@ -56,6 +58,7 @@ import {
   type CronJob,
   type Question,
   type Snapshot,
+  type SessionRef,
   type TimelineItem,
 } from "./agent"
 import { getSocket } from "./socket"
@@ -136,7 +139,15 @@ type Props = {
   // On a phone with sessions in Working: the line under the composer that
   // opens the switcher (Switcher.tsx).
   onSwitch?: () => void
+  // The user's recent conversations, newest first: the + menu offers them as
+  // references for the next message (`Loom.Agent.Refs`).
+  recent?: AgentInfo[]
+  // Open another session: a referenced one's chip.
+  onOpenSession?: (id: string) => void
 }
+
+// How a chip in a message opens the session it points at.
+const OpenSession = createContext<((id: string) => void) | undefined>(undefined)
 
 // How a card or link deep in the transcript opens something in the canvas.
 const OpenCanvas = createContext<(item: CanvasItem) => void>(() => {})
@@ -169,6 +180,8 @@ export function Chat({
   incognito,
   project,
   onSwitch,
+  recent,
+  onOpenSession,
 }: Props) {
   const { transcript, joinError, submit, resend, discard, interrupt, dropQueued, rename, draft: remoteDraft } = useAgent(
     session.id,
@@ -235,9 +248,14 @@ export function Chat({
   // 40-pixel target is the last thing you want to do.
   const drop = useFileDrop(attachments.add)
 
+  // Earlier sessions picked for the next message; another chat's don't carry over.
+  const [refs, setRefs] = useState<SessionRef[]>([])
+  useEffect(() => setRefs([]), [session.id])
+
   const send = (text: string) => {
-    submit(text, attachments.ready)
+    submit(text, attachments.ready, refs)
     attachments.clear()
+    setRefs([])
     setDraft("")
   }
 
@@ -379,6 +397,7 @@ export function Chat({
       {/* `output/…` links in a reply become downloads from this session, and
           attachments, sent or about to be, open in the canvas. */}
       <OpenCanvas.Provider value={onOpenCanvas}>
+      <OpenSession.Provider value={onOpenSession}>
         <Unsent.Provider value={unsent}>
         <OutputLink.Provider value={renderOutput}>
           <Timeline
@@ -454,6 +473,9 @@ export function Chat({
           busy={busy}
           interrupted={transcript.status === "interrupted"}
           attachments={attachments}
+          refs={refs}
+          setRefs={setRefs}
+          recent={(recent ?? []).filter((s) => s.id !== session.id && s.kind == null)}
           onSubmit={send}
           onInterrupt={interrupt}
           tools={<EffortButton session={session} />}
@@ -462,6 +484,7 @@ export function Chat({
           under={onSwitch && <Grabber onOpen={onSwitch} />}
         />
         </div>
+      </OpenSession.Provider>
       </OpenCanvas.Provider>
     </div>
   )
@@ -1224,6 +1247,7 @@ function ItemView({ item, sessionId, onAnswer }: ItemProps) {
             {item.text.trim() !== "" &&
               (item.origin === "tidy" || item.origin === "handoff" ? <Markdown text={item.text} /> : <Rich text={item.text} />)}
             {item.files.length > 0 && <SentFiles sessionId={sessionId} files={item.files} />}
+            {item.refs.length > 0 && <SentRefs refs={item.refs} />}
             {item.uploads && item.uploads.length > 0 && <LocalFiles files={item.uploads} sending={!item.failed} />}
             {item.queued && <span className="tag">queued</span>}
             {item.origin === "phone" && <span className="tag">phone</span>}
@@ -1663,6 +1687,37 @@ function LocalFiles({ files, sending }: { files: LocalFile[]; sending: boolean }
   )
 }
 
+/** One referenced chat: a one-line pill, its title. */
+function RefChip({ title, onClick, onRemove }: { title: string; onClick?: () => void; onRemove?: () => void }) {
+  return (
+    <span
+      className={"ref-chip" + (onClick ? " clickable" : "")}
+      title={onRemove ? `${title} — the agent reads it if it needs to` : title}
+      onClick={onClick}
+    >
+      <MessageSquare />
+      <span className="ref-chip-title">{title}</span>
+      {onRemove && (
+        <button className="ref-chip-x" title="Remove" onClick={onRemove}>
+          <X />
+        </button>
+      )}
+    </span>
+  )
+}
+
+/** The earlier sessions a message pointed at; a tap opens one. */
+function SentRefs({ refs }: { refs: SessionRef[] }) {
+  const open = useContext(OpenSession)
+  return (
+    <div className="files">
+      {refs.map((r) => (
+        <RefChip key={r.id} title={r.title} onClick={open && (() => open(r.id))} />
+      ))}
+    </div>
+  )
+}
+
 /** The attachments that went out with a message. */
 function SentFiles({ sessionId, files }: { sessionId: string; files: AgentFile[] }) {
   return (
@@ -2000,6 +2055,9 @@ function Composer({
   busy,
   interrupted,
   attachments,
+  refs,
+  setRefs,
+  recent,
   onSubmit,
   onInterrupt,
   tools,
@@ -2010,6 +2068,9 @@ function Composer({
   busy: boolean
   interrupted: boolean
   attachments: Attachments
+  refs: SessionRef[]
+  setRefs: (refs: SessionRef[]) => void
+  recent: AgentInfo[]
   onSubmit: (text: string) => void
   onInterrupt: () => void
   // Beside +: the thinking level.
@@ -2080,7 +2141,7 @@ function Composer({
   // An attachment on its own is a message: dragging in a screenshot and
   // pressing send, with nothing typed, is a normal way to ask about it.
   const sendable =
-    (text.trim() !== "" || attachments.items.length > 0) && !attachments.preparing
+    (text.trim() !== "" || attachments.items.length > 0 || refs.length > 0) && !attachments.preparing
 
   const send = () => {
     if (!sendable) return
@@ -2090,8 +2151,11 @@ function Composer({
 
   return (
     <div className="composer">
-      {attachments.items.length > 0 && (
+      {(attachments.items.length > 0 || refs.length > 0) && (
         <div className="tray">
+          {refs.map((r) => (
+            <RefChip key={r.id} title={r.title} onRemove={() => setRefs(refs.filter((x) => x.id !== r.id))} />
+          ))}
           {attachments.items.map((item) => (
             <AttachmentChip
               key={item.key}
@@ -2135,13 +2199,15 @@ function Composer({
           }}
         />
         <div className="composer-tools">
-          <button
-            className="composer-btn attach"
-            title="Attach files — or drop them anywhere in the conversation"
-            onClick={() => picker.current?.click()}
-          >
-            <Plus />
-          </button>
+          <PlusMenu
+            recent={recent}
+            picked={refs}
+            onFiles={() => picker.current?.click()}
+            onRef={(r) => {
+              setRefs([...refs, r])
+              ref.current?.focus()
+            }}
+          />
           {tools}
         </div>
 
@@ -2263,6 +2329,83 @@ function Composer({
         </div>
       </div>
       {under}
+    </div>
+  )
+}
+
+// How many recent chats the + menu offers, and how many one message may name.
+const RECENT_SHOWN = 8
+const MAX_REFS = 5
+
+/**
+ * The composer's +: attach files, or point the message at a recent chat. The
+ * chat is not loaded into the message — the agent is told where it is and
+ * reads it if it needs to (`Loom.Agent.Refs`).
+ */
+function PlusMenu({
+  recent,
+  picked,
+  onFiles,
+  onRef,
+}: {
+  recent: AgentInfo[]
+  picked: SessionRef[]
+  onFiles: () => void
+  onRef: (ref: SessionRef) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const root = useRef<HTMLDivElement>(null)
+
+  // Closed by a tap anywhere else, or Escape.
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: PointerEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false)
+    document.addEventListener("pointerdown", onDown)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("pointerdown", onDown)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [open])
+
+  const taken = new Set(picked.map((r) => r.id))
+  const shown = recent.filter((s) => !taken.has(s.id)).slice(0, RECENT_SHOWN)
+  const full = picked.length >= MAX_REFS
+
+  return (
+    <div className="plus" ref={root}>
+      <button
+        className={"composer-btn attach" + (open ? " open" : "")}
+        title="Attach files or a recent chat — or drop files anywhere in the conversation"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <Plus />
+      </button>
+      {open && (
+        <div className="plus-pop" role="menu">
+          <button role="menuitem" onClick={() => (setOpen(false), onFiles())}>
+            <Paperclip />
+            <span className="session-menu-label">Files</span>
+          </button>
+          {shown.length > 0 && <div className="plus-head">Recent chats</div>}
+          {shown.map((s) => (
+            <button
+              key={s.id}
+              role="menuitem"
+              disabled={full}
+              title={full ? `At most ${MAX_REFS} chats per message` : (s.title ?? "")}
+              onClick={() => (setOpen(false), onRef({ id: s.id, title: s.title ?? "Untitled" }))}
+            >
+              <MessageSquare />
+              <span className="session-menu-label">{s.title ?? "Untitled"}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

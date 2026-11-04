@@ -179,6 +179,11 @@ function App() {
     () => [...ordinary.filter((s) => !isArchived(s)), ...incognito.filter((s) => s.pinned)],
     [ordinary, incognito],
   )
+  // What the composer's + offers to reference: plain conversations, newest first.
+  const recentChats = useMemo(
+    () => ordinary.filter((s) => s.kind == null && !isArchived(s)).sort((a, b) => lastActive(b) - lastActive(a)),
+    [ordinary],
+  )
   const archived = useMemo(
     () => ordinary.filter(isArchived).sort((a, b) => (b.archived_at ?? 0) - (a.archived_at ?? 0)),
     [ordinary],
@@ -809,6 +814,8 @@ function App() {
         ? (backend?: AgentBackend) => carryOn(active.id, backend)
         : undefined,
     onSwitch: narrow && working.length > 0 ? () => setSwitching(true) : undefined,
+    recent: recentChats,
+    onOpenSession: select,
   }
 
   return (

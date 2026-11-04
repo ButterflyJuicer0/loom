@@ -84,8 +84,13 @@ export type PendingMessage = {
   // Still on this device: uploaded, all at once, before the message goes;
   // they then join `files`.
   uploads?: LocalFile[]
+  // Earlier sessions picked from the + menu; see `Loom.Agent.Refs`.
+  refs?: SessionRef[]
   failed?: string
 }
+
+/** An earlier session a message points at: the model is told where it is. */
+export type SessionRef = { id: string; title: string }
 
 export type Transcript = {
   events: AgentEvent[]
@@ -355,6 +360,8 @@ export type TimelineItem =
       files: AgentFile[]
       // Our own bubble's files not uploaded yet, shown from the device.
       uploads?: LocalFile[]
+      // Earlier sessions it points at, shown as chips.
+      refs: SessionRef[]
       origin?: string
       // When the server took it, ms since the epoch. Absent while it is still
       // our own optimistic bubble.
@@ -436,6 +443,7 @@ export function buildTimeline(t: Transcript): TimelineItem[] {
           kind: "user",
           text: String(p.text ?? ""),
           files: (p.files as AgentFile[] | undefined) ?? [],
+          refs: (p.refs as SessionRef[] | undefined) ?? [],
           origin: p.origin as string | undefined,
           at: event.at,
           queued: p.status === "queued",
@@ -643,6 +651,7 @@ export function buildTimeline(t: Transcript): TimelineItem[] {
       text: p.text,
       files: p.files,
       uploads: p.uploads,
+      refs: p.refs ?? [],
       queued: false,
       pending: true,
       failed: p.failed,

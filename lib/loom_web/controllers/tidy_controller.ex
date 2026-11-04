@@ -331,7 +331,17 @@ defmodule LoomWeb.TidyController do
          {:ok, meta} <- Loom.Agent.Store.read_meta(id) do
       {:ok, safe_info(id) || %{title: meta[:title]}}
     else
-      _ -> tidyable(id)
+      _ -> plain(id)
+    end
+  end
+
+  # Reading is wider than tidying: a pinned conversation is not for tidying,
+  # but is one the user may point a new chat at (`Loom.Agent.Refs`).
+  defp plain(id) do
+    case safe_info(id) do
+      nil -> {:error, "#{id}: no such session"}
+      %{kind: nil} = info when not is_map_key(info, :employee_id) or info.employee_id == nil -> {:ok, info}
+      _ -> {:error, "#{id}: not in Recents, not for reading"}
     end
   end
 
