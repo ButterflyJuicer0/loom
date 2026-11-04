@@ -51,12 +51,16 @@ closed.
 | State | Action | Returns |
 |---|---|---|
 | `:idle` | start a turn | `:started` |
-| `:starting` / `:running` | steer into the current turn | `:steered` |
+| `:starting` / `:running`, `mode: :queue` (the chat) | queue for the next turn | `:queued` |
+| `:starting` / `:running`, otherwise (cron, notices, employees) | steer into the current turn | `:steered` |
 | steer rejected | queue | `:queued` |
 | `:interrupted` | queue + new message, start a turn | `:started` |
 
-Both backends support mid-turn injection natively, so nothing waits for a turn
-to end. The queue only holds two things: messages typed while interrupted, and
+Both backends support mid-turn injection natively, but a message typed in the
+chat waits for the turn to end, as in Claude Code: the work is not cut into, and
+the queue goes out merged as the next turn. `steer_queued/1` ("Send now") steers
+the whole queue into the running turn instead; if that is refused it stays
+queued. Besides those, the queue holds messages typed while interrupted and
 steers that were rejected (Codex's `expectedTurnId` mismatch). It is persisted
 to disk.
 

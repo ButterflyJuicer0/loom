@@ -16,6 +16,17 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **Delete a device's sessions**: in Sessions (a device or this server), the
+  trash button on an open session moves its files to the trash on that
+  machine — macOS Trash, the XDG Trash on Linux, `~/.loom-trash` if neither
+  can be written — so it can be put back. Refused while the session runs. One
+  of Loom's own leaves the sidebar too, into Loom's trash.
+
+### Fixed
+- Device sessions: arguments reach the scan script through `json.loads`, so a
+  `true` or `null` no longer breaks it.
+
 ## [0.6.0] – 2026-11-04
 
 ### Added
