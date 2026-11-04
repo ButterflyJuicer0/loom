@@ -209,30 +209,6 @@
   color: var(--green);
 }
 
-/* A line back, from the card. */
-.bell-reply {
-  display: flex;
-  flex: 1 1 auto;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 3px 3px 3px 12px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--fg) 8%, transparent);
-}
-
-.bell-reply input {
-  flex: 1 1 auto;
-  min-width: 0;
-  border: 0;
-  outline: none;
-  background: transparent;
-  color: var(--fg);
-  font: inherit;
-  /* 16px or more, or iOS zooms the page to it. */
-  font-size: max(0.95rem, 16px);
-}
-
 .bell-send {
   flex: 0 0 auto;
   display: grid;
@@ -343,21 +319,6 @@
   opacity: 0.75;
 }
 
-.bell-panel.chatting {
-  height: 80vh;
-}
-
-.bell-chat {
-  position: relative;
-  display: flex;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.bell-chat .chat.bare .chat-top::before {
-  display: none;
-}
-
 .todo-add {
   display: flex;
   align-items: center;
@@ -459,13 +420,7 @@
   text-align: left;
 }
 
-@media (max-width: 640px) {
-  .bell-panel.chatting {
-    height: 100%;
-  }
-}
-
-/* ── What a card carries to be answered where it is ──────────────────── */
+/* ── What a card carries; the rest is in its own session ──────────────── */
 
 .bell-band.later::before {
   background: transparent;
@@ -473,52 +428,17 @@
   box-sizing: border-box;
 }
 
-/* The background: a few lines, the rest on a tap. */
+/* The start of its brief: two lines; the whole of it opens with the card. */
 .bell-detail {
   margin-top: 4px;
   color: var(--fg-dim);
   font-size: 0.85rem;
   line-height: 1.45;
   overflow-wrap: anywhere;
-  white-space: pre-wrap;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  cursor: pointer;
-}
-
-.bell-detail.open {
-  display: block;
-}
-
-/* The answers its source foresees: pills, as many as it gave. */
-.bell-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 9px;
-}
-
-.bell-option {
-  padding: 6px 12px;
-  border: 1px solid color-mix(in srgb, var(--fg) 22%, transparent);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--fg);
-  font: inherit;
-  font-size: 0.85rem;
-  line-height: 1.3;
-  text-align: left;
-  cursor: pointer;
-}
-
-.bell-option:hover {
-  background: color-mix(in srgb, var(--fg) 7%, transparent);
-}
-
-.bell-option:disabled {
-  opacity: 0.5;
 }
 
 .bell-acts {

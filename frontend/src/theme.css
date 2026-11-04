@@ -39,12 +39,32 @@
   --send-off-fg: #2f2f2f;
   --shadow: rgb(0 0 0 / 45%);
   --scrim: rgb(0 0 0 / 60%);
+  --desktop-inset: 0px;
 }
 
 html,
 body,
 #root {
   background: var(--bg);
+}
+
+/* Leave room around desktop controls, including in a full-screen app. */
+@media (min-width: 641px) {
+  :root {
+    --desktop-inset: 12px;
+  }
+
+  .app {
+    box-sizing: border-box;
+    padding: var(--desktop-inset);
+    background: var(--bg-raised);
+  }
+
+  .main {
+    background: var(--bg);
+    border-radius: 16px;
+    overflow: clip;
+  }
 }
 
 /* The interface in sans… */
@@ -1368,7 +1388,7 @@ pre.code,
 .sidebar {
   zoom: var(--sidebar-scale, 1);
   /* A dragged width leaves the chat at least 400px, the window resized or not. */
-  flex-basis: calc(min(var(--sidebar-w, 16.25rem), 80vw, 100vw - 400px) / var(--sidebar-scale, 1));
+  flex-basis: calc(min(var(--sidebar-w, 16.25rem), 80vw, 100vw - 400px - 2 * var(--desktop-inset)) / var(--sidebar-scale, 1));
 }
 
 /* The desktop sidebar's drag edge (App.tsx): no line, only the cursor. */
@@ -2044,4 +2064,132 @@ body.sidebar-resizing iframe {
 /* A pinned incognito row's unpin: shown always, not only on hover. */
 .session .session-unpin {
   visibility: visible;
+}
+
+/* Meeting mode (Meeting.tsx): the bar over the composer, the folded
+   transcript batches, the quiet "·" turns, and the download dialog. */
+.meeting-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 auto 8px;
+  max-width: var(--chat-width, 48rem);
+  width: 100%;
+  padding: 6px 8px 6px 12px;
+  border-radius: 999px;
+  background: var(--bg-soft, rgba(127, 127, 127, 0.12));
+  font-size: 0.85em;
+  box-sizing: border-box;
+}
+.meeting-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red, #e5484d);
+  flex: none;
+  animation: meeting-pulse 1.6s ease-in-out infinite;
+}
+.meeting-dot.off {
+  background: var(--fg-dim);
+  animation: none;
+}
+@keyframes meeting-pulse {
+  50% { opacity: 0.35; }
+}
+.meeting-time {
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+}
+.meeting-live {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  direction: rtl; /* the newest words stay in view */
+  text-align: left;
+}
+.meeting-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.meeting-btn:hover {
+  background: rgba(127, 127, 127, 0.15);
+}
+.meeting-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.meeting-btn.end {
+  color: var(--red, #e5484d);
+}
+.meeting-fold {
+  align-self: flex-end;
+  max-width: min(36rem, 92%);
+  margin-left: auto;
+}
+.meeting-fold-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: rgba(127, 127, 127, 0.1);
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+.meeting-fold-head svg {
+  width: 14px;
+  height: 14px;
+}
+.meeting-fold.open .meeting-fold-head > svg:last-child {
+  transform: rotate(180deg);
+}
+.meeting-fold-body {
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(127, 127, 127, 0.08);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  font-size: 0.85em;
+  max-height: 50vh;
+  overflow: auto;
+}
+.meeting-quiet {
+  color: var(--fg-dim);
+  padding: 0 4px;
+  line-height: 1;
+}
+.meeting-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(127, 127, 127, 0.18);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.meeting-progress > div {
+  height: 100%;
+  background: var(--fg);
+  transition: width 0.3s;
+}
+.meeting-pct {
+  float: right;
+  font-variant-numeric: tabular-nums;
 }

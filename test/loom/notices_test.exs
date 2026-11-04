@@ -22,7 +22,8 @@ defmodule Loom.NoticesTest do
        tick: :timer.hours(24),
        clock: fn -> :counters.get(clock, 1) end,
        notify: fn title, body, session -> send(test, {:notified, title, body, session}) end,
-       submit: fn session, text -> send(test, {:submitted, session, text}) end}
+       submit: fn session, text -> send(test, {:submitted, session, text}) end,
+       ring: fn title, _body, _session, call? -> send(test, {:rang, title, call?}) end}
     )
 
     on_exit(fn -> File.rm(path) end)
@@ -34,14 +35,18 @@ defmodule Loom.NoticesTest do
 
   defp post(s, attrs, source \\ @emp), do: Notices.post(source, attrs, s)
 
-  test "an urgent one notifies at once; important and the rest do not", %{s: s} do
+  test "0–5 notify at once, one each; the rest do not", %{s: s} do
     {:ok, n} = post(s, %{summary: "部署要批准", priority: 1, needs: "approve", session: "a_1"})
     assert n["status"] == "open" and n["priority"] == 1
     assert_received {:notified, "钱多多 · needs your approval", "部署要批准", "a_1"}
+    assert_received {:rang, "钱多多 · needs your approval", false}
 
     {:ok, _} = post(s, %{summary: "换供应商？", priority: 4}, %{kind: "session", id: "a_2", name: "x"})
+    assert_received {:notified, "x · important", "换供应商？", nil}
     {:ok, _} = post(s, %{summary: "日报", priority: 7}, %{kind: "session", id: "a_3", name: "y"})
     refute_received {:notified, _, _, _}
+    # Only 0–1 ring Bark.
+    refute_received {:rang, _, _}
   end
 
   test "one urgent a day per source; the next is posted as 3", %{s: s} do
@@ -58,6 +63,7 @@ defmodule Loom.NoticesTest do
 
   test "the same key updates the open notice, and notifies only if more urgent", %{s: s} do
     {:ok, a} = post(s, %{summary: "止损没设", priority: 4, key: "stop"})
+    assert_received {:notified, _, "止损没设", _}
     {:ok, b} = post(s, %{summary: "止损没设，收盘前要定", priority: 2, key: "stop"})
     assert a["id"] == b["id"]
     assert b["summary"] =~ "收盘前"
@@ -154,16 +160,17 @@ defmodule Loom.NoticesTest do
     assert m["detail"] == nil and m["options"] == []
   end
 
-  test "later: out of the digest until then, then back with a notification",
+  test "later: quiet until then, then back with a notification",
        %{s: s, set: set} do
     {:ok, n} = post(s, %{summary: "要不要换？", priority: 4, needs: "reply", session: "a_9"})
+    assert_received {:notified, _, _, _}
     assert {:error, _} = Notices.later(n["id"], @ten - 1, s)
     assert {:error, _} = Notices.later(n["id"], @ten + 8 * 24 * @hour, s)
     # Until 21:00.
     {:ok, l} = Notices.later(n["id"], @ten + 11 * @hour, s)
     assert l["later_until"] == @ten + 11 * @hour and l["status"] == "open"
 
-    # 20:05: no digest for it.
+    # 20:05: nothing yet.
     set.(@ten + 10 * @hour + 300_000)
     send(s, :tick)
     _ = Notices.list(s)
@@ -184,27 +191,38 @@ defmodule Loom.NoticesTest do
     assert m["later_until"] == nil
   end
 
-  test "a 2 at night waits for 07:00; 20:00 sends one digest", %{s: s, set: set} do
-    # 23:00
+  test "nothing but a 0 between 00:00 and 07:00; then one by one", %{s: s, set: set} do
+    # 23:00: still the evening.
     set.(@ten + 13 * @hour)
-    {:ok, _} = post(s, %{summary: "夜里的", priority: 2})
-    refute_received {:notified, _, _, _}
+    {:ok, _} = post(s, %{summary: "晚上的", priority: 4})
+    assert_received {:notified, _, "晚上的", _}
+
+    # 01:00: a 0 gets through, the rest are held.
+    set.(@ten + 15 * @hour)
+    {:ok, _} = post(s, %{summary: "夜里的", priority: 3}, %{kind: "dream", id: "d", name: "Dream"})
+    {:ok, n} = post(s, %{summary: "着火了", priority: 0}, %{kind: "session", id: "a_7", name: "z"})
+    assert_received {:notified, "z · urgent", "着火了", nil}
+    # A 0 keeps ringing.
+    assert_received {:rang, "z · urgent", true}
+    {:ok, _} = Notices.later(n["id"], @ten + 16 * @hour, s)
+    {:ok, m} = post(s, %{summary: "推后的", priority: 5}, %{kind: "session", id: "a_8", name: "v"})
+    {:ok, _} = Notices.later(m["id"], @ten + 16 * @hour, s)
     send(s, :tick)
     _ = Notices.list(s)
     refute_received {:notified, _, _, _}
+    # 02:00: put off until now, still night: only the 0 comes back.
+    set.(@ten + 16 * @hour)
+    send(s, :tick)
+    _ = Notices.list(s)
+    assert_received {:notified, "z · reminder", "着火了", nil}
+    refute_received {:notified, _, _, _}
 
-    # 07:10 the next day
+    # 07:10: each on its own, most urgent first.
     set.(@ten + 21 * @hour + 600_000)
     send(s, :tick)
     _ = Notices.list(s)
-    assert_received {:notified, "钱多多 · urgent", "夜里的", nil}
-
-    {:ok, _} = post(s, %{summary: "晚上看", priority: 4}, %{kind: "session", id: "a_5", name: "w"})
-    # 20:05
-    set.(@ten + 34 * @hour + 300_000)
-    send(s, :tick)
-    _ = Notices.list(s)
-    assert_received {:notified, "1 important thing waiting", "w: 晚上看", nil}
+    assert_received {:notified, "v · reminder", "推后的", nil}
+    assert_received {:notified, "Dream · important", "夜里的", nil}
     send(s, :tick)
     _ = Notices.list(s)
     refute_received {:notified, _, _, _}
@@ -216,5 +234,71 @@ defmodule Loom.NoticesTest do
     send(s, :tick)
     assert [%{"status" => "expired"}] = Notices.list(s)
     assert File.read!(path) =~ n["id"]
+  end
+
+  describe "a session of its own" do
+    setup %{path: path} do
+      test = self()
+      name = :"notices_chat_#{System.unique_integer([:positive])}"
+
+      start_supervised!(
+        {Notices,
+         name: name,
+         path: path <> ".chat",
+         tick: :timer.hours(24),
+         clock: fn -> @ten end,
+         notify: fn title, body, session -> send(test, {:notified, title, body, session}) end,
+         submit: fn session, text -> send(test, {:submitted, session, text}) end,
+         ring: fn _, _, _, _ -> :ok end,
+         chat: fn n, chat ->
+           send(test, {:chat, n["summary"], chat})
+           chat || "a_chat_" <> n["id"]
+         end},
+        id: name
+      )
+
+      on_exit(fn -> File.rm(path <> ".chat") end)
+      %{c: name}
+    end
+
+    test "a new notice gets one, the push opens it, an update reuses it", %{c: c} do
+      {:ok, n} =
+        post(c, %{summary: "要批准", priority: 3, needs: "approve", session: "a_src", key: "k"})
+
+      chat = "a_chat_" <> n["id"]
+      assert n["chat"] == chat
+      assert_received {:chat, "要批准", nil}
+      assert_received {:notified, _, "要批准", ^chat}
+
+      {:ok, m} =
+        post(c, %{summary: "要批准，更急了", priority: 2, needs: "approve", session: "a_src", key: "k"})
+
+      assert m["id"] == n["id"] and m["chat"] == chat
+      assert_received {:chat, "要批准，更急了", ^chat}
+      assert Notices.of_chat(chat, c)["id"] == n["id"]
+    end
+
+    test "writing in it does not settle it; its relay does, and tells the source", %{c: c} do
+      {:ok, n} = post(c, %{summary: "换供应商？", priority: 4, needs: "reply", session: "a_src"})
+      Notices.replied(n["chat"], c)
+      assert [%{"status" => "open"}] = Notices.list(c)
+
+      assert {:error, _} = Notices.relay(n["id"], "a_other", "reply", "好", c)
+      refute_received {:submitted, _, _}
+
+      {:ok, d} = Notices.relay(n["id"], n["chat"], "reply", "换成 B，周一开始", c)
+      assert d["status"] == "done" and d["answer"] == "换成 B，周一开始"
+      assert_received {:submitted, "a_src", "↩ 换供应商？\n\n换成 B，周一开始"}
+    end
+
+    test "a read one opened is done, yet its chat can still pass word on", %{c: c} do
+      {:ok, n} = post(c, %{summary: "日报好了", priority: 4, session: "a_src"})
+      {:ok, %{"status" => "done"}} = Notices.read(n["id"], c)
+      {:ok, _} = Notices.relay(n["id"], n["chat"], "approve", nil, c)
+      assert_received {:submitted, "a_src", "✅ Approved: 日报好了"}
+      assert {:error, _} = Notices.relay(n["id"], n["chat"], "reply", " ", c)
+      {:ok, _} = Notices.relay(n["id"], n["chat"], "done", nil, c)
+      refute_received {:submitted, _, _}
+    end
   end
 end

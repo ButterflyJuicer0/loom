@@ -1,0 +1,6 @@
+config.json
+models/
+music/
+logs/
+__pycache__/
+.venv/

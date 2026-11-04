@@ -20,9 +20,17 @@ defmodule Loom.Employees do
     session counts (`{:turn_cost, id, usd}` from the sessions). Spent, the
     work stops — a turn running is interrupted — and the user is asked once;
     what they approve on top counts for that day only.
-  - **Permissions are soft.** The projects it is given are named in its
-    instructions with their workspaces, and it is told to stay in them; it
-    runs as the same user as every other agent, so nothing enforces it.
+  - **Permissions are soft, unless it is given some.** The projects it is
+    given are named in its instructions with their workspaces, and it is told
+    to stay in them; it runs as the same user as every other agent, so
+    nothing enforces it. `permissions` (Claude Code only) are hard: the tools
+    it has and the rules each call must match, which Claude Code itself
+    enforces, under `dontAsk` (`Loom.Agent.Guard`). Set and changed only from
+    a setup chat, with a summary in words, which is all the page shows; its
+    sessions start again with them. What is refused is a line in its Updates.
+  - **Setup chats** (`employee_setup`, in Recents): the user tells an agent
+    what employee they want, or what to change in one; it ends with a
+    `loom-employee` block, which is saved when the turn ends.
   - **A workstation**, if it is given one: a device (`Loom.Nodes`) where
     what it does happens. Its sessions stay here, but every tool call is
     checked first (`Loom.Agent.Guard`, `rel/loom-guard`): commands, files,
@@ -93,7 +101,9 @@ defmodule Loom.Employees do
     "model" => "opus",
     "paused" => false,
     # A device's id: where it works (nil: here).
-    "workstation" => nil
+    "workstation" => nil,
+    # What it may do, enforced by Claude Code (`Loom.Agent.Guard`); nil: anything.
+    "permissions" => nil
   }
 
   # Each backend's own name for its best model, which an employee starts on.
@@ -102,6 +112,11 @@ defmodule Loom.Employees do
   @editable ~w(name role persona language project_ids hours heartbeat_min min_gap_min
                max_turn_min budget_usd budget_turns weekly_report ask_first model
                workstation)
+
+  # Set only from a setup chat (`setup/2`), never from the settings page, so the
+  # rules and the summary the user reads change together and in one place.
+  @setup @editable ++ ~w(permissions)
+  @setup_fence ~r/```loom-employee[ \t]*\n(.*?)\n?```/s
 
   # Settings no longer kept: the daily report (2026-10-31).
   @dropped ~w(daily_report last_daily)
@@ -166,6 +181,26 @@ defmodule Loom.Employees do
   def update_boss(id, text, server \\ @name), do: GenServer.call(server, {:update_boss, id, text})
 
   def delete_boss(id, server \\ @name), do: GenServer.call(server, {:delete_boss, id})
+
+  @doc """
+  Start a setup chat: one to hire an employee in conversation, or, given an
+  id, to change that one. It is in Recents like any chat; what it agrees on
+  is saved when its turns end (see the moduledoc).
+  """
+  def setup_chat(employee_id \\ nil) do
+    with {:ok, e} <- if(employee_id, do: get(employee_id), else: {:ok, nil}) do
+      id = Agent.new_id()
+      title = if e, do: "Set up #{e["name"]}", else: "Hire an employee"
+
+      with {:ok, _} <-
+             Agent.start_session(id, backend: :claude_code, kind: "employee_setup", title: title) do
+        devices = Loom.Nodes.list() |> Enum.map(&%{id: &1.id, name: &1.name})
+        projects = Loom.Projects.list() |> Enum.map(&%{id: &1.id, name: &1.name})
+        Agent.tell(id, Prompt.setup_context(e, projects, devices))
+        {:ok, id}
+      end
+    end
+  end
 
   @doc "Its mirror, for Sleep to read."
   def boss_path, do: Path.join(Agent.Store.home(), "boss.md")
@@ -280,70 +315,13 @@ defmodule Loom.Employees do
   end
 
   def handle_call({:create, attrs}, _from, state) do
-    now = now()
-    id = "e_" <> (:crypto.strong_rand_bytes(6) |> Base.url_encode64(padding: false))
-
-    with {:ok, backend} <- hire_backend(attrs),
-         base =
-           Map.merge(@defaults, %{
-             "name" => nil,
-             "backend" => backend,
-             "model" => @models[backend]
-           }),
-         {:ok, settings} <- settings(base, attrs),
-         :ok <- if(blank?(settings["name"]), do: {:error, "an employee needs a name"}, else: :ok) do
-      e =
-        settings
-        |> Map.merge(%{
-          "id" => id,
-          "created_at" => now,
-          "kpis" => [],
-          "log" => [],
-          "inbox" => [],
-          "spend" => %{},
-          "turns" => %{},
-          "extra" => %{},
-          # The first wake-up is right away: it introduces itself and looks around.
-          "wake_at" => now,
-          "wake_reason" => "first day",
-          "last_weekly" => nil
-        })
-
-      File.mkdir_p!(workspace(id))
-      write_files(e, state.boss)
-
-      with {:ok, chat} <- start_session(e, "employee_chat"),
-           {:ok, work} <- start_session(e, "employee_work") do
-        e = Map.merge(e, %{"chat_session" => chat, "work_session" => work})
-        state = put(state, e)
-        {:reply, {:ok, view(e)}, state}
-      else
-        error -> {:reply, error, state}
-      end
-    else
-      error -> {:reply, error, state}
-    end
+    {reply, state} = hire(state, attrs, @editable)
+    {:reply, reply, state}
   end
 
   def handle_call({:update, id, attrs}, _from, state) do
-    with {:ok, e} <- fetch(state, id),
-         {:ok, settings} <- settings(e, attrs) do
-      changed = Map.take(settings, @editable) != Map.take(e, @editable)
-      moved = settings["workstation"] != e["workstation"]
-      e = Map.merge(e, settings)
-      e = if moved, do: e |> Map.merge(%{"offline_since" => nil}) |> refresh_station(), else: e
-
-      e =
-        if changed,
-          do: note(e, "Your settings were changed by the boss; see the wake-up below."),
-          else: e
-
-      state = put(state, e)
-      if moved, do: moved_station(e)
-      {:reply, {:ok, view(e)}, state}
-    else
-      error -> {:reply, error, state}
-    end
+    {reply, state} = change(state, id, attrs, @editable)
+    {:reply, reply, state}
   end
 
   def handle_call({:delete, id}, _from, state) do
@@ -493,6 +471,16 @@ defmodule Loom.Employees do
       nil ->
         {:noreply, state}
     end
+  end
+
+  def handle_info({:turn_ended, session, %{kind: "employee_setup"} = summary}, state) do
+    text =
+      case summary[:outcome] do
+        {:ok, text} -> text
+        _ -> nil
+      end
+
+    {:noreply, setup(state, session, text)}
   end
 
   def handle_info({:turn_ended, session, summary}, state) do
@@ -759,19 +747,20 @@ defmodule Loom.Employees do
          s when is_binary(s) <- e["work_session"] do
       lines =
         for line <- String.split(body, "\n", trim: true),
-            {:ok, %{"what" => what}} <- [Jason.decode(line)],
-            do: what
+            {:ok, %{"what" => what} = entry} <- [Jason.decode(line)],
+            do: {entry["by"] == "permissions", what}
 
-      {shown, rest} = Enum.split(lines, 5)
-      more = if rest == [], do: "", else: " (and #{length(rest)} more)"
+      for {by_permissions?, whats} <- Enum.group_by(lines, &elem(&1, 0), &elem(&1, 1)) do
+        {shown, rest} = Enum.split(whats, 5)
+        more = if rest == [], do: "", else: " (and #{length(rest)} more)"
 
-      if shown != [],
-        do:
-          Agent.note(
-            s,
-            "Blocked on this server, off its workstation: " <>
-              Enum.map_join(shown, " · ", &String.slice(&1, 0, 120)) <> more
-          )
+        lead =
+          if by_permissions?,
+            do: "Refused by its permissions: ",
+            else: "Blocked on this server, off its workstation: "
+
+        Agent.note(s, lead <> Enum.map_join(shown, " · ", &String.slice(&1, 0, 120)) <> more)
+      end
     end
   catch
     :exit, _ -> :ok
@@ -1035,7 +1024,7 @@ defmodule Loom.Employees do
   defp start_session(e, kind, extra \\ []) do
     id = Agent.new_id()
     # Before it starts: its first spawn already has the hook, or not.
-    write_guard(e, id)
+    write_guard(e, id, kind)
     title = if kind == "employee_chat", do: "#{e["name"]} · chat", else: "#{e["name"]} · work"
 
     {:ok, backend} = Agent.Backend.parse(e["backend"] || "claude_code")
@@ -1214,17 +1203,160 @@ defmodule Loom.Employees do
     end
   end
 
+  # ── Hiring and changing ─────────────────────────────────────────────────
+
+  # `keys`: what `attrs` may set — the settings page's, or a setup chat's.
+  defp hire(state, attrs, keys) do
+    now = now()
+    id = "e_" <> (:crypto.strong_rand_bytes(6) |> Base.url_encode64(padding: false))
+
+    with {:ok, backend} <- hire_backend(attrs),
+         base =
+           Map.merge(@defaults, %{
+             "name" => nil,
+             "backend" => backend,
+             "model" => @models[backend]
+           }),
+         {:ok, settings} <- settings(base, attrs, keys),
+         :ok <- if(blank?(settings["name"]), do: {:error, "an employee needs a name"}, else: :ok) do
+      e =
+        settings
+        |> Map.merge(%{
+          "id" => id,
+          "created_at" => now,
+          "kpis" => [],
+          "log" => [],
+          "inbox" => [],
+          "spend" => %{},
+          "turns" => %{},
+          "extra" => %{},
+          # The first wake-up is right away: it introduces itself and looks around.
+          "wake_at" => now,
+          "wake_reason" => "first day",
+          "last_weekly" => nil
+        })
+
+      File.mkdir_p!(workspace(id))
+      write_files(e, state.boss)
+
+      with {:ok, chat} <- start_session(e, "employee_chat"),
+           {:ok, work} <- start_session(e, "employee_work") do
+        e = Map.merge(e, %{"chat_session" => chat, "work_session" => work})
+        {{:ok, view(e)}, put(state, e)}
+      else
+        error -> {error, state}
+      end
+    else
+      error -> {error, state}
+    end
+  end
+
+  defp change(state, id, attrs, keys) do
+    with {:ok, e} <- fetch(state, id),
+         {:ok, settings} <- settings(e, attrs, keys) do
+      changed = Map.take(settings, @setup) != Map.take(e, @setup)
+      moved = settings["workstation"] != e["workstation"]
+      bound = settings["permissions"] != e["permissions"]
+      e = Map.merge(e, settings)
+      e = if moved, do: e |> Map.merge(%{"offline_since" => nil}) |> refresh_station(), else: e
+
+      e =
+        if changed,
+          do: note(e, "Your settings were changed by the boss; see the wake-up below."),
+          else: e
+
+      state = put(state, e)
+      if moved, do: moved_station(e)
+      if bound and not moved, do: new_permissions(e)
+      {{:ok, view(e)}, state}
+    else
+      error -> {error, state}
+    end
+  end
+
+  # Its sessions start again with the new flags; both hear what they are.
+  defp new_permissions(e) do
+    text =
+      case e["permissions"] do
+        %{"summary" => summary} ->
+          "[Loom: the boss changed your work session's permissions. From now on: #{summary} Loom enforces them there; what they refuse shows in your updates. See .employee/status.md.]"
+
+        _ ->
+          "[Loom: the boss lifted your work session's permissions: it may use every tool again.]"
+      end
+
+    # Only the work session is held to them, so only it starts again.
+    for s <- [e["work_session"]], is_binary(s) do
+      try do
+        if Agent.exists?(s) do
+          Agent.tell(s, text)
+          Agent.reload_backend(s)
+        end
+      catch
+        :exit, _ -> :ok
+      end
+    end
+  end
+
+  # A setup chat's turn ended: the last `loom-employee` block in its reply is
+  # an employee to hire, or with an `id`, the settings to change in one.
+  # Saved or not, the chat says so, to the user and to the agent.
+  defp setup(state, session, text) do
+    with [_ | _] = blocks <- Regex.scan(@setup_fence, text || ""),
+         [_, body] = List.last(blocks) do
+      {reply, state} =
+        case Jason.decode(body) do
+          {:ok, %{"id" => id} = attrs} when is_binary(id) -> change(state, id, attrs, @setup)
+          {:ok, %{} = attrs} -> hire(state, attrs, @setup)
+          _ -> {{:error, "the loom-employee block is not a JSON object"}, state}
+        end
+
+      {note, tell} =
+        case reply do
+          {:ok, v} ->
+            {"Saved: #{v["name"]} (#{v["id"]})#{if v["permissions"], do: ", restricted", else: ""}",
+             "[Loom: saved #{v["name"]}, id #{v["id"]}.]"}
+
+          {:error, why} ->
+            why = if is_binary(why), do: why, else: inspect(why)
+            {"Not saved: " <> why, "[Loom: the loom-employee block was not saved: #{why}]"}
+        end
+
+      Task.start(fn ->
+        try do
+          Agent.note(session, note)
+          Agent.tell(session, tell)
+        catch
+          :exit, _ -> :ok
+        end
+      end)
+
+      state
+    else
+      _ -> state
+    end
+  end
+
   # ── Settings ────────────────────────────────────────────────────────────
 
-  defp settings(base, attrs) do
-    attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end) |> Map.take(@editable)
+  defp settings(base, attrs, keys) do
+    attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end) |> Map.take(keys)
 
-    Enum.reduce_while(attrs, {:ok, base}, fn {key, value}, {:ok, acc} ->
+    attrs
+    |> Enum.reduce_while({:ok, base}, fn {key, value}, {:ok, acc} ->
       case setting(key, value) do
         {:ok, v} -> {:cont, {:ok, Map.put(acc, key, v)}}
         {:error, why} -> {:halt, {:error, why}}
       end
     end)
+    |> case do
+      {:ok, %{"permissions" => %{}, "backend" => b}} when b != "claude_code" ->
+        {:error,
+         "permissions need a Claude Code employee: Kiro and Codex cannot be held to them, so Loom will not pretend"}
+
+      result ->
+        result
+    end
   end
 
   defp setting(key, v) when key in ~w(name role persona language model) do
@@ -1273,6 +1405,32 @@ defmodule Loom.Employees do
     do:
       {:ok,
        list |> Enum.filter(&is_binary/1) |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))}
+
+  defp setting("permissions", nil), do: {:ok, nil}
+
+  defp setting("permissions", %{} = p) do
+    strings? = fn key -> is_list(p[key] || []) and Enum.all?(p[key] || [], &is_binary/1) end
+
+    cond do
+      not (is_list(p["tools"]) and strings?.("tools")) ->
+        {:error, "permissions.tools is a list of Claude Code tool names"}
+
+      not (strings?.("allow") and strings?.("deny")) ->
+        {:error, "permissions.allow and .deny are lists of rules"}
+
+      blank?(p["summary"]) ->
+        {:error, "permissions need a summary for the boss, in words"}
+
+      true ->
+        {:ok,
+         %{
+           "tools" => Enum.uniq(p["tools"]),
+           "allow" => p["allow"] || [],
+           "deny" => p["deny"] || [],
+           "summary" => String.trim(p["summary"])
+         }}
+    end
+  end
 
   defp setting(key, _v), do: {:error, "#{key} is not valid"}
 
@@ -1405,34 +1563,45 @@ defmodule Loom.Employees do
     end
   end
 
-  # The guard's rules for one of its sessions: none without a workstation.
-  defp write_guard(%{"workstation" => nil}, session), do: Guard.put(session, nil)
+  # The guard's rules for one of its sessions: none without a workstation or
+  # permissions. Permissions hold the work session only, where it reads what
+  # can't be trusted on its own; the chat is the boss talking to it, an
+  # ordinary session (the boss's call, 2026-11-02).
+  defp write_guard(%{"permissions" => %{}} = e, session, "employee_chat"),
+    do: write_guard(Map.put(e, "permissions", nil), session, "employee_chat")
 
-  defp write_guard(e, session) do
+  defp write_guard(%{"workstation" => nil, "permissions" => nil}, session, _kind),
+    do: Guard.put(session, nil)
+
+  defp write_guard(e, session, kind) do
     ws = workspace(e["id"])
     # Claude Code keeps its memory for a directory under ~/.claude/projects.
-    memory = Path.expand("~/.claude/projects/" <> String.replace(ws, ~r/[\/.]/, "-"))
+    memory = Path.expand("~/.claude/projects/" <> String.replace(ws, ~r/[^a-zA-Z0-9]/, "-"))
+    skills = Path.expand("~/.claude/skills")
 
     Guard.put(session, %{
       workstation: e["workstation_name"],
       workspace: ws,
       writes: [memory],
-      reads: [
-        memory,
-        Path.expand("~/.claude/skills"),
-        Path.expand("~/.kiro/skills"),
-        dir(e["id"])
-      ],
-      log: Path.join(dir(e["id"]), "blocked.jsonl")
+      reads: [memory, skills, Path.expand("~/.kiro/skills"), dir(e["id"])],
+      log: Path.join(dir(e["id"]), "blocked.jsonl"),
+      permissions: e["permissions"],
+      # A heartbeat between 5 and 60 minutes outlives the default prompt cache
+      # but not the hour-long one: each wake-up would otherwise write its whole
+      # context again (~$0.30 a wake-up on Opus, measured 2026-11-03).
+      cache_1h: kind == "employee_work" and (e["heartbeat_min"] || 0) in 6..59,
+      # What every employee with permissions may do whatever they say: keep
+      # its notes and memory, read its skills and its own files, and post to
+      # the bell. Nothing that could change its own settings.
+      allow_own:
+        for(d <- [ws, memory], t <- ~w(Read Write Edit), do: "#{t}(/#{d}/**)") ++
+          for(d <- [dir(e["id"]), skills], do: "Read(/#{d}/**)") ++
+          ["Bash(loom-notice:*)"]
     })
   rescue
     error -> Logger.warning("Loom.Employees: cannot write #{session}'s guard: #{inspect(error)}")
   end
 
-  # ── The boss profile ────────────────────────────────────────────────────
-
-  # A line added, or put in the place of one (`replaces`), by an employee or
-  # (`e` nil) the user. The same line again is nothing new.
   defp learn(state, item, e, session) do
     now = now()
     norm = &(&1 |> String.downcase() |> String.replace(~r/[\s[:punct:]。，、；：！？]+/u, ""))
@@ -1555,7 +1724,8 @@ defmodule Loom.Employees do
   # `Loom.Employees.Prompt.system/2`), and the mirror of where it stands.
   defp write_files(e, boss) do
     File.mkdir_p!(Path.join(workspace(e["id"]), ".employee"))
-    for s <- [e["chat_session"], e["work_session"]], is_binary(s), do: write_guard(e, s)
+    if is_binary(e["chat_session"]), do: write_guard(e, e["chat_session"], "employee_chat")
+    if is_binary(e["work_session"]), do: write_guard(e, e["work_session"], "employee_work")
 
     File.write!(
       Path.join(dir(e["id"]), "system_employee_work.md"),

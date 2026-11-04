@@ -9,6 +9,7 @@ import {
   Hourglass,
   ListChecks,
   LoaderCircle,
+  Lock,
   MessageCircle,
   PanelLeft,
   Pause,
@@ -159,8 +160,11 @@ export function EmployeePage({
   projects,
   devices,
   chat,
+  onSetupChat,
 }: {
   employee: Employee
+  // A setup chat about this employee: where its permissions are changed.
+  onSetupChat: (employeeId: string) => void
   chatSession: AgentInfo | undefined
   workSession: AgentInfo | undefined
   tab: EmployeeTab
@@ -231,6 +235,7 @@ export function EmployeePage({
               devices={devices}
               onUpsert={onUpsert}
               onDeleted={onDeleted}
+              onSetupChat={() => onSetupChat(employee.id)}
             />
           )}
         </div>
@@ -242,9 +247,9 @@ export function EmployeePage({
 // ── The bar under the header ───────────────────────────────────────────────
 
 const TABS: { id: EmployeeTab; label: string; icon: ReactNode }[] = [
+  { id: "updates", label: "Updates", icon: <Siren /> },
   { id: "chat", label: "Chat", icon: <MessageCircle /> },
   { id: "kpis", label: "KPIs", icon: <ListChecks /> },
-  { id: "updates", label: "Updates", icon: <Siren /> },
   { id: "reports", label: "Reports", icon: <FileText /> },
   { id: "settings", label: "Settings", icon: <SettingsIcon /> },
 ]
@@ -305,6 +310,11 @@ function EmployeeBar({
           {status.label}
           {e.status === "sleeping" && e.wake_at && <span className="emp-dim"> · wakes {clock(e.wake_at)}</span>}
         </span>
+        {e.permissions && (
+          <span className="emp-restricted" title={e.permissions.summary}>
+            <Lock /> Restricted
+          </span>
+        )}
         <span className="emp-spend" title="Spent today, of today's budget">
           <Wallet />
           {short(e, e.spent_today)}
@@ -726,12 +736,14 @@ function SettingsPane({
   devices,
   onUpsert,
   onDeleted,
+  onSetupChat,
 }: {
   employee: Employee
   projects: Project[]
   devices: Device[]
   onUpsert: (e: Employee) => void
   onDeleted: () => void
+  onSetupChat: () => void
 }) {
   // Folded unless in use: most never need it.
   const [advanced, setAdvanced] = useState(e.workstation !== null)
@@ -852,6 +864,25 @@ function SettingsPane({
         onChange={(ev) => setDraft((d) => ({ ...d, ask_first: ev.target.value.split("\n") }))}
       />
       <small className="emp-dim">One per line. It asks with an urgent update, and waits.</small>
+
+      <h2 className="emp-section">Permissions</h2>
+      <p className="emp-permissions">
+        {e.permissions ? (
+          <>
+            <Lock /> {e.permissions.summary}
+          </>
+        ) : (
+          "Every tool, like any chat."
+        )}
+      </p>
+      <small className="emp-dim">
+        {e.permissions
+          ? "Hard, for its work: Claude Code itself refuses anything else there, and refusals show in Updates. Its chat with you is not limited. "
+          : "Hard limits — only some tools, only some commands — are set in conversation. "}
+        <button type="button" className="text-btn emp-inline-btn" onClick={onSetupChat}>
+          Change in a chat
+        </button>
+      </small>
 
       <h2 className="emp-section">Workspace</h2>
       <code className="project-path">{e.workspace}</code>
@@ -1012,10 +1043,13 @@ function NumberField({ label, value, onChange }: { label: string; value: number 
 export function HireDialog({
   projects,
   onHired,
+  onChat,
   onClose,
 }: {
   projects: Project[]
   onHired: (e: Employee) => void
+  // Hire in conversation instead: a setup chat, which saves what you agree on.
+  onChat: () => void
   onClose: () => void
 }) {
   const [draft, setDraft] = useState<EmployeeSettings>({
@@ -1049,6 +1083,22 @@ export function HireDialog({
           }
         }}
       >
+        <button
+          type="button"
+          className="emp-hire-chat"
+          onClick={() => {
+            onChat()
+            onClose()
+          }}
+        >
+          <MessageCircle />
+          <span>
+            <strong>Describe it in a chat</strong>
+            <small className="emp-dim">Say what you need; the agent sets it up, permissions included, once you agree.</small>
+          </span>
+          <ChevronRight />
+        </button>
+        <div className="emp-hire-or emp-dim">or fill in the form</div>
         <div className="emp-field">
           <span className="emp-field-label">Agent</span>
           <div className="emp-chips">

@@ -123,9 +123,7 @@ defmodule Loom.Agent.Backend.ClaudeCode do
     "stream-json",
     "--include-partial-messages",
     "--setting-sources",
-    "user",
-    "--permission-mode",
-    "bypassPermissions"
+    "user"
   ]
 
   # Interrupt and teardown both kill; this is how long we give the tree to
@@ -348,12 +346,14 @@ defmodule Loom.Agent.Backend.ClaudeCode do
 
   defp instruction_args(_handle), do: []
 
-  # A virtual employee on a workstation: every tool call is checked first.
-  defp guard_args(%{loom_id: id}) do
-    if Loom.Agent.Guard.guarded?(id),
-      do: ["--settings", Loom.Agent.Guard.claude_settings()],
-      else: []
-  end
+  # The permission mode, and for a virtual employee its rules: the hook on a
+  # workstation, Claude Code's own permissions when it is given some
+  # (`Loom.Agent.Guard.claude_args/1`). Last, as `--allowedTools` and the like
+  # take every argument up to the next flag.
+  defp guard_args(%{loom_id: id}), do: Loom.Agent.Guard.claude_args(id)
+
+  defp tool_input(handle, message),
+    do: Map.get(Map.get(handle, :inputs, %{}), message["tool_use_id"], %{})
 
   defp message_line(text) do
     Jsonl.line(%{"type" => "user", "message" => %{"role" => "user", "content" => text}})
@@ -601,9 +601,17 @@ defmodule Loom.Agent.Backend.ClaudeCode do
   end
 
   defp translate(handle, %{"type" => "system", "subtype" => "permission_denied"} = message) do
-    # Should be unreachable under bypassPermissions. If it ever fires the model
-    # is being silently crippled, so it has to be loud.
-    Logger.error("ClaudeCode: permission denied despite automode: #{inspect(message)}")
+    # A virtual employee's permissions at work (`dontAsk`): a line in its
+    # Updates. Anywhere else, under bypassPermissions, it should be
+    # unreachable, and the model is being silently crippled, so it is loud.
+    if Loom.Agent.Guard.guarded?(handle.loom_id),
+      do:
+        Loom.Agent.Guard.denied(
+          handle.loom_id,
+          message["tool_name"] || "?",
+          tool_input(handle, message)
+        ),
+      else: Logger.error("ClaudeCode: permission denied despite automode: #{inspect(message)}")
 
     {handle,
      [
@@ -878,6 +886,12 @@ defmodule Loom.Agent.Backend.ClaudeCode do
     # Remembered so the matching tool_result, which only carries the id, can be
     # labelled with the tool that produced it.
     handle = %{handle | tools: Map.put(handle.tools, id, name)}
+
+    # And its input, for a call a virtual employee's permissions refuse: the
+    # refusal names only the tool (see the permission_denied clause).
+    inputs = Map.get(handle, :inputs, %{})
+    inputs = if map_size(inputs) > 50, do: %{}, else: inputs
+    handle = Map.put(handle, :inputs, Map.put(inputs, id, Map.get(block, "input", %{})))
 
     {handle,
      [

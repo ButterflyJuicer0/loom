@@ -61,8 +61,28 @@ defmodule Loom.Agent.Store do
     Application.get_env(:loom, Loom.Agent, [])[:data_dir] || Path.join(home(), "sessions")
   end
 
+  # The only shape a session id is ever allowed to take. `Agent.new_id/0`
+  # produces `a_` + url-safe chars, and `start_given/4` enforces a stricter
+  # version of this at the edge; the broader class here keeps every historical
+  # id loom has ever generated readable while still forbidding anything that
+  # could be a path (no `.`, no `/`, no `..`, no empty string). Validating here
+  # means every derived path — `files_dir/1`, `output_dir/1`, `events_path/1`,
+  # `delete_session/1` — inherits containment, so a `:id` URL segment that
+  # percent-decoded to `..` cannot reach `File.rm_rf!/1`.
+  @id_pattern ~r/\A[A-Za-z0-9_-]+\z/
+
+  @doc "Whether a string is shaped like a session id (and therefore safe as a path segment)."
+  def valid_id?(id) when is_binary(id), do: Regex.match?(@id_pattern, id)
+  def valid_id?(_), do: false
+
   @doc "Directory holding one session's header, logs, and session memory."
-  def session_dir(id), do: Path.join(data_dir(), id)
+  def session_dir(id) do
+    unless valid_id?(id) do
+      raise ArgumentError, "invalid session id: #{inspect(id)}"
+    end
+
+    Path.join(data_dir(), id)
+  end
 
   @doc "A session's transcript log, for reading it some other way than `read_events/2`."
   def events_path(id), do: Path.join(session_dir(id), @events_file)
@@ -125,6 +145,17 @@ defmodule Loom.Agent.Store do
   end
 
   defp copy_legacy(legacy, id) do
+    # Legacy directories we did not write may not match the id shape; those are
+    # already-known junk (stray test temp directories), so skip rather than
+    # raise from `session_dir/1`'s validation.
+    if not valid_id?(id) do
+      false
+    else
+      do_copy_legacy(legacy, id)
+    end
+  end
+
+  defp do_copy_legacy(legacy, id) do
     from = Path.join(legacy, id)
     to = session_dir(id)
 

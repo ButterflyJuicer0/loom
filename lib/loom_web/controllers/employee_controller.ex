@@ -17,7 +17,17 @@ defmodule LoomWeb.EmployeeController do
   # POST /api/employees — `name`, and any of the settings.
   def create(conn, params), do: reply(conn, Employees.create(params))
 
-  # PATCH /api/employees/:id — any of the settings.
+  # POST /api/employees/setup — a setup chat, to hire in conversation, or with
+  # `employee_id` to change that one (`Employees.setup_chat/1`).
+  def setup(conn, params) do
+    case Employees.setup_chat(params["employee_id"]) do
+      {:ok, id} -> json(conn, %{session: id})
+      error -> reply(conn, error)
+    end
+  end
+
+  # PATCH /api/employees/:id — any of the settings (not `permissions`: those
+  # are set from a setup chat only).
   def update(conn, %{"id" => id} = params),
     do: reply(conn, Employees.update(id, Map.delete(params, "id")))
 

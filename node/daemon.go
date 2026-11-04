@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -14,6 +15,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -35,6 +37,8 @@ type config struct {
 	URL   string `json:"url"`
 	Token string `json:"token"`
 	Shell string `json:"shell"`
+	// Optional; see mqtt.go. Absent means no broker and no open port.
+	MQTT *mqttConfig `json:"mqtt,omitempty"`
 }
 
 // stateDir is where loom-node keeps what it writes as it runs: its logs, and
@@ -75,8 +79,10 @@ func loadConfig() (*config, error) {
 }
 
 func runDaemon(args []string) int {
-	if len(args) != 0 {
-		fmt.Fprintln(os.Stderr, "usage: loom-node daemon")
+	fs := flag.NewFlagSet("daemon", flag.ContinueOnError)
+	mqttAddr := fs.String("mqtt", "", "also run an MQTT broker on this address (overrides mqtt.listen)")
+	if fs.Parse(args) != nil || fs.NArg() != 0 {
+		fmt.Fprintln(os.Stderr, "usage: loom-node daemon [--mqtt HOST:PORT]")
 		return 2
 	}
 	log.SetFlags(log.LstdFlags)
@@ -84,11 +90,28 @@ func runDaemon(args []string) int {
 	ensureControlLink()
 	log.Printf("loom-node %s starting", version)
 
+	// The broker is set up once: changing it needs a restart.
+	if cfg, err := loadConfig(); err == nil && (cfg.MQTT != nil || *mqttAddr != "") {
+		mc := mqttConfig{}
+		if cfg.MQTT != nil {
+			mc = *cfg.MQTT
+		}
+		if *mqttAddr != "" {
+			mc.Listen = *mqttAddr
+		}
+		if mc.Listen != "" {
+			startMQTT(&mc)
+		}
+	} else if *mqttAddr != "" {
+		log.Printf("mqtt: not started: %v", err)
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	hostname, _ := os.Hostname()
 	backoff := time.Second
+	warnedCleartext := false
 
 	for ctx.Err() == nil {
 		// Read every time, so a reinstall takes effect without a restart.
@@ -97,6 +120,12 @@ func runDaemon(args []string) int {
 			log.Printf("cannot start: %v", err)
 			sleep(ctx, time.Minute)
 			continue
+		}
+		// Still allowed (a LAN setup without TLS), but whoever is on the path
+		// can read the token and send this device commands.
+		if !warnedCleartext && strings.HasPrefix(cfg.URL, "http://") {
+			log.Printf("warning: %s is cleartext http; anyone on the network path can impersonate loom to this device. Reinstall with an https:// url.", cfg.URL)
+			warnedCleartext = true
 		}
 
 		info := map[string]string{
@@ -297,6 +326,10 @@ func (s *session) exec(r request) {
 	timeout := time.Duration(r.Timeout) * time.Second
 	if timeout <= 0 {
 		timeout = 120 * time.Second
+	}
+	// loom caps exec at 1800 s; a frame asking for more is not loom's.
+	if timeout > 1800*time.Second {
+		timeout = 1800 * time.Second
 	}
 
 	var mu sync.Mutex

@@ -67,3 +67,12 @@ buttons. Once is enough; if they say no, go on here.
 A session opened from another's "Continue in a new chat" begins with a Loom
 note naming the old one. Follow it: read the old one (`--files`) unless its
 conversation was copied in, write the handoff summary it asks for, and wait.
+
+## Sessions the user referenced
+
+A message may end with "The user referenced N earlier Loom sessions", each
+with its title, id and directory — the user picked them from the composer's
++ menu. They are the session the user means; skip the search. Read one only
+when the request needs it (`loom-session read ID`, `--files` as above); a
+quick question may not. Whether you read it or not, don't open with the
+我读了… line unless you did.

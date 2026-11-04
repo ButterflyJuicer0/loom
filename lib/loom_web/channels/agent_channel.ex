@@ -4,7 +4,8 @@ defmodule LoomWeb.AgentChannel do
   devices join `agent:<id>` at once and all of them both receive and send.
 
   Client → server:
-    - "submit"    : %{"text" => _, "client_msg_id" => _, "files" => [%{"path" => _}]}
+    - "submit"    : %{"text" => _, "client_msg_id" => _, "files" => [%{"path" => _}],
+                      "refs" => [%{"id" => _}]}
     - "interrupt" : %{}
 
   Server → client:
@@ -54,7 +55,8 @@ defmodule LoomWeb.AgentChannel do
            files: file_paths(params),
            # Mid-turn, the chat's messages wait for the turn by default;
            # "steer" puts one straight into it.
-           mode: if(params["mode"] == "steer", do: :steer, else: :queue)
+           mode: if(params["mode"] == "steer", do: :steer, else: :queue),
+           refs: ref_ids(params)
          ) do
       {:ok, disposition} ->
         # The user wrote here: what the bell had open for this session is answered.
@@ -137,4 +139,15 @@ defmodule LoomWeb.AgentChannel do
   end
 
   defp file_paths(_params), do: []
+
+  # Earlier sessions picked from the + menu, by id; `Loom.Agent.Refs` checks them.
+  defp ref_ids(%{"refs" => refs}) when is_list(refs) do
+    Enum.flat_map(refs, fn
+      %{"id" => id} when is_binary(id) -> [id]
+      id when is_binary(id) -> [id]
+      _ -> []
+    end)
+  end
+
+  defp ref_ids(_params), do: []
 end

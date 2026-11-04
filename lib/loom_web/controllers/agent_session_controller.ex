@@ -77,19 +77,26 @@ defmodule LoomWeb.AgentSessionController do
     conn
     |> put_status(:unprocessable_entity)
     |> json(%{
-      error: "`backend` must be \"claude_code\" or \"codex\"",
+      error: "`backend` must be \"claude_code\", \"codex\" or \"kiro\"",
       given: given
     })
   end
 
   # POST /api/agents/:id/continue — carry it on in a new session, which
-  # starts on a handoff summary; see `Loom.Agent.Carry`.
-  def continue(conn, %{"id" => id}) do
-    case Agent.Carry.continue(id) do
-      {:ok, new} -> conn |> put_status(:created) |> json(view(Agent.info(new)))
+  # starts on a handoff summary; see `Loom.Agent.Carry`. An optional
+  # `backend` moves it to another engine.
+  def continue(conn, %{"id" => id} = params) do
+    with {:ok, backend} <- continue_backend(params["backend"]),
+         {:ok, new} <- Agent.Carry.continue(id, backend) do
+      conn |> put_status(:created) |> json(view(Agent.info(new)))
+    else
+      :error -> bad_backend(conn, params["backend"])
       {:error, reason} -> conn |> put_status(:unprocessable_entity) |> json(%{error: reason})
     end
   end
+
+  defp continue_backend(nil), do: {:ok, nil}
+  defp continue_backend(given), do: Loom.Agent.Backend.parse(given)
 
   # PATCH /api/agents/:id — any of `title` (rename), `pinned`, `archived`, `done`, `seen_seq` (read
   # up to there), `effort` (the thinking level, null for the default), `model` (likewise) and `project_id` (move into that project, or out of any with
@@ -130,9 +137,21 @@ defmodule LoomWeb.AgentSessionController do
   # Stopping without deleting would be a trap in a UI: the session vanishes
   # from the list, then comes back at the next boot because `Agent.Bootstrap`
   # restores everything on disk.
+  #
+  # The id has to be gated here the same way the file-plane routes gate theirs:
+  # Plug percent-decodes each path segment, so `:id` could arrive as `..` and
+  # the whole call chain (`Agent.delete_session/1` → `Store.delete_session/1`
+  # → `File.rm_rf!/1`) would turn into a path traversal. `Store.session_dir/1`
+  # now rejects anything that is not shaped like a session id; this guard
+  # turns that rejection into a 404 instead of a 500 and matches the behaviour
+  # of every other `:id`-bearing route.
   def delete(conn, %{"id" => id}) do
-    Agent.delete_session(id)
-    send_resp(conn, :no_content, "")
+    if Loom.Agent.Store.valid_id?(id) and Agent.exists?(id) do
+      Agent.delete_session(id)
+      send_resp(conn, :no_content, "")
+    else
+      conn |> put_status(:not_found) |> json(%{error: "no such session"})
+    end
   end
 
   defp build_opts(params) do

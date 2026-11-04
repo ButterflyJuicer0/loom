@@ -22,7 +22,9 @@ export function Login({ onSuccess }: Props) {
       setError(
         err instanceof Error && err.message === "invalid_password"
           ? "Wrong password"
-          : "Login failed",
+          : err instanceof Error && err.message === "too_many_attempts"
+            ? "Too many tries — wait a few minutes"
+            : "Login failed",
       )
       setPassword("")
     } finally {

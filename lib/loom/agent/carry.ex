@@ -11,6 +11,9 @@ defmodule Loom.Agent.Carry do
       with `loom-session read --files`. An error or a classifier's stop is not
       carried over, nor is a context near its limit.
 
+  It may move to another backend (the header's arrow beside "Continue in new
+  chat"): then it is always `:read`, as no engine can resume another's store.
+
   Either way its first turn is a handoff summary of at most five lines, then
   it waits for the user. The new session is on the user's own model, not the
   old one's: a fallback the old one fell to is not inherited.
@@ -23,14 +26,15 @@ defmodule Loom.Agent.Carry do
   # would be compacted soon anyway, by Claude Code and not by a summary.
   @long 0.6
 
-  @doc "Start the new session; `{:ok, id}`."
-  def continue(id) do
+  @doc "Start the new session, on `backend` or else the old one's; `{:ok, id}`."
+  def continue(id, backend \\ nil) do
     with {:ok, info} <- source(id) do
-      how = how(id, info)
+      backend = backend || info.backend
+      how = if backend == info.backend, do: how(id, info), else: {:read, :backend}
       new = Agent.new_id()
 
       opts =
-        [backend: info.backend, title: info.title, title_by: info[:title_by] || "tidy"] ++
+        [backend: backend, title: info.title, title_by: info[:title_by] || "tidy"] ++
           if(info.project_id, do: [project: info.project_id], else: []) ++
           fork(how, id)
 

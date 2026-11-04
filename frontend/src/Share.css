@@ -1,0 +1,280 @@
+/* "Share…": the conversation as exchanges to pick, over the timeline's place.
+   See Share.tsx. */
+/* Over the timeline, under the header, so the conversation keeps its place
+   for when picking is done; the composer is hidden meanwhile. */
+.share-view {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.chat.sharing .to-bottom {
+  display: none;
+}
+
+.share-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: calc(var(--top-h, 0px) + 8px) 14px calc(96px + env(safe-area-inset-bottom));
+}
+
+.share-inner {
+  max-width: var(--measure);
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.share-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--fg-dim);
+  font-size: 0.923rem;
+}
+
+.share-seg {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  opacity: 0.38;
+  transition: opacity 0.15s;
+}
+
+.share-seg.on {
+  opacity: 1;
+}
+
+.share-check {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.share-check svg {
+  width: 22px;
+  height: 22px;
+}
+
+.share-seg {
+  cursor: pointer;
+}
+
+.share-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Long exchanges stay readable but do not take the screen: picking is the job. */
+.share-body > .bubble.assistant {
+  max-height: 14rem;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 75%, transparent);
+  mask-image: linear-gradient(to bottom, #000 75%, transparent);
+}
+
+.share-user {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.share-user > .bubble.user {
+  white-space: pre-wrap;
+  max-height: 8rem;
+  overflow: hidden;
+}
+
+.share-bar-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 6px 14px max(14px, env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+
+/* The composer's glass, in the composer's place. */
+.share-bar {
+  pointer-events: auto;
+  max-width: var(--measure);
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 1.75rem;
+  background: color-mix(in srgb, var(--composer) 18%, transparent);
+  -webkit-backdrop-filter: blur(4px) saturate(1.4);
+  backdrop-filter: blur(4px) saturate(1.4);
+  border: 1px solid color-mix(in srgb, var(--fg) 26%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent),
+    0 8px 28px var(--shadow);
+}
+
+.share-cancel,
+.share-go {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 2.5rem;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.share-cancel {
+  background: none;
+  color: var(--fg);
+}
+
+.share-go {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.share-go:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.share-go svg {
+  width: 16px;
+  height: 16px;
+}
+
+.share-count {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  color: var(--fg-dim);
+  font-size: 0.923rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-count .failed {
+  color: var(--red);
+}
+
+/* The drawn image, as ChatGPT's share dialog shows its card: a title, the
+   preview in a rounded frame, then a row of round buttons with labels. */
+.share-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: var(--scrim);
+  /* Under <body>, out of the app's own font. */
+  font-family: var(--ui);
+  color: var(--fg);
+}
+
+.share-dialog {
+  width: min(36rem, 100%);
+  max-height: calc(100dvh - 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px 10px;
+  border-radius: 24px;
+  background: var(--surface-modal);
+  box-shadow: 0 16px 48px var(--shadow);
+}
+
+.share-dialog-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-dialog-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 1.08rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-preview {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 58dvh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.share-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.share-actions {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  padding-top: 4px;
+}
+
+.share-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.846rem;
+  cursor: pointer;
+}
+
+.share-action-icon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--bg-card);
+}
+
+.share-action-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.share-said {
+  min-height: 1.2em;
+  text-align: center;
+  color: var(--fg-dim);
+  font-size: 0.846rem;
+}

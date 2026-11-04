@@ -340,6 +340,16 @@
   padding: 6px;
 }
 
+.device-group + .device-group {
+  margin-top: 6px;
+}
+
+.device-group-label {
+  padding: 6px 8px 2px;
+  font-size: 0.8em;
+  color: var(--fg-dim);
+}
+
 .device-empty {
   padding: 12px;
   color: var(--fg-dim);
@@ -1278,8 +1288,8 @@
 
 @media (display-mode: window-controls-overlay) {
   .app {
-    --wco-left: env(titlebar-area-x, 0px);
-    --wco-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
+    --wco-left: max(0px, calc(env(titlebar-area-x, 0px) - var(--desktop-inset)));
+    --wco-right: max(0px, calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) - var(--desktop-inset)));
   }
 
   .sidebar-head,

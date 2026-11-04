@@ -65,8 +65,8 @@ defmodule LoomWeb.TidyController do
   # turn's last. Tool calls and thinking are left out; `files` adds what the
   # tool calls left behind, as paths (`Loom.Agent.Manifest`).
   def read(conn, %{"id" => id} = params) do
-    with {:ok, _caller} <- caller(conn),
-         {:ok, info} <- tidyable(id) do
+    with {:ok, caller} <- caller(conn),
+         {:ok, info} <- readable(id, caller) do
       json(conn, %{
         id: id,
         title: info.title,
@@ -322,6 +322,28 @@ defmodule LoomWeb.TidyController do
 
   defp tidyable?(info),
     do: info.kind == nil and info[:employee_id] == nil and info.pinned != true
+
+  # A bell notice's own session may read the session the notice came from,
+  # employee's or Dream's though it be: that is what it is there to explain.
+  defp readable(id, caller) do
+    with "notice" <- caller[:kind],
+         %{"session" => ^id} <- Loom.Notices.of_chat(caller.id),
+         {:ok, meta} <- Loom.Agent.Store.read_meta(id) do
+      {:ok, safe_info(id) || %{title: meta[:title]}}
+    else
+      _ -> plain(id)
+    end
+  end
+
+  # Reading is wider than tidying: a pinned conversation is not for tidying,
+  # but is one the user may point a new chat at (`Loom.Agent.Refs`).
+  defp plain(id) do
+    case safe_info(id) do
+      nil -> {:error, "#{id}: no such session"}
+      %{kind: nil} = info when not is_map_key(info, :employee_id) or info.employee_id == nil -> {:ok, info}
+      _ -> {:error, "#{id}: not in Recents, not for reading"}
+    end
+  end
 
   defp tidyable(id) do
     case safe_info(id) do

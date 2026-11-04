@@ -14,6 +14,7 @@ import {
   emptyTranscript,
   newClientMsgId,
   type PendingMessage,
+  type SessionRef,
   type AgentDelta,
   type AgentEvent,
   type Snapshot,
@@ -90,7 +91,7 @@ function withUnsent(t: Transcript, id: string): Transcript {
 type Agent = {
   transcript: Transcript
   joinError: string | null
-  submit: (text: string, uploads?: LocalFile[]) => void
+  submit: (text: string, uploads?: LocalFile[], refs?: SessionRef[]) => void
   // A message that did not get through: send it again, or let it go.
   resend: (clientMsgId: string) => void
   discard: (clientMsgId: string) => void
@@ -289,6 +290,7 @@ export function useAgent(
           // Already uploaded; only the path travels. The server checks it is
           // one of this session's own attachments before the model is told.
           files: p.files.map((f) => ({ path: f.path, name: f.name })),
+          refs: (p.refs ?? []).map((r) => ({ id: r.id })),
         },
         SUBMIT_TIMEOUT_MS,
       )
@@ -341,11 +343,11 @@ export function useAgent(
 
 
   const submit = useCallback(
-    (text: string, uploads: LocalFile[] = []) => {
+    (text: string, uploads: LocalFile[] = [], refs: SessionRef[] = []) => {
       // Optimistic: the bubble appears now and is replaced by the
       // authoritative `:user` event, matched on `client_msg_id`. Without that
       // id the sender would see its own message twice.
-      const p: PendingMessage = { clientMsgId: newClientMsgId(), text, files: [], uploads }
+      const p: PendingMessage = { clientMsgId: newClientMsgId(), text, files: [], uploads, refs }
       setTranscript((t) => addPending(t, p))
       send(p)
     },

@@ -69,6 +69,7 @@ export async function login(password: string): Promise<string> {
     body: JSON.stringify({ password }),
   })
   if (res.status === 401) throw new Error("invalid_password")
+  if (res.status === 429) throw new Error("too_many_attempts")
   if (!res.ok) throw new Error(`login failed: ${res.status}`)
   const data = await res.json()
   setToken(data.token)
@@ -158,9 +159,10 @@ export type AgentInfo = {
   // "dream" for a scope's sleep session, which the lists leave out and the
   // moon opens; see `Sleep.tsx`. "employee_chat" and "employee_work" for a
   // virtual employee's, opened from its page; see `Employees.tsx`. "bell" for
-  // the bell's chat; "task" for a task's own session, opened from the task.
+  // the bell's chat; "task" for a task's own session, opened from the task;
+  // "notice" for a bell notice's own, listed once the user wrote in it.
   // Older servers do not send it.
-  kind?: "dream" | "employee_chat" | "employee_work" | "bell" | "task" | "incognito" | null
+  kind?: "dream" | "employee_chat" | "employee_work" | "employee_setup" | "bell" | "task" | "incognito" | "notice" | null
   employee_id?: string | null
   // When a safety classifier stopped the model here (ms), and why; a session
   // kept for a fixed job is then carried on in a fresh one. See
@@ -472,10 +474,14 @@ export function updateAgent(
 
 /**
  * Carry a session on in a new one, which starts on a handoff summary: a copy
- * of its conversation when that is healthy, else it reads it. The new session.
+ * of its conversation when that is healthy, else it reads it. The new session,
+ * on `backend` if given (another engine always reads it).
  */
-export function continueAgent(id: string): Promise<AgentInfo> {
-  return apiCall(`/api/agents/${id}/continue`, { method: "POST" })
+export function continueAgent(id: string, backend?: AgentBackend): Promise<AgentInfo> {
+  return apiCall(`/api/agents/${id}/continue`, {
+    method: "POST",
+    ...(backend ? { body: JSON.stringify({ backend }) } : {}),
+  })
 }
 
 /** A session's unsent composer text, on the server; "" when there is none. */
@@ -1193,6 +1199,9 @@ export type Employee = {
   // is kept when the device is removed.
   workstation: string | null
   workstation_name: string | null
+  // Hard limits Claude Code holds it to, set from a setup chat only; the page
+  // shows the summary. Null: every tool, as any session.
+  permissions: { summary: string } | null
   status: EmployeeStatus
   chat_session: string
   work_session: string
@@ -1250,6 +1259,13 @@ const one = async (call: Promise<{ employee: Employee }>) => (await call).employ
 
 export function createEmployee(attrs: EmployeeSettings): Promise<Employee> {
   return one(apiCall("/api/employees", { method: "POST", body: JSON.stringify(attrs) }))
+}
+
+/** A setup chat: hire in conversation, or with an id, change that employee. Its session id. */
+export async function employeeSetup(employeeId?: string): Promise<string> {
+  const body = employeeId ? { employee_id: employeeId } : {}
+  return (await apiCall<{ session: string }>("/api/employees/setup", { method: "POST", body: JSON.stringify(body) }))
+    .session
 }
 
 export function updateEmployee(id: string, attrs: EmployeeSettings): Promise<Employee> {
@@ -1341,8 +1357,11 @@ export function deleteBossLine(id: string): Promise<BossLine[]> {
 export type Notice = {
   id: string
   source: { kind: "employee" | "dream" | "session"; id: string; name: string }
-  // The session it points to, where it is answered.
+  // The session it came from, which its decision is passed to.
   session: string | null
+  // Its own session, which opens on its brief: where it is asked about and
+  // decided. Older notices have none, and open where they came from.
+  chat?: string | null
   summary: string
   priority: number
   key: string | null
@@ -1352,10 +1371,8 @@ export type Notice = {
   note: string | null
   // "approve", "reject", or what the user wrote back from the bell.
   answer?: string
-  // The background, beyond the one line.
+  // Its brief, markdown: what its own session opens on.
   detail?: string | null
-  // The answers its source foresees, each a button.
-  options?: string[]
   // The `seq` of the message that started the turn it came from.
   anchor?: number | null
   // Put off until then (ms); back in the list after.
@@ -1372,11 +1389,6 @@ export function readNotice(id: string): Promise<Notice> {
   return notice(apiCall(`/api/notices/${id}/read`, { method: "POST" }))
 }
 
-/** Answered in the bell: the text goes to its session as the user's. */
-export function replyNotice(id: string, text: string): Promise<Notice> {
-  return notice(apiCall(`/api/notices/${id}/reply`, { method: "POST", body: JSON.stringify({ text }) }))
-}
-
 /** Put off until `until` (ms): out of the list until then, then notified again. */
 export function laterNotice(id: string, until: number): Promise<Notice> {
   return notice(apiCall(`/api/notices/${id}/later`, { method: "POST", body: JSON.stringify({ until }) }))
@@ -1385,11 +1397,6 @@ export function laterNotice(id: string, until: number): Promise<Notice> {
 /** Settled by hand: nothing more to do about it. */
 export function dismissNotice(id: string): Promise<Notice> {
   return notice(apiCall(`/api/notices/${id}/dismiss`, { method: "POST" }))
-}
-
-/** Approved or rejected from the bell; its session is told. */
-export function answerNotice(id: string, approve: boolean): Promise<Notice> {
-  return notice(apiCall(`/api/notices/${id}/answer`, { method: "POST", body: JSON.stringify({ approve }) }))
 }
 
 /** The user's own list, beside the bell: added by them, or by an agent they told to. */
@@ -1420,7 +1427,19 @@ export async function deleteTodo(id: string): Promise<void> {
   await apiCall(`/api/todos/${id}`, { method: "DELETE" })
 }
 
-/** The bell's chat session, made on first use. */
-export async function bellSession(): Promise<string> {
-  return (await apiCall<{ session: string }>("/api/notices/session", { method: "POST" })).session
+/**
+ * Draw a rendered page of the conversation as one long PNG on the server
+ * (headless Chrome; no network, no script). See `Loom.Snapshot`.
+ */
+export async function shareImage(id: string, html: string, css: string): Promise<Blob> {
+  const body = new FormData()
+  body.append("css", css)
+  body.append("page", new Blob([html], { type: "text/html" }), "page.html")
+  const res = await fetch(`/api/agents/${id}/image`, { method: "POST", headers: authHeaders(), body })
+  if (res.status === 401) throw unauthorized()
+  if (!res.ok) {
+    const err = await res.json().catch(() => null)
+    throw new Error(err?.error ?? `image failed: ${res.status}`)
+  }
+  return res.blob()
 }

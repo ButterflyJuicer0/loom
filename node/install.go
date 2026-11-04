@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,7 +30,12 @@ const (
 func runInstall(args []string) int {
 	fs := flag.NewFlagSet("install", flag.ContinueOnError)
 	origin := fs.String("url", "", "loom's address, e.g. https://loom.example.com")
-	token := fs.String("token", "", "this device's token, from the install script")
+	// --token is kept for backward compatibility with older install scripts
+	// but exposes the secret in the process table (ps, /proc/<pid>/cmdline).
+	// New install scripts pipe the token on stdin and pass --token-stdin.
+	// LOOM_NODE_TOKEN is a third option for callers that cannot pipe stdin.
+	token := fs.String("token", "", "this device's token (DEPRECATED: visible in the process table; prefer --token-stdin)")
+	tokenStdin := fs.Bool("token-stdin", false, "read the device's token from stdin (one line, trailing newline optional)")
 	// Not $SHELL on Windows: Git Bash's is an MSYS path. The daemon picks
 	// PowerShell when it starts.
 	shellDefault := os.Getenv("SHELL")
@@ -39,13 +46,38 @@ func runInstall(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
-	if *origin == "" || *token == "" {
-		fmt.Fprintln(os.Stderr, "usage: loom-node install --url URL --token TOKEN [--shell SHELL]\n"+
+
+	// Resolve the token. Precedence: --token-stdin, then LOOM_NODE_TOKEN, then
+	// the --token flag (deprecated: visible in argv). Scrub the flag slot and
+	// the env var after reading so a later ps/env dump cannot recover it.
+	tokenValue := ""
+	switch {
+	case *tokenStdin:
+		t, err := readTokenFromStdin()
+		if err != nil {
+			return die("reading --token-stdin: %v", err)
+		}
+		tokenValue = t
+	case os.Getenv("LOOM_NODE_TOKEN") != "":
+		tokenValue = os.Getenv("LOOM_NODE_TOKEN")
+		os.Unsetenv("LOOM_NODE_TOKEN")
+	case *token != "":
+		tokenValue = *token
+		fmt.Fprintln(os.Stderr, "loom-node: warning: --token on the command line is visible in the process table;"+
+			" the install script should use --token-stdin instead")
+	}
+	// Best-effort scrub of the parsed flag copy so later heap/argv reads see
+	// an empty string. The original argv slot itself is harder to overwrite
+	// portably in Go; the install script no longer puts the secret there.
+	*token = ""
+
+	if *origin == "" || tokenValue == "" {
+		fmt.Fprintln(os.Stderr, "usage: loom-node install --url URL --token-stdin [--shell SHELL]\n"+
 			"(the install command in loom's Devices dialog does this for you)")
 		return 2
 	}
 
-	cfg := config{URL: strings.TrimRight(*origin, "/"), Token: *token, Shell: *shell}
+	cfg := config{URL: strings.TrimRight(*origin, "/"), Token: tokenValue, Shell: *shell}
 	if err := writeConfig(cfg); err != nil {
 		return die("%v", err)
 	}
@@ -78,6 +110,22 @@ func runInstall(args []string) int {
 	fmt.Println("loom-node is running; the device shows a green dot under Devices in loom once it connects")
 	fmt.Println("log of what loom ran here: ~/.local/state/loom-node/log")
 	return 0
+}
+
+// readTokenFromStdin reads a single line (or EOF-terminated blob) from stdin
+// and returns it with any trailing CR/LF stripped. An empty token is an
+// error: it almost certainly means the caller forgot to pipe anything.
+func readTokenFromStdin() (string, error) {
+	r := bufio.NewReader(os.Stdin)
+	line, err := r.ReadString('\n')
+	if err != nil && err != io.EOF {
+		return "", err
+	}
+	line = strings.TrimRight(line, "\r\n")
+	if line == "" {
+		return "", errors.New("empty token on stdin")
+	}
+	return line, nil
 }
 
 func writeConfig(cfg config) error {
