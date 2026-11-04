@@ -51,7 +51,10 @@ defmodule LoomWeb.AgentChannel do
     case Agent.submit(socket.assigns.session_id, text,
            origin: socket.assigns.device,
            client_msg_id: Map.get(params, "client_msg_id"),
-           files: file_paths(params)
+           files: file_paths(params),
+           # Mid-turn, the chat's messages wait for the turn by default;
+           # "steer" puts one straight into it.
+           mode: if(params["mode"] == "steer", do: :steer, else: :queue)
          ) do
       {:ok, disposition} ->
         # The user wrote here: what the bell had open for this session is answered.
@@ -72,6 +75,13 @@ defmodule LoomWeb.AgentChannel do
     # not immediately start something else. The user continues by typing, which
     # sends the parked messages along with the new one.
     case Agent.interrupt(socket.assigns.session_id) do
+      :ok -> {:reply, :ok, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: inspect(reason)}}, socket}
+    end
+  end
+
+  def handle_in("steer_queued", _params, socket) do
+    case Agent.steer_queued(socket.assigns.session_id) do
       :ok -> {:reply, :ok, socket}
       {:error, reason} -> {:reply, {:error, %{reason: inspect(reason)}}, socket}
     end

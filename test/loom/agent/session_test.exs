@@ -178,6 +178,50 @@ defmodule Loom.Agent.SessionTest do
       assert Agent.info(id).queued == 0
     end
 
+    test "with mode: :queue a mid-turn message waits for the turn to end" do
+      # What the chat asks for: the work is not cut into, and the queue goes
+      # out as the next turn, as in Claude Code.
+      id = new_session()
+      Agent.submit(id, "first")
+      BackendStub.await_turn()
+
+      assert {:ok, :queued} = Agent.submit(id, "then this", mode: :queue)
+      assert {:ok, :queued} = Agent.submit(id, "and this", mode: :queue)
+      BackendStub.refute_steer()
+      assert Agent.info(id).queue == ["then this", "and this"]
+
+      finish_turn(id)
+      assert BackendStub.await_turn() == "then this\n\nand this"
+    end
+
+    test "steer_queued sends the waiting messages into the running turn" do
+      id = new_session()
+      Agent.submit(id, "first")
+      BackendStub.await_turn()
+      Agent.submit(id, "then this", mode: :queue)
+
+      assert :ok = Agent.steer_queued(id)
+      assert BackendStub.await_steer() == "then this"
+      assert Agent.info(id).queued == 0
+
+      finish_turn(id)
+      BackendStub.refute_turn()
+    end
+
+    test "a refused steer_queued keeps the messages queued" do
+      id = new_session()
+      Agent.submit(id, "first")
+      BackendStub.await_turn()
+      Agent.submit(id, "then this", mode: :queue)
+      BackendStub.fail_next_steer()
+
+      assert {:error, _} = Agent.steer_queued(id)
+      assert Agent.info(id).queue == ["then this"]
+
+      finish_turn(id)
+      assert BackendStub.await_turn() == "then this"
+    end
+
     test "a refused steer falls back to the queue rather than being lost" do
       # Codex refuses when the turn ended between us deciding to steer and the
       # call landing. Late beats lost.

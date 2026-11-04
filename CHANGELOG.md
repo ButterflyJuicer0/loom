@@ -15,6 +15,11 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Message queue**: a message typed while the agent is working no longer
+  cuts into the turn. It waits in the queue above the composer and goes out
+  as the next turn when this one ends — several at once go together, as in
+  Claude Code. **Send now** puts them into the running turn after all; ✕
+  drops one. Cron, notices and employees still steer as before.
 - **A device's sessions**: Devices → **sessions** on an online Mac or Linux
   box lists the Claude Code and Codex sessions on it, the running ones on
   top (busy or idle, pid), each with its folder, model, size and last reply;

@@ -94,26 +94,38 @@ defmodule LoomWeb.AgentChannelTest do
       assert_push "event", %{kind: :user, payload: %{client_msg_id: "c1", status: :sent}}
     end
 
-    test "a message sent mid-turn reports that it joined the turn", %{id: id} do
+    test "a message sent mid-turn waits for the turn and is broadcast", %{id: id} do
       {:ok, _snapshot, socket} = attach(id)
       push(socket, "submit", %{"text" => "first"})
       BackendStub.await_turn()
-
-      ref = push(socket, "submit", %{"text" => "second"})
-      assert_reply ref, :ok, %{status: :steered}
-
-      assert BackendStub.await_steer() == "second"
-    end
-
-    test "a refused steer comes back queued and is broadcast", %{id: id} do
-      {:ok, _snapshot, socket} = attach(id)
-      push(socket, "submit", %{"text" => "first"})
-      BackendStub.await_turn()
-      BackendStub.fail_next_steer()
 
       ref = push(socket, "submit", %{"text" => "second"})
       assert_reply ref, :ok, %{status: :queued}
       assert_push "event", %{kind: :queue, payload: %{queued: 1}}
+      BackendStub.refute_steer()
+    end
+
+    test "mode steer puts a mid-turn message into the turn", %{id: id} do
+      {:ok, _snapshot, socket} = attach(id)
+      push(socket, "submit", %{"text" => "first"})
+      BackendStub.await_turn()
+
+      ref = push(socket, "submit", %{"text" => "second", "mode" => "steer"})
+      assert_reply ref, :ok, %{status: :steered}
+      assert BackendStub.await_steer() == "second"
+    end
+
+    test "steer_queued sends the waiting messages into the turn", %{id: id} do
+      {:ok, _snapshot, socket} = attach(id)
+      push(socket, "submit", %{"text" => "first"})
+      BackendStub.await_turn()
+      push(socket, "submit", %{"text" => "second"})
+      assert_push "event", %{kind: :queue, payload: %{queued: 1}}
+
+      ref = push(socket, "steer_queued", %{})
+      assert_reply ref, :ok
+      assert BackendStub.await_steer() == "second"
+      assert_push "event", %{kind: :queue, payload: %{queued: 0}}
     end
 
     test "a submit with no text is rejected rather than crashing the channel", %{id: id} do
