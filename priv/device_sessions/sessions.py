@@ -4,12 +4,13 @@
 #   ARGS["op"] == "list":       the agent sessions on this machine, newest first
 #   ARGS["op"] == "transcript": the last messages of one session file
 #
-# Read-only: it opens files under ~/.claude and ~/.codex and nothing else.
+# Read-only: it opens files under ~/.claude, ~/.codex and ~/.kiro and nothing else.
 import glob, json, os, socket, sys, time
 
 HOME = os.path.expanduser("~")
 CLAUDE = os.path.join(HOME, ".claude")
 CODEX = os.path.join(HOME, ".codex")
+KIRO = os.path.join(HOME, ".kiro")
 MAX_TEXT = 4000
 
 
@@ -210,6 +211,77 @@ def codex_transcript(path, limit):
     return out[-limit:], len(out)
 
 
+# ── Kiro ──────────────────────────────────────────────────────────────────
+# ~/.kiro/sessions/cli/<id>.json is the header (title, cwd, why it was made),
+# <id>.jsonl the conversation: "Prompt" (the user) and "AssistantMessage"
+# events, each with `content` blocks of `kind` text / toolUse / …
+
+
+def kiro_blocks(data):
+    content = (data or {}).get("content") or []
+    text, tools = [], []
+    for b in content if isinstance(content, list) else []:
+        if not isinstance(b, dict):
+            continue
+        k, d = b.get("kind"), b.get("data")
+        if k == "text" and isinstance(d, str):
+            text.append(d)
+        elif k and "tool" in k.lower() and "result" not in k.lower() and isinstance(d, dict):
+            tools.append(tool_label(d.get("name") or d.get("toolName"), d.get("input") or d.get("args")))
+    return "\n".join(text), tools
+
+
+def kiro_header(path):
+    try:
+        return json.load(open(path[:-1], encoding="utf-8", errors="replace"))  # .jsonl -> .json
+    except Exception:
+        return {}
+
+
+def kiro_summary(path):
+    h = kiro_header(path)
+    s = {"agent": "kiro", "id": h.get("session_id") or os.path.basename(path)[:-6], "file": path,
+         "title": h.get("title"), "first": None, "last": None, "cwd": h.get("cwd"), "model": None,
+         "branch": None, "messages": 0, "started": h.get("created_at")}
+    for d in lines(path):
+        body, _ = kiro_blocks(d.get("data"))
+        if d.get("kind") == "Prompt" and not is_noise(body):
+            s["messages"] += 1
+            s["first"] = s["first"] or clip(body, 160)
+        elif d.get("kind") == "AssistantMessage" and body.strip():
+            s["messages"] += 1
+            s["last"] = body
+    s["last"] = clip(s["last"], 220) if s["last"] else None
+    return s
+
+
+def kiro_transcript(path, limit):
+    out = []
+    for d in lines(path):
+        k = d.get("kind")
+        body, tools = kiro_blocks(d.get("data"))
+        if k == "Prompt":
+            if not is_noise(body):
+                out.append({"role": "user", "text": body[:MAX_TEXT], "at": None})
+        elif k == "AssistantMessage" and (body.strip() or tools):
+            if out and out[-1]["role"] == "assistant" and not out[-1]["text"].strip():
+                out[-1]["text"] = body[:MAX_TEXT]
+                out[-1]["tools"] += tools
+            else:
+                out.append({"role": "assistant", "text": body[:MAX_TEXT], "tools": tools, "at": None})
+    return out[-limit:], len(out)
+
+
+def kiro_files():
+    files = []
+    for f in glob.glob(os.path.join(KIRO, "sessions", "cli", "*.jsonl")):
+        # Kiro's own helpers (subagents) make most of these; they are not the user's.
+        if kiro_header(f).get("session_created_reason") == "subagent":
+            continue
+        files.append(f)
+    return files
+
+
 # ── Entry points ──────────────────────────────────────────────────────────
 
 
@@ -256,6 +328,18 @@ def list_sessions(limit):
             s["live"] = True
             s["status"] = "recent"
         sessions.append(s)
+    kfiles = kiro_files()
+    kfiles.sort(key=lambda f: os.path.getmtime(f), reverse=True)
+    for f in kfiles[: max(limit // 2, 10)]:
+        try:
+            s = kiro_summary(f)
+        except Exception:
+            continue
+        s["updated"] = os.path.getmtime(f)
+        if time.time() - s["updated"] < 120:
+            s["live"] = True
+            s["status"] = "recent"
+        sessions.append(s)
     sessions = [s for s in sessions if s["messages"] > 0 or s.get("live")]
     sessions.sort(key=lambda s: (bool(s.get("live")), s["updated"]), reverse=True)
     for s in sessions:
@@ -264,18 +348,23 @@ def list_sessions(limit):
     counts = {
         "claude": len(glob.glob(os.path.join(CLAUDE, "projects", "*", "*.jsonl"))),
         "codex": len(glob.glob(os.path.join(CODEX, "sessions", "**", "*.jsonl"), recursive=True)),
+        "kiro": len(kfiles),
     }
     return {"host": socket.gethostname(), "home": HOME, "sessions": sessions, "totals": counts}
 
 
 def transcript(agent, path, limit):
     real = os.path.realpath(path)
-    root = os.path.realpath(os.path.join(CLAUDE, "projects") if agent == "claude" else os.path.join(CODEX, "sessions"))
+    roots = {"claude": os.path.join(CLAUDE, "projects"), "codex": os.path.join(CODEX, "sessions"),
+             "kiro": os.path.join(KIRO, "sessions")}
+    if agent not in roots:
+        return {"error": "unknown agent"}
+    root = os.path.realpath(roots[agent])
     if not real.startswith(root + os.sep) or not real.endswith(".jsonl"):
         return {"error": "not a session file"}
     if not os.path.isfile(real):
         return {"error": "that session file is gone"}
-    msgs, total = (claude_transcript if agent == "claude" else codex_transcript)(real, limit)
+    msgs, total = {"claude": claude_transcript, "codex": codex_transcript, "kiro": kiro_transcript}[agent](real, limit)
     return {"messages": msgs, "total": total,
             "updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(os.path.getmtime(real)))}
 

@@ -1,13 +1,22 @@
 defmodule LoomWeb.DeviceSessionsController do
   @moduledoc """
-  The agent sessions on a device — Claude Code and Codex, running or past —
-  for the Devices dialog's Sessions view.
+  The agent sessions on a device — Claude Code, Codex and Kiro, running or
+  past — for the Sessions view (the sidebar's Device sessions, the Devices
+  dialog's **sessions**).
 
   Nothing is kept on this side: each request runs
   `priv/device_sessions/sessions.py` on the device through its channel (the
   same path as `loom-node exec`, see `LoomWeb.NodeController`) and returns what
-  it prints. The script only reads `~/.claude` and `~/.codex` there, and a
-  transcript is only ever read from inside those.
+  it prints. The script only reads `~/.claude`, `~/.codex` and `~/.kiro`
+  there, and a transcript is only ever read from inside those.
+
+  `"host"` is this server, the one Loom runs on, as if it were a device: the
+  same script runs here directly. Its sessions include Loom's own, and those
+  are marked with their Loom id (`loom_id`, `loom_title`), so they open as
+  themselves rather than being continued into a copy.
+
+  Every session carries `source`, the device id (or `"host"`) it is on, so a
+  pick that mixes them knows where to read each one.
 
   The device needs `python3`, so macOS and Linux/WSL; others get a 422.
 
@@ -18,9 +27,11 @@ defmodule LoomWeb.DeviceSessionsController do
       agent works where the original did — the device, through `loom-node` —
       and may resume the original there (`claude --resume`) when the whole
       history matters.
-    - `pick/2` reads a task the user described and names the device sessions
-      most likely to be that work (`Loom.OneShot`), with a reason each; when
-      the model cannot be reached it falls back to matching words.
+    - `pick/2` reads a task the user described and names the sessions most
+      likely to be that work (`Loom.OneShot`), with a reason each; when the
+      model cannot be reached it falls back to matching words. On a device it
+      searches this server's history too — the main agent's — so a task
+      begun in Loom is found from any device's view.
   """
   use LoomWeb, :controller
 
@@ -30,6 +41,7 @@ defmodule LoomWeb.DeviceSessionsController do
   @await_ms 5_000
   @timeout_s 60
   @max_out 8 * 1024 * 1024
+  @bootstrap "import base64,sys;exec(compile(base64.b64decode(sys.argv[1]),'loom-sessions','exec'))"
 
   def index(conn, %{"id" => id} = params) do
     limit = params |> Map.get("limit", "40") |> to_int(40) |> min(200) |> max(1)
@@ -37,42 +49,74 @@ defmodule LoomWeb.DeviceSessionsController do
   end
 
   def show(conn, %{"id" => id, "agent" => agent, "file" => file} = params)
-      when agent in ~w(claude codex) do
+      when agent in ~w(claude codex kiro) do
     limit = params |> Map.get("limit", "120") |> to_int(120) |> min(500) |> max(1)
     run(conn, id, %{"op" => "transcript", "agent" => agent, "file" => file, "limit" => limit})
   end
 
   def show(conn, _params),
-    do: conn |> put_status(400) |> json(%{error: "agent (claude or codex) and file are required"})
+    do:
+      conn
+      |> put_status(400)
+      |> json(%{error: "agent (claude, codex or kiro) and file are required"})
 
   # POST /api/devices/:id/sessions/continue — `agent`, `file`, and optional
   # `instruction` (what to do next; with one the new session starts at once)
   # and `backend` (the Loom session's engine, `claude_code` by default).
   def continue(conn, %{"id" => id, "agent" => agent, "file" => file} = params)
-      when agent in ~w(claude codex) and is_binary(file) do
+      when agent in ~w(claude codex kiro) and is_binary(file) do
     instruction = params |> Map.get("instruction", "") |> to_string() |> String.trim()
 
     with {:ok, backend} <- backend(params["backend"]),
          {:ok, node} <- find(id),
          {:ok, list} <- scan(node, %{"op" => "list", "limit" => 200}),
-         {:ok, session} <- find_session(list, file),
-         {:ok, tail} <-
-           scan(node, %{"op" => "transcript", "agent" => agent, "file" => file, "limit" => 30}),
-         {:ok, new_id} <- start_continuation(node, list, session, tail, instruction, backend) do
-      json(conn, %{id: new_id, started: instruction != ""})
+         {:ok, session} <- find_session(list, file) do
+      # One of Loom's own: it is opened, not copied.
+      case session["loom_id"] do
+        loom_id when is_binary(loom_id) ->
+          json(conn, %{id: loom_id, started: false, existing: true})
+
+        _ ->
+          with {:ok, tail} <-
+                 scan(node, %{
+                   "op" => "transcript",
+                   "agent" => agent,
+                   "file" => file,
+                   "limit" => 30
+                 }),
+               {:ok, new_id} <-
+                 start_continuation(node, list, session, tail, instruction, backend) do
+            json(conn, %{id: new_id, started: instruction != ""})
+          else
+            {:error, status, message} -> conn |> put_status(status) |> json(%{error: message})
+          end
+      end
     else
       {:error, status, message} -> conn |> put_status(status) |> json(%{error: message})
     end
   end
 
   def continue(conn, _params),
-    do: conn |> put_status(400) |> json(%{error: "agent (claude or codex) and file are required"})
+    do:
+      conn
+      |> put_status(400)
+      |> json(%{error: "agent (claude, codex or kiro) and file are required"})
 
   # POST /api/devices/:id/sessions/pick — `task`, in the user's words.
   def pick(conn, %{"id" => id, "task" => task}) when is_binary(task) and task != "" do
     with {:ok, node} <- find(id),
          {:ok, list} <- scan(node, %{"op" => "list", "limit" => 60}) do
-      sessions = list["sessions"] || []
+      # The main agent's history too, unless that is what is being searched;
+      # a host that cannot be read just adds nothing.
+      extra =
+        with false <- node[:host] == true,
+             {:ok, host_list} <- scan(host_node(), %{"op" => "list", "limit" => 40}) do
+          host_list["sessions"] || []
+        else
+          _ -> []
+        end
+
+      sessions = (list["sessions"] || []) ++ extra
       {picks, by} = choose(String.trim(task), sessions)
       json(conn, %{picks: picks, by: by})
     else
@@ -92,15 +136,74 @@ defmodule LoomWeb.DeviceSessionsController do
   end
 
   defp scan(node, args) do
-    with :ok <- supported(node),
-         {:ok, pid} <- reach(node),
-         {:ok, out} <- exec(pid, command(args)),
+    with {:ok, out} <- run_script(node, args),
          {:ok, result} <- decode(out) do
       case result do
         %{"error" => message} -> {:error, 422, message}
+        %{"sessions" => sessions} -> {:ok, %{result | "sessions" => tag(sessions, node)}}
         _ -> {:ok, result}
       end
     end
+  end
+
+  defp run_script(%{host: true}, args) do
+    script = Base.encode64(source(args))
+    task = Task.async(fn -> System.cmd("python3", ["-c", @bootstrap, script]) end)
+
+    case Task.yield(task, @timeout_s * 1000) || Task.shutdown(task, :brutal_kill) do
+      {:ok, {out, 0}} -> {:ok, out}
+      {:ok, {_out, code}} -> {:error, 502, "the scan failed on this server (exit #{code})"}
+      nil -> {:error, 504, "the scan of this server did not finish in time"}
+    end
+  end
+
+  defp run_script(node, args) do
+    with :ok <- supported(node),
+         {:ok, pid} <- reach(node) do
+      exec(pid, command(args))
+    end
+  end
+
+  # Where each session is, and, on this server, which Loom session it is.
+  defp tag(sessions, node) do
+    owners = if node[:host], do: loom_owners(), else: %{}
+
+    Enum.map(sessions, fn s ->
+      s = Map.put(s, "source", node.id)
+
+      case owners[{s["agent"], s["id"]}] do
+        nil -> s
+        {loom_id, title} -> Map.merge(s, %{"loom_id" => loom_id, "loom_title" => title})
+      end
+    end)
+  end
+
+  # {agent, backend session id} => {Loom id, Loom title}, from every Loom
+  # session's header: each backend keeps its own id there.
+  defp loom_owners do
+    alias Loom.Agent.Backend
+
+    for meta <- Loom.Agent.Store.list_metas(),
+        {agent, key} <- [claude: :cc_session_id, codex: :codex_thread_id, kiro: :kiro_session_id],
+        sid = Backend.meta_get(meta, key),
+        is_binary(sid),
+        into: %{} do
+      {{Atom.to_string(agent), sid},
+       {Backend.meta_get(meta, :id), Backend.meta_get(meta, :title)}}
+    end
+  end
+
+  @doc "This server, as a device whose sessions can be listed."
+  def host_node do
+    os =
+      case :os.type() do
+        {:unix, :darwin} -> "darwin"
+        {:unix, _} -> "linux"
+        {:win32, _} -> "windows"
+      end
+
+    arch = :erlang.system_info(:system_architecture) |> to_string() |> String.split("-") |> hd()
+    %{id: "host", name: "this server", os: os, arch: arch, host: true}
   end
 
   # ── Continuing ──────────────────────────────────────────────────────────
@@ -142,13 +245,15 @@ defmodule LoomWeb.DeviceSessionsController do
   # What the user sees (`display`) and what the agent is given (`prompt`).
   @doc false
   def brief(node, list, s, tail, instruction) do
-    agent = if s["agent"] == "codex", do: "Codex", else: "Claude Code"
+    agent = agent_label(s["agent"])
     cwd = s["cwd"] || list["home"] || "~"
     title = s["title"] || s["first"] || s["id"]
+    host? = node[:host] == true
+    where = if host?, do: "on **this server**", else: "on **#{node.name}**"
 
     display =
       [
-        "↪ Continuing **#{title}** — a #{agent} session on **#{node.name}**",
+        "↪ Continuing **#{title}** — a #{agent} session #{where}",
         "",
         "`#{cwd}` · `#{s["id"]}` · #{s["messages"]} messages · last active #{s["updated"]}",
         if(instruction != "", do: "\n" <> quote_lines(instruction))
@@ -157,9 +262,29 @@ defmodule LoomWeb.DeviceSessionsController do
       |> Enum.join("\n")
 
     resume =
-      if s["agent"] == "codex",
-        do: "codex exec resume #{s["id"]} \"<message>\"",
-        else: "claude -p --resume #{s["id"]} \"<message>\""
+      case s["agent"] do
+        "codex" ->
+          "codex exec resume #{s["id"]} \"<message>\""
+
+        "kiro" ->
+          "kiro-cli chat --resume (see `kiro-cli chat --help` for picking session #{s["id"]})"
+
+        _ ->
+          "claude -p --resume #{s["id"]} \"<message>\""
+      end
+
+    {intro, reach, work, resume_line} =
+      if host? do
+        {"[Loom: the user picked a #{agent} session on this server (the host Loom runs on) and wants it carried on from here, in this Loom session. The work lives here, in its folder.]",
+         "- Where: this server, so run commands directly (no loom-node)",
+         "- Work in #{cwd}, as that session did. Check the current state before changing anything: files may have moved on since.",
+         "- If the full history is needed, the original session can be resumed here: `cd #{shell(cwd)} && #{resume}`. Say so before doing it."}
+      else
+        {"[Loom: the user picked a #{agent} session on their device \"#{node.name}\" and wants it carried on from here, in this Loom session. The work lives on that device, not on this host.]",
+         "- Device: #{node.name} (#{node.os}/#{node.arch}), reached with `loom-node exec #{node.name} --cwd #{shell(cwd)} -- '<command>'` (see the loom-node skill; `loom-node read`/`write` for files)",
+         "- Work on #{node.name} in #{cwd} through loom-node, as that session did. Check the current state there before changing anything: files may have moved on since.",
+         "- If the full history is needed, the original session can be resumed on the device itself: `loom-node exec #{node.name} --cwd #{shell(cwd)} --timeout 1800 -- '#{resume}'`. Say so before doing it."}
+      end
 
     turns =
       (tail["messages"] || [])
@@ -173,10 +298,10 @@ defmodule LoomWeb.DeviceSessionsController do
       )
 
     prompt = """
-    [Loom: the user picked a #{agent} session on their device "#{node.name}" and wants it carried on from here, in this Loom session. The work lives on that device, not on this host.]
+    #{intro}
 
     ## The session being continued
-    - Device: #{node.name} (#{node.os}/#{node.arch}), reached with `loom-node exec #{node.name} --cwd #{shell(cwd)} -- '<command>'` (see the loom-node skill; `loom-node read`/`write` for files)
+    #{reach}
     - Working directory there: #{cwd}
     - #{agent} session id: #{s["id"]}#{if s["branch"], do: " · git branch #{s["branch"]}", else: ""}#{if s["model"], do: " · model #{s["model"]}", else: ""}
     - Transcript file there: #{s["file"]} (#{tail["total"] || s["messages"]} messages in all)
@@ -188,8 +313,8 @@ defmodule LoomWeb.DeviceSessionsController do
     #{turns}
 
     ## How to carry on
-    - Work on #{node.name} in #{cwd} through loom-node, as that session did. Check the current state there before changing anything: files may have moved on since.
-    - If the full history is needed, the original session can be resumed on the device itself: `loom-node exec #{node.name} --cwd #{shell(cwd)} --timeout 1800 -- '#{resume}'`. Say so before doing it.
+    #{work}
+    #{resume_line}
     - Reply in the user's language.
 
     ## What the user wants now
@@ -198,6 +323,10 @@ defmodule LoomWeb.DeviceSessionsController do
 
     {display, prompt}
   end
+
+  defp agent_label("codex"), do: "Codex"
+  defp agent_label("kiro"), do: "Kiro"
+  defp agent_label(_), do: "Claude Code"
 
   defp turn(%{"role" => "user", "text" => t}), do: "**User:** " <> clip(t, 1_500)
 
@@ -242,8 +371,10 @@ defmodule LoomWeb.DeviceSessionsController do
       candidates
       |> Enum.with_index()
       |> Enum.map_join("\n", fn {s, i} ->
-        "#{i}. [#{s["agent"]}#{if s["live"], do: ", running", else: ""}] " <>
-          "title: #{s["title"] || "-"} | first: #{short(s["first"], 160)} | last: #{short(s["last"], 200)} | " <>
+        where = if s["source"] == "host", do: ", on the Loom server", else: ""
+
+        "#{i}. [#{s["agent"]}#{where}#{if s["live"], do: ", running", else: ""}] " <>
+          "title: #{s["loom_title"] || s["title"] || "-"} | first: #{short(s["first"], 160)} | last: #{short(s["last"], 200)} | " <>
           "folder: #{s["cwd"]} | updated: #{s["updated"]} | #{s["messages"]} msgs"
       end)
 
@@ -256,7 +387,15 @@ defmodule LoomWeb.DeviceSessionsController do
        |> Enum.uniq_by(& &1["i"])
        |> Enum.take(3)
        |> Enum.map(fn p ->
-         %{file: Enum.at(candidates, p["i"])["file"], score: p["score"], reason: p["reason"]}
+         s = Enum.at(candidates, p["i"])
+
+         %{
+           file: s["file"],
+           source: s["source"],
+           session: s,
+           score: p["score"],
+           reason: p["reason"]
+         }
        end)}
     else
       _ -> :error
@@ -275,7 +414,11 @@ defmodule LoomWeb.DeviceSessionsController do
     |> Enum.map(fn s ->
       have =
         terms(
-          Enum.join([s["title"], s["first"], s["last"], s["cwd"]] |> Enum.reject(&is_nil/1), " ")
+          Enum.join(
+            [s["loom_title"], s["title"], s["first"], s["last"], s["cwd"]]
+            |> Enum.reject(&is_nil/1),
+            " "
+          )
         )
 
       hits = MapSet.intersection(want, have) |> MapSet.size()
@@ -287,6 +430,8 @@ defmodule LoomWeb.DeviceSessionsController do
     |> Enum.map(fn {s, hits} ->
       %{
         file: s["file"],
+        source: s["source"],
+        session: s,
         score: min(100, round(100 * hits / max(MapSet.size(want), 1))),
         reason: "#{hits} matching terms"
       }
@@ -311,6 +456,8 @@ defmodule LoomWeb.DeviceSessionsController do
     MapSet.new(words ++ cjk)
   end
 
+  defp find("host"), do: {:ok, host_node()}
+
   defp find(id) do
     case Enum.find(Nodes.list(), &(&1.id == id)) do
       nil -> {:error, 404, "no such device"}
@@ -332,12 +479,9 @@ defmodule LoomWeb.DeviceSessionsController do
   end
 
   # The script travels as an argument, base64'd, so no shell quoting can touch it.
-  defp command(args) do
-    source = "ARGS = " <> Jason.encode!(args) <> "\n" <> script()
-    b64 = Base.encode64(source)
+  defp command(args), do: ~s|python3 -c "#{@bootstrap}" #{Base.encode64(source(args))}|
 
-    ~s|python3 -c "import base64,sys;exec(compile(base64.b64decode(sys.argv[1]),'loom-sessions','exec'))" #{b64}|
-  end
+  defp source(args), do: "ARGS = " <> Jason.encode!(args) <> "\n" <> script()
 
   defp script do
     :loom |> :code.priv_dir() |> Path.join("device_sessions/sessions.py") |> File.read!()

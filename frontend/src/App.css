@@ -2200,3 +2200,24 @@
   opacity: 0.5;
   cursor: default;
 }
+
+.dsess-agent.kiro {
+  color: #9b6bff;
+  background: color-mix(in srgb, #9b6bff 15%, transparent);
+}
+
+/* Where a session is, when it is not where the dialog is: "server", "Loom". */
+.dsess-where {
+  flex: 0 0 auto;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--fg-dim);
+  font-size: 0.692rem;
+  line-height: 1.5;
+}
+
+.dsess-where.loom {
+  border-color: color-mix(in srgb, var(--green) 50%, transparent);
+  color: var(--green);
+}

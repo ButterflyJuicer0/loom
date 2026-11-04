@@ -37,6 +37,13 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   matching words when no model answers).
 - **Device sessions** at the top of the sidebar, under Tasks: unfold it,
   tap a device, and its sessions open — no trip through the Devices dialog.
+- **This server in Device sessions**: the server Loom runs on is listed
+  first, so the main agent's own history can be read and picked from like a
+  device's. Loom's own sessions are marked and open as themselves rather
+  than being continued into a copy; Smart pick on a device searches this
+  server's sessions too.
+- **Kiro sessions** are listed beside Claude Code and Codex (its subagent
+  sessions left out), with their transcripts, and can be continued in Loom.
 
 ### Fixed
 - One-shot model calls (filing a session into a project, reading a described
