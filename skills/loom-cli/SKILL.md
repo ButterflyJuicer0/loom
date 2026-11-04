@@ -50,6 +50,18 @@ DEVICE --wait` makes a fresh code for the same device.
 When the agent can already reach the machine (it is a device, or an AWS
 instance with SSM), run the line there yourself instead of asking.
 
+**A headless Linux server** (a cloud instance, no desktop login): loom-node
+installs as a systemd *user* service, which needs a user session. Run the line
+as a normal user after enabling lingering, not as root — over SSM that is:
+
+```
+loginctl enable-linger ec2-user
+sudo -iu ec2-user env XDG_RUNTIME_DIR=/run/user/$(id -u ec2-user) sh -c 'curl -fsSL …/node/install/CODE | sh'
+```
+
+As root over SSM it falls back to a background process, which SSM kills when
+the command ends ("Terminated"), and the device never shows up.
+
 ## Manage
 
 ```
@@ -68,6 +80,10 @@ DEVICE is the id (`n_…`) or the name.
   countries). Say so and what would fix it — allow its country or IP, or a
   `public_url` it can reach. Changing the WAF is the user's call.
 - `this install link is used up or expired`: `loomctl node reinstall DEVICE`.
+- `downloading loom-node for linux-arm64` then `curl: (22) … 404`: this host
+  has no build for that system. `loomctl doctor` lists what is missing and
+  the `make -C node …` line that builds it (with the Go version `node/go.mod`
+  needs, fetched and checksum-verified).
 - Windows or Android and the device sessions view: that view needs `python3`
   on the device (macOS/Linux).
 - Once online, reach it with `loom-node` (see the loom-nodes skill).

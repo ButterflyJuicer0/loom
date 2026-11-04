@@ -24,7 +24,7 @@ for 2 minutes, so run it on the device right away (`--wait` watches for it).
 The password is read from $LOOM_PASSWORD, or asked for. Nothing else needs it:
 the token is kept in ~/.loom/cli-token (mode 0600) until it expires.
 """
-import argparse, getpass, json, os, shutil, stat, subprocess, sys, time
+import argparse, getpass, json, os, re, shutil, stat, subprocess, sys, time
 import urllib.error, urllib.parse, urllib.request
 
 HOME = os.environ.get("LOOM_HOME") or os.path.expanduser("~/.loom")
@@ -198,6 +198,8 @@ def print_join(node, code):
     print("  Android (the Loom Node app): open this on the phone, then paste the second URL into the app:")
     print(f"    {base}/node/app/{code}")
     print(f"    {url}\n")
+    print("  A headless Linux server: run it as a normal user, not root, after\n"
+          "  `sudo loginctl enable-linger USER`, so the user service outlives the login.\n")
 
 
 def wait_online(node_id, since, timeout):
@@ -336,14 +338,48 @@ def cmd_doctor(a):
         p = shutil.which(cli)
         check(bool(p), f"{cli}: {p or 'not on PATH'}")
     print("loom-node")
-    builds = sorted(f for f in os.listdir(os.path.join(REPO, "priv", "node"))
-                    if f.startswith("loom-node")) if os.path.isdir(os.path.join(REPO, "priv", "node")) else []
-    bad += not check(bool(builds), "builds to hand out: " + (", ".join(builds) or "none"),
-                     "make -C node (needs Go), or rel/deploy.sh")
+    pdir = os.path.join(REPO, "priv", "node")
+    have = {f[len("loom-node-"):] for f in os.listdir(pdir) if f.startswith("loom-node-")} if os.path.isdir(pdir) else set()
+    want = node_targets()
+    missing = [t for t in want if t not in have]
+    hint = (f"missing {' '.join(missing)} — a device of that kind gets a 404 on install. "
+            f"Build them: {go_hint()} make -C node {' '.join(missing)}") if missing else ""
+    bad += not check(not missing, "builds to hand out: " + (", ".join(sorted(have)) or "none"), hint)
     check(bool(shutil.which("loom-node")), f"loom-node on this host: {shutil.which('loom-node') or 'missing'}")
     print("CLI")
     check(bool(read_token()), "logged in" if read_token() else "not logged in (loomctl login)")
     sys.exit(1 if bad else 0)
+
+
+def node_targets():
+    """The systems node/Makefile builds for, which a device may be."""
+    try:
+        with open(os.path.join(REPO, "node", "Makefile")) as f:
+            for line in f:
+                if line.startswith("TARGETS"):
+                    return line.split(":=", 1)[1].split()
+    except OSError:
+        pass
+    return ["darwin-arm64", "darwin-amd64", "linux-arm64", "linux-amd64", "windows-arm64", "windows-amd64", "android-arm64"]
+
+
+def go_hint():
+    """A Go older than node/go.mod asks for: fetch the right one, verified."""
+    need = None
+    try:
+        with open(os.path.join(REPO, "node", "go.mod")) as f:
+            for line in f:
+                if line.startswith("go "):
+                    need = line.split()[1]
+    except OSError:
+        pass
+    have = subprocess.run(["go", "env", "GOVERSION"], capture_output=True, text=True).stdout.strip() if shutil.which("go") else ""
+    if not have:
+        return "(install Go first)"
+    ver = lambda v: tuple(int(x) for x in re.findall(r"\d+", v.split()[0])[:3])  # "go1.25.8 X:nodwarf5"
+    if need and ver(have) < ver(need):
+        return f"GOTOOLCHAIN=go{need} GOPROXY=https://proxy.golang.org GOSUMDB=sum.golang.org"
+    return ""
 
 
 def cmd_config(a):
