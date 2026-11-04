@@ -105,7 +105,7 @@ defmodule Loom.Agent.StoreTest do
       Store.write_meta("a_kept", %{id: "a_kept"})
 
       for id <- ["", ".", "..", ".trash", "../x", "a/b", "/"] do
-        assert Store.delete_session(id) == {:error, :invalid_id}
+        assert_raise ArgumentError, fn -> Store.delete_session(id) end
       end
 
       assert {:ok, _} = Store.read_meta("a_kept")
