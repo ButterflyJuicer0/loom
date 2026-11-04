@@ -20,7 +20,7 @@ defmodule LoomWeb.DeviceSessionsController do
 
   The device needs `python3`, so macOS and Linux/WSL; others get a 422.
 
-  Two actions build on that:
+  Three actions build on that:
 
     - `continue/2` carries a device session on in a new Loom session: its
       first message is the device session's gist and recent turns, and the
@@ -32,6 +32,10 @@ defmodule LoomWeb.DeviceSessionsController do
       model cannot be reached it falls back to matching words. On a device it
       searches this server's history too — the main agent's — so a task
       begun in Loom is found from any device's view.
+    - `delete/2` moves a session's files to the trash on its machine (the
+      script's `delete` op; nothing is erased). A running one is refused. One
+      of Loom's own goes to Loom's trash as well (`Loom.Agent.delete_session/1`),
+      or it would come back here as a stranger.
   """
   use LoomWeb, :controller
 
@@ -101,6 +105,61 @@ defmodule LoomWeb.DeviceSessionsController do
       conn
       |> put_status(400)
       |> json(%{error: "agent (claude, codex or kiro) and file are required"})
+
+  # DELETE /api/devices/:id/sessions — `agent`, `file` and `id` (the agent's
+  # session id), as listed.
+  #
+  # One run of the script, not a scan first: a scan of a device across the
+  # internet takes seconds, and the script checks what matters itself — that
+  # the file is a session's, and that it is not running. Whether it is one of
+  # Loom's own is known here, from Loom's headers.
+  def delete(conn, %{"id" => id, "agent" => agent, "file" => file} = params)
+      when agent in ~w(claude codex kiro) and is_binary(file) do
+    sid = params["session"] || file |> Path.basename() |> Path.rootname()
+
+    with {:ok, node} <- find(id),
+         {:ok, loom_id} <- delete_loom_own(node, agent, sid),
+         {:ok, result} <-
+           scan(node, %{
+             "op" => "delete",
+             "agent" => agent,
+             "file" => file,
+             "id" => sid,
+             "checked" => loom_id != nil
+           }) do
+      json(conn, Map.put(result, "loom_id", loom_id))
+    else
+      {:error, status, message} -> conn |> put_status(status) |> json(%{error: message})
+    end
+  end
+
+  def delete(conn, _params),
+    do:
+      conn
+      |> put_status(400)
+      |> json(%{error: "agent (claude, codex or kiro) and file are required"})
+
+  # One of Loom's own, on this server: Loom lets it go first, so nothing is
+  # writing to the file when it moves, and its folder goes to Loom's trash —
+  # or it would come back in this list as a stranger. Loom keeps its `claude`
+  # warm between turns, so the script's pid check would call it running;
+  # whether it is mid-turn is Loom's to say.
+  defp delete_loom_own(%{host: true}, agent, sid) do
+    case loom_owners()[{agent, sid}] do
+      nil ->
+        {:ok, nil}
+
+      {loom_id, _title} ->
+        if Agent.busy?(loom_id) do
+          {:error, 409, "that Loom session is still running; stop it first"}
+        else
+          Agent.delete_session(loom_id)
+          {:ok, loom_id}
+        end
+    end
+  end
+
+  defp delete_loom_own(_node, _agent, _sid), do: {:ok, nil}
 
   # POST /api/devices/:id/sessions/pick — `task`, in the user's words.
   def pick(conn, %{"id" => id, "task" => task}) when is_binary(task) and task != "" do
@@ -481,7 +540,11 @@ defmodule LoomWeb.DeviceSessionsController do
   # The script travels as an argument, base64'd, so no shell quoting can touch it.
   defp command(args), do: ~s|python3 -c "#{@bootstrap}" #{Base.encode64(source(args))}|
 
-  defp source(args), do: "ARGS = " <> Jason.encode!(args) <> "\n" <> script()
+  # Through `json.loads`, not pasted as a literal: JSON's `true`, `false` and
+  # `null` are not Python. A JSON string is a valid Python string literal.
+  @doc false
+  def source(args),
+    do: "import json\nARGS = json.loads(#{Jason.encode!(Jason.encode!(args))})\n" <> script()
 
   defp script do
     :loom |> :code.priv_dir() |> Path.join("device_sessions/sessions.py") |> File.read!()
