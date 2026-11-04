@@ -16,12 +16,12 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
-- **Share a chat as a PDF**: "Share…" in the chat's menu lists the
-  conversation as exchanges, all picked, tool calls and thinking left out;
-  untick what should not go, and each output file too. "Share PDF" prints it
-  on the server (headless Chrome, no script or network; images inlined) and
-  opens the system share sheet with the PDF and the picked files beside it
-  (a directory as a zip); on a desktop without one they download.
+- **Share a chat as an image**: "Share…" in the chat's menu lists the
+  conversation as exchanges, all picked, tool calls, thinking and files left
+  out; untick what should not go. "Share image" draws it on the server as one
+  long PNG (headless Chrome, no network) and shows it the way ChatGPT's share
+  dialog does: a preview card, then Share (the system sheet), Save image and
+  Copy image.
 - **Continue picks the backend**: an arrow beside "Continue in new chat" (in
   the chat and in a sidebar row's menu) lets the new chat run on another
   backend instead of the old one's.

@@ -69,13 +69,16 @@
   height: 22px;
 }
 
+.share-seg {
+  cursor: pointer;
+}
+
 .share-body {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  cursor: pointer;
 }
 
 /* Long exchanges stay readable but do not take the screen: picking is the job. */
@@ -95,44 +98,6 @@
   white-space: pre-wrap;
   max-height: 8rem;
   overflow: hidden;
-}
-
-.share-files {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.share-file {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
-  padding: 5px 10px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: none;
-  color: var(--fg-dim);
-  font: inherit;
-  font-size: 0.923rem;
-  cursor: pointer;
-}
-
-.share-file.on {
-  color: var(--fg);
-  border-color: color-mix(in srgb, var(--fg) 40%, transparent);
-}
-
-.share-file svg {
-  flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-}
-
-.share-file-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .share-bar-wrap {
@@ -211,4 +176,105 @@
 
 .share-count .failed {
   color: var(--red);
+}
+
+/* The drawn image, as ChatGPT's share dialog shows its card: a title, the
+   preview in a rounded frame, then a row of round buttons with labels. */
+.share-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: var(--scrim);
+  /* Under <body>, out of the app's own font. */
+  font-family: var(--ui);
+  color: var(--fg);
+}
+
+.share-dialog {
+  width: min(36rem, 100%);
+  max-height: calc(100dvh - 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px 10px;
+  border-radius: 24px;
+  background: var(--surface-modal);
+  box-shadow: 0 16px 48px var(--shadow);
+}
+
+.share-dialog-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-dialog-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 1.08rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-preview {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 58dvh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.share-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.share-actions {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  padding-top: 4px;
+}
+
+.share-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.846rem;
+  cursor: pointer;
+}
+
+.share-action-icon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--bg-card);
+}
+
+.share-action-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.share-said {
+  min-height: 1.2em;
+  text-align: center;
+  color: var(--fg-dim);
+  font-size: 0.846rem;
 }
