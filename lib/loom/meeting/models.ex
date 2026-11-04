@@ -21,6 +21,15 @@ defmodule Loom.Meeting.Models do
     "diar" => "speaker-diarization"
   }
 
+  # SHA-256 of each release tarball at @version, and of bpe.vocab. A download
+  # that does not match is thrown away, never unpacked or served. Bumping
+  # @version means recomputing these: curl -sfL <url> | sha256sum
+  @sha256 %{
+    "asr" => "25e47ff0ceab2b3b3b7005eb5355dab041ac1806a0d7b75b363c036243cf718e",
+    "diar" => "f197725498893010a8da8f18c62ee67c62ed7294ab33d68a0b182211fcba0b7d"
+  }
+  @bpe_vocab_sha256 "d0b642f3a2eacd5fadefdeff9e0e1358cab729647cbb7fe58cf738e1f7407029"
+
   def bundles, do: Map.keys(@bundles)
 
   def start_link(_), do: GenServer.start_link(__MODULE__, nil, name: __MODULE__)
@@ -165,16 +174,23 @@ defmodule Loom.Meeting.Models do
         # bunzip2 of ~200 MB takes longer than the download itself.
         send(me, {:progress, done + File.stat!(tar).size, total})
         send(me, :unpacking)
-        File.mkdir_p!(tmp)
 
-        case System.cmd("tar", ["xjf", tar, "-C", tmp, "--strip-components=2"], stderr_to_stdout: true) do
-          {_, 0} ->
+        with :ok <- verify(tar, @sha256[bundle]),
+             :ok <- File.mkdir_p(tmp),
+             {_, 0} <-
+               System.cmd("tar", ["xjf", tar, "-C", tmp, "--strip-components=2", "--no-same-owner"],
+                 stderr_to_stdout: true
+               ) do
             File.rm(tar)
             extras(bundle, tmp)
             File.rm_rf!(bundle_dir(bundle))
             File.rename!(tmp, bundle_dir(bundle))
             File.write!(Path.join(bundle_dir(bundle), ".ok"), @version)
             :ok
+        else
+          {:error, reason} ->
+            File.rm(tar)
+            {:error, reason}
 
           {out, _} ->
             {:error, "unpack failed: " <> String.slice(out, 0, 200)}
@@ -191,7 +207,14 @@ defmodule Loom.Meeting.Models do
   @bpe_vocab "https://huggingface.co/csukuangfj/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/resolve/main/bpe.vocab"
 
   defp extras("asr", dir) do
-    System.cmd("curl", ["-sfL", "--retry", "3", "-o", Path.join(dir, "bpe.vocab"), @bpe_vocab])
+    part = Path.join(dir, "bpe.vocab.part")
+    System.cmd("curl", ["-sfL", "--retry", "3", "--max-filesize", "1048576", "-o", part, @bpe_vocab])
+
+    # A vocabulary that does not match is dropped: the page runs without hotwords.
+    case verify(part, @bpe_vocab_sha256) do
+      :ok -> File.rename(part, Path.join(dir, "bpe.vocab"))
+      _ -> File.rm(part)
+    end
   end
 
   defp extras(_bundle, _dir), do: :ok
@@ -201,6 +224,22 @@ defmodule Loom.Meeting.Models do
     dir = bundle_dir("asr")
     if File.dir?(dir) and not File.exists?(Path.join(dir, "bpe.vocab")), do: extras("asr", dir)
     :ok
+  end
+
+  # Streams the file, so a 200 MB tarball is never one binary.
+  defp verify(path, expected) do
+    got =
+      path
+      |> File.stream!(1_048_576)
+      |> Enum.reduce(:crypto.hash_init(:sha256), &:crypto.hash_update(&2, &1))
+      |> :crypto.hash_final()
+      |> Base.encode16(case: :lower)
+
+    if got == expected,
+      do: :ok,
+      else: {:error, "integrity check failed for #{Path.basename(path)}: got sha256 #{got}"}
+  rescue
+    e -> {:error, "integrity check failed: " <> Exception.message(e)}
   end
 
   defp watch(me, port, tar, done, total) do

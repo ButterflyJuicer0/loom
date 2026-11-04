@@ -76,10 +76,14 @@ if config_env() == :prod do
 
   config :loom, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # Empty counts as missing: an empty LOOM_PASSWORD would otherwise be a
+  # password anyone can type.
   config :loom,
          :password,
-         System.get_env("LOOM_PASSWORD") ||
-           raise("environment variable LOOM_PASSWORD is missing.")
+         (case String.trim(System.get_env("LOOM_PASSWORD") || "") do
+            "" -> raise("environment variable LOOM_PASSWORD is missing or empty.")
+            _ -> System.get_env("LOOM_PASSWORD")
+          end)
 
   config :loom, LoomWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],

@@ -147,7 +147,9 @@ defmodule LoomWeb.NodeInstallController do
     chmod 755 "$tmp"
     mv "$tmp" "$bin/loom-node"
 
-    "$bin/loom-node" install --url "$URL" --token "$TOKEN" --shell "${SHELL:-/bin/sh}"
+    # Pipe the token on stdin so it never appears in the process table
+    # (ps, /proc/<pid>/cmdline) during the install.
+    printf %s "$TOKEN" | "$bin/loom-node" install --url "$URL" --token-stdin --shell "${SHELL:-/bin/sh}"
     """
   end
 
@@ -183,7 +185,9 @@ defmodule LoomWeb.NodeInstallController do
         Remove-Item -Force -ErrorAction SilentlyContinue $tmp
       }
 
-      & $exe install --url $URL --token $TOKEN
+      # Pipe the token on stdin so it never appears in the process table
+      # (Get-Process CommandLine, Win32_Process, EDR agents) during install.
+      $TOKEN | & $exe install --url $URL --token-stdin
       if ($LASTEXITCODE -ne 0) { throw "loom-node: install failed" }
     }
     """

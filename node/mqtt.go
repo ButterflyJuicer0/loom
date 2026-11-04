@@ -91,13 +91,30 @@ func startMQTT(mc *mqttConfig) {
 		log.Printf("mqtt: not started: config.json has no mqtt.users (an open broker is not allowed)")
 		return
 	}
+	// Drop any mqtt.users entry whose username or password is empty: an
+	// empty password would otherwise authenticate any CONNECT that merely
+	// names the user (subtle.ConstantTimeCompare of two zero-length slices
+	// returns 1), silently producing exactly the open broker the guard
+	// above claims to forbid.
+	users := make(map[string]string, len(mc.Users))
+	for u, p := range mc.Users {
+		if u == "" || p == "" {
+			log.Printf("mqtt: ignoring mqtt.users entry with empty username or password (user %q)", u)
+			continue
+		}
+		users[u] = p
+	}
+	if len(users) == 0 {
+		log.Printf("mqtt: not started: every mqtt.users entry has an empty username or password (an open broker is not allowed)")
+		return
+	}
 	ln, err := net.Listen("tcp", mc.Listen)
 	if err != nil {
 		log.Printf("mqtt: not started: %v", err)
 		return
 	}
-	log.Printf("mqtt: listening on %s (%d users)", ln.Addr(), len(mc.Users))
-	go newBroker(mc.Users).serve(ln)
+	log.Printf("mqtt: listening on %s (%d users)", ln.Addr(), len(users))
+	go newBroker(users).serve(ln)
 }
 
 func (b *broker) serve(ln net.Listener) error {
@@ -225,7 +242,12 @@ func (b *broker) parseConnect(p []byte) (id, user string, keepalive uint16, rc b
 		}
 	}
 	want, known := b.users[user]
-	if flags&0x80 == 0 || !known || subtle.ConstantTimeCompare([]byte(pass), []byte(want)) != 1 {
+	// Reject before the compare if the client did not supply a password or
+	// supplied an empty one: subtle.ConstantTimeCompare returns 1 for two
+	// zero-length slices, so an empty-vs-empty check would authenticate a
+	// username-only CONNECT against a (defensively filtered, but kept here
+	// too) blank configured password. Also still require the username flag.
+	if flags&0x80 == 0 || flags&0x40 == 0 || len(pass) == 0 || !known || len(want) == 0 || subtle.ConstantTimeCompare([]byte(pass), []byte(want)) != 1 {
 		return "", user, 0, 4
 	}
 	if id == "" {

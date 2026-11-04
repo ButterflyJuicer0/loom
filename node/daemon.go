@@ -15,6 +15,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -110,6 +111,7 @@ func runDaemon(args []string) int {
 
 	hostname, _ := os.Hostname()
 	backoff := time.Second
+	warnedCleartext := false
 
 	for ctx.Err() == nil {
 		// Read every time, so a reinstall takes effect without a restart.
@@ -118,6 +120,12 @@ func runDaemon(args []string) int {
 			log.Printf("cannot start: %v", err)
 			sleep(ctx, time.Minute)
 			continue
+		}
+		// Still allowed (a LAN setup without TLS), but whoever is on the path
+		// can read the token and send this device commands.
+		if !warnedCleartext && strings.HasPrefix(cfg.URL, "http://") {
+			log.Printf("warning: %s is cleartext http; anyone on the network path can impersonate loom to this device. Reinstall with an https:// url.", cfg.URL)
+			warnedCleartext = true
 		}
 
 		info := map[string]string{
@@ -318,6 +326,10 @@ func (s *session) exec(r request) {
 	timeout := time.Duration(r.Timeout) * time.Second
 	if timeout <= 0 {
 		timeout = 120 * time.Second
+	}
+	// loom caps exec at 1800 s; a frame asking for more is not loom's.
+	if timeout > 1800*time.Second {
+		timeout = 1800 * time.Second
 	}
 
 	var mu sync.Mutex

@@ -170,10 +170,13 @@ defmodule LoomWeb.NoticeController do
   end
 
   # Acting for the user is the bell's chat's alone. Soft, like the rest: the
-  # session id is whatever the process says it is.
+  # session id is whatever the process says it is — but it has to be a real
+  # session id whose own header names it, never a path that lands on some
+  # other meta.json.
   defp bell(conn) do
     with [session | _] <- get_req_header(conn, "x-loom-session"),
-         {:ok, %{kind: "bell"} = meta} <- Loom.Agent.Store.read_meta(session) do
+         true <- Loom.Agent.Store.valid_id?(session),
+         {:ok, %{id: ^session, kind: "bell"} = meta} <- Loom.Agent.Store.read_meta(session) do
       {:ok, session, source_of(session, meta)}
     else
       _ -> {:error, "only the bell's own chat can act on notices for the user"}
@@ -182,7 +185,8 @@ defmodule LoomWeb.NoticeController do
 
   defp source(conn) do
     with [session | _] <- get_req_header(conn, "x-loom-session"),
-         {:ok, meta} <- Loom.Agent.Store.read_meta(session) do
+         true <- Loom.Agent.Store.valid_id?(session),
+         {:ok, %{id: ^session} = meta} <- Loom.Agent.Store.read_meta(session) do
       {:ok, session, source_of(session, meta)}
     else
       _ -> {:error, "run this from a Loom session: LOOM_SESSION_ID is missing or unknown"}

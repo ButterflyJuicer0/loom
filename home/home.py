@@ -3,13 +3,29 @@
 Devices announce themselves on home/<id>/caps; a tool call is a message on
 home/<id>/cmd with a rid, answered on home/<id>/ack.
 """
-import asyncio, json, logging, secrets, time
+import asyncio, json, logging, secrets, ssl, time
 
 from mqtt import MQTT
 
 log = logging.getLogger("home")
 DISCOVER_EVERY = 300   # seconds; a device that misses two rounds is dropped
 ACK_TIMEOUT = 10
+
+
+def _mqtt_ssl_context(cfg):
+    """Build an ssl.SSLContext from the mqtt.* keys, or return None for plaintext.
+
+    Config keys (all optional, additive): tls (bool), ca_file (path to a PEM CA bundle used to
+    pin the broker's issuer), insecure (bool, disables hostname/cert verification -- test only).
+    """
+    if not cfg.get("tls"):
+        return None
+    ctx = ssl.create_default_context(cafile=cfg.get("ca_file"))
+    if cfg.get("insecure"):
+        log.warning("mqtt.insecure=true: TLS certificate verification disabled")
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+    return ctx
 
 
 class Home:
@@ -19,7 +35,9 @@ class Home:
         if cfg and cfg.get("host"):
             self.bus = MQTT(cfg["host"], cfg.get("port", 1883), cfg["user"], cfg["password"],
                             cfg.get("client_id", "loom-home-voice"), ["home/+/caps", "home/+/ack"],
-                            self.on_message, on_connect=self.discover)
+                            self.on_message, on_connect=self.discover,
+                            ssl_context=_mqtt_ssl_context(cfg),
+                            server_hostname=cfg.get("server_hostname"))
 
     async def run(self):
         if not self.bus:

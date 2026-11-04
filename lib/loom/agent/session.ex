@@ -726,7 +726,15 @@ defmodule Loom.Agent.Session do
   end
 
   def handle_call({:rename, title, by}, _from, state) do
-    title = title |> to_string() |> String.trim() |> String.slice(0, @title_limit)
+    # Collapse any interior whitespace/newlines so a stored title cannot carry
+    # line breaks or control characters into later consumers (e.g. the Dream
+    # prompt). `maybe_title/2` already does this for auto titles.
+    title =
+      title
+      |> to_string()
+      |> String.replace(~r/\s+/u, " ")
+      |> String.trim()
+      |> String.slice(0, @title_limit)
 
     if title == "" do
       {:reply, {:error, :empty}, state}

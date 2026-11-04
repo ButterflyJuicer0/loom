@@ -11,6 +11,8 @@ defmodule Loom.Application do
       LoomWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:loom, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Loom.PubSub},
+      # Brute-force brake for POST /api/login.
+      Loom.Auth.Throttle,
       {Registry, keys: :unique, name: Loom.Terminal.Registry},
       {DynamicSupervisor, strategy: :one_for_one, name: Loom.Terminal.SessionSupervisor},
       Loom.Terminal.Layout,

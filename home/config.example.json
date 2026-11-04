@@ -2,6 +2,17 @@
   "host": "0.0.0.0",
   "port": 8000,
   "token": "change-me: the bearer token your robots send",
+  "tls": {
+    "cert_file": null,
+    "key_file": null,
+    "client_ca_file": null
+  },
+  "_comment_local_api_token": "Optional: when set, POST /api/say, POST /api/tool and GET /api/status also need Authorization: Bearer <it>. Empty keeps loopback-only access.",
+  "local_api_token": "",
+  "_comment_device_tokens": "Optional, e.g. {\"aa:bb:cc:dd:ee:ff\": \"token\"}: one token per robot. Values may be plaintext or a sha256 hex digest; the server hashes before compare. When set, the Device-Id header must match the device bound to the presented token, and the shared 'token' above may be left unset.",
+  "device_tokens": {},
+  "_comment_device_ids": "Fallback allowlist when only the shared 'token' is used; connections whose Device-Id is not in this list (or in device_tokens) are rejected. Omit to accept any Device-Id (legacy behaviour).",
+  "device_ids": [],
   "voice": "zh-CN-XiaoxiaoNeural",
   "voice_rate": "+10%",
   "local_tts": {
@@ -27,7 +38,11 @@
     "port": 1883,
     "user": "voice",
     "password": "change-me",
-    "client_id": "loom-home-voice"
+    "client_id": "loom-home-voice",
+    "tls": false,
+    "ca_file": null,
+    "server_hostname": null,
+    "insecure": false
   },
   "home_ids": {
     "aa:bb:cc:dd:ee:ff": "dog"

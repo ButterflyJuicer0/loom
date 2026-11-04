@@ -9,7 +9,8 @@ Run:  python server.py   (config.json next to it; see config.example.json)
 Local control (127.0.0.1 only): POST /api/say {"text"}, POST /api/tool {"name","arguments"},
 GET /api/status.
 """
-import asyncio, io, json, logging, re, time, uuid, wave
+import asyncio, hashlib, hmac, io, json, logging, re, ssl, time, uuid, wave
+from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -309,7 +310,7 @@ class Session:
         self.reply_task, self.act_task, self.pending_song, self.failed = None, None, False, []
         self.gate = None  # future of the current reply: True = the turn is over, play/act; False = dropped
         self.calling = False
-        self.history = HISTORY.setdefault(device_id, {"msgs": [], "at": 0})
+        self.history = history_for(device_id)
         self.last_activity = time.monotonic()
 
     @staticmethod
@@ -756,17 +757,111 @@ class Session:
         self.last_activity = time.monotonic()
 
 
-HISTORY, SESSIONS = {}, {}
+# Bounded conversation history: LRU by last-access with a hard cap and TTL eviction so an attacker who
+# connects with a stream of random Device-Id values cannot grow HISTORY without limit. The 1800 s stale
+# window matches reply()'s existing "clear messages after 1800 s" rule; entries older than HISTORY_TTL
+# are dropped entirely on each access.
+HISTORY_MAX = 256
+HISTORY_TTL = 3600  # seconds; older entries are evicted entirely (not just their messages)
+HISTORY: "OrderedDict[str, dict]" = OrderedDict()
+SESSIONS = {}
+
+
+def history_for(device_id):
+    """Return the per-device history dict, creating it if needed, with LRU + TTL eviction."""
+    now = time.monotonic()
+    h = HISTORY.get(device_id)
+    if h is None:
+        h = {"msgs": [], "at": 0}
+        HISTORY[device_id] = h
+    else:
+        HISTORY.move_to_end(device_id)
+    # TTL sweep: drop stale entries so the dict cannot grow unbounded across attacker-chosen ids.
+    for k in list(HISTORY.keys()):
+        v = HISTORY[k]
+        if v is h:
+            continue
+        if v["at"] and now - v["at"] > HISTORY_TTL:
+            del HISTORY[k]
+    # Hard LRU cap: evict least-recently used entries that are not currently in use by a live session.
+    while len(HISTORY) > HISTORY_MAX:
+        k, _ = next(iter(HISTORY.items()))
+        if k == device_id:
+            break
+        del HISTORY[k]
+    return h
+
+
+def _hash_secret(s):
+    return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+
+def _device_tokens():
+    """Normalize CFG['device_tokens'] into {device_id: sha256_hex}.
+
+    Accepts either plaintext tokens or sha256 hex digests (64 hex chars) in config so operators can store
+    hashed values at rest. Comparison is constant-time against the sha256 of the presented token.
+    """
+    out = {}
+    for dev, tok in (CFG.get("device_tokens") or {}).items():
+        tok = (tok or "").strip()
+        if not tok:
+            continue
+        out[dev] = tok.lower() if (len(tok) == 64 and all(c in "0123456789abcdefABCDEF" for c in tok)) else _hash_secret(tok)
+    return out
+
+
+def _authenticate(req):
+    """Return the device id bound to the presented bearer token, or None if only the shared token matched.
+
+    Raises web.HTTPUnauthorized if no credential matches. When per-device tokens are configured in
+    CFG['device_tokens'], a matching per-device token is accepted and its device id is returned (and will
+    be enforced against the Device-Id header). The legacy shared token in CFG['token'] is still accepted
+    for backwards compatibility if present; it returns None (unbound).
+    """
+    presented = req.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+    if not presented:
+        raise web.HTTPUnauthorized()
+    presented_hash = _hash_secret(presented)
+    for dev, tok_hash in _device_tokens().items():
+        if hmac.compare_digest(presented_hash, tok_hash):
+            return dev
+    shared = CFG.get("token")
+    if shared and hmac.compare_digest(presented, shared):
+        return None
+    raise web.HTTPUnauthorized()
+
+
 HOME = Home(CFG.get("mqtt"))
 
 
 async def ws_handler(req):
-    if req.headers.get("Authorization", "").removeprefix("Bearer ").strip() != CFG["token"]:
+    try:
+        bound_dev = _authenticate(req)
+    except web.HTTPUnauthorized:
         log.warning("rejected ws from %s", req.remote)
-        raise web.HTTPUnauthorized()
+        raise
+    header_dev = req.headers.get("Device-Id", "").strip()
+    device_tokens = _device_tokens()
+    if bound_dev is not None:
+        # Per-device credential: the device identity is the one bound to the token. If the header is
+        # present it must match; a mismatched or empty header is refused rather than silently overridden.
+        if header_dev and header_dev != bound_dev:
+            log.warning("rejected ws from %s: Device-Id %r does not match credential %r",
+                        req.remote, header_dev, bound_dev)
+            raise web.HTTPForbidden()
+        dev = bound_dev
+    else:
+        # Legacy shared-token path. If an allowlist is configured, enforce it; otherwise fall back to the
+        # header (or peer address) as before so existing deployments keep working.
+        allow = set(device_tokens.keys()) | set(CFG.get("device_ids") or [])
+        dev = header_dev or req.remote
+        if allow and dev not in allow:
+            log.warning("rejected ws from %s: Device-Id %r is not in the provisioned allowlist",
+                        req.remote, dev)
+            raise web.HTTPForbidden()
     ws = web.WebSocketResponse(max_msg_size=1 << 20)
     await ws.prepare(req)
-    dev = req.headers.get("Device-Id", req.remote)
     s = Session(ws, dev)
     s.ip = req.remote
     SESSIONS[dev] = s
@@ -797,10 +892,48 @@ async def idle_watchdog(s):
             await s.ws.close()
 
 
+LOCAL_API_TOKEN = CFG.get("local_api_token") or ""
+
+
+def _host_is_loopback(host_header):
+    """Return True if the HTTP Host header names loopback (defends against DNS rebinding
+    and against reverse-proxied requests whose peer address is 127.0.0.1)."""
+    if not host_header:
+        return False
+    # Strip optional :port. IPv6 literals arrive as [::1]:port.
+    h = host_header.strip()
+    if h.startswith("["):
+        end = h.find("]")
+        if end == -1:
+            return False
+        hostname = h[1:end]
+    else:
+        hostname = h.rsplit(":", 1)[0] if h.count(":") == 1 else h
+    return hostname in ("127.0.0.1", "::1", "localhost")
+
+
 def local_only(fn):
     async def wrap(req):
+        # 1) Peer address must be loopback. This is defence in depth only; a localhost
+        #    reverse proxy would also satisfy it, so the token below is the real gate.
         if req.remote not in ("127.0.0.1", "::1"):
             raise web.HTTPForbidden()
+        # 2) Reject browser-originated cross-site requests. Any Origin or Referer at all
+        #    indicates a browser context; local CLI callers (curl, scripts) do not send
+        #    these, so refuse rather than try to parse them.
+        if req.headers.get("Origin") or req.headers.get("Referer"):
+            raise web.HTTPForbidden()
+        # 3) Host header must name a loopback name/address: blocks DNS-rebinding where
+        #    a browser connects to 127.0.0.1 under an attacker-controlled hostname.
+        if not _host_is_loopback(req.headers.get("Host", "")):
+            raise web.HTTPForbidden()
+        # 4) Require a real credential if one is configured. When set this is the
+        #    authoritative check and also protects against other local OS users and
+        #    against any localhost reverse proxy that terminates the TCP peer address.
+        if LOCAL_API_TOKEN:
+            got = req.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+            if not hmac.compare_digest(got, LOCAL_API_TOKEN):
+                raise web.HTTPUnauthorized()
         return await fn(req)
     return wrap
 
@@ -826,7 +959,12 @@ async def api_tool(req):
     if not s:
         return web.json_response({"ok": False, "error": "robot not connected; wake it first"}, status=409)
     j = await req.json()
-    return web.json_response({"ok": True, "result": await s.call_tool(j["name"], j.get("arguments", {}))})
+    name = j["name"]
+    # Only allow tool names the device actually advertises; refuses attacker-chosen
+    # tool names that would otherwise be forwarded to the robot's MCP server.
+    if not any(t.get("name") == name for t in s.tools):
+        return web.json_response({"ok": False, "error": "unknown tool"}, status=404)
+    return web.json_response({"ok": True, "result": await s.call_tool(name, j.get("arguments", {}))})
 
 
 @local_only
@@ -856,8 +994,25 @@ async def main():
                     web.get("/api/status", api_status), web.get("/", health)])
     runner = web.AppRunner(app)
     await runner.setup()
-    await web.TCPSite(runner, CFG.get("host", "0.0.0.0"), CFG.get("port", 8000)).start()
-    log.info("loom-home voice listening on %s:%s", CFG.get("host", "0.0.0.0"), CFG.get("port", 8000))
+    tls_cfg = CFG.get("tls") or {}
+    ssl_context = None
+    if tls_cfg.get("cert_file") and tls_cfg.get("key_file"):
+        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        ssl_context.load_cert_chain(tls_cfg["cert_file"], tls_cfg["key_file"])
+        if tls_cfg.get("client_ca_file"):
+            # Optional mutual TLS: require robots to present a certificate issued by this CA.
+            ssl_context.load_verify_locations(tls_cfg["client_ca_file"])
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
+    else:
+        log.warning("tls.cert_file/tls.key_file not set: serving ws:// in cleartext. The bearer token "
+                    "and conversation audio/transcripts are exposed to any LAN observer. Configure a "
+                    "tls block in config.json and point robots at wss://<host>:%s/xiaozhi/v1/.",
+                    CFG.get("port", 8000))
+    await web.TCPSite(runner, CFG.get("host", "0.0.0.0"), CFG.get("port", 8000),
+                      ssl_context=ssl_context).start()
+    log.info("loom-home voice listening on %s://%s:%s",
+             "wss" if ssl_context else "ws",
+             CFG.get("host", "0.0.0.0"), CFG.get("port", 8000))
     await asyncio.Event().wait()
 
 

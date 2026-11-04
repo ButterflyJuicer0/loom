@@ -137,9 +137,21 @@ defmodule LoomWeb.AgentSessionController do
   # Stopping without deleting would be a trap in a UI: the session vanishes
   # from the list, then comes back at the next boot because `Agent.Bootstrap`
   # restores everything on disk.
+  #
+  # The id has to be gated here the same way the file-plane routes gate theirs:
+  # Plug percent-decodes each path segment, so `:id` could arrive as `..` and
+  # the whole call chain (`Agent.delete_session/1` → `Store.delete_session/1`
+  # → `File.rm_rf!/1`) would turn into a path traversal. `Store.session_dir/1`
+  # now rejects anything that is not shaped like a session id; this guard
+  # turns that rejection into a 404 instead of a 500 and matches the behaviour
+  # of every other `:id`-bearing route.
   def delete(conn, %{"id" => id}) do
-    Agent.delete_session(id)
-    send_resp(conn, :no_content, "")
+    if Loom.Agent.Store.valid_id?(id) and Agent.exists?(id) do
+      Agent.delete_session(id)
+      send_resp(conn, :no_content, "")
+    else
+      conn |> put_status(:not_found) |> json(%{error: "no such session"})
+    end
   end
 
   defp build_opts(params) do

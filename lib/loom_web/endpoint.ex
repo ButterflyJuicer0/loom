@@ -25,7 +25,13 @@ defmodule LoomWeb.Endpoint do
   # (a laptop lid, a dropped Wi-Fi) is let go within a minute; the daemon
   # heartbeats every 15s.
   socket "/node", LoomWeb.NodeSocket,
-    websocket: [check_origin: false, timeout: 45_000],
+    websocket: [
+      check_origin: false,
+      timeout: 45_000,
+      # Far above the largest legitimate device frame (a file-read chunk is
+      # 256 KB raw, ~342 KB base64), so a crafted frame cannot be unbounded.
+      max_frame_size: 8 * 1024 * 1024
+    ],
     longpoll: false
 
   # The frontend, straight from the release. There is no web server in front,

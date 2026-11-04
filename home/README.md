@@ -40,6 +40,26 @@ speech. MIT, like the rest of this repository.
 4. `python server.py`, then point the robot's websocket URL at
    `ws://<this machine>:8000/xiaozhi/v1/` with the token from the config.
 
+## TLS
+
+Both the robot websocket and the MQTT link transmit secrets (the shared
+bearer token the robot sends in the `Authorization` header, the Opus audio
+and STT/LLM transcripts, and the MQTT broker user/password). Without TLS
+they travel in cleartext, so any device on the same LAN -- a guest on the
+Wi-Fi, a compromised IoT device on the same segment, an ARP-spoofing
+neighbour -- can recover the token and the broker credentials and then
+command every home device. Enable TLS in production:
+
+- Websocket (`wss://`): fill in the `tls` block in `config.json`
+  (`cert_file`, `key_file`, optionally `client_ca_file` to require robot
+  client certificates), then point robots at `wss://<host>:8000/xiaozhi/v1/`.
+  If `tls` is not configured the server still starts on `ws://` and logs a
+  warning on every boot.
+- MQTT: set `mqtt.tls=true` and `mqtt.ca_file` to the PEM bundle that signs
+  the broker certificate (optionally `mqtt.server_hostname` if the broker
+  address is an IP). Without this the MQTT CONNECT and every PUBLISH travel
+  in cleartext and `mqtt.py` logs a warning.
+
 Optional: `music/shows/<name>.json` adds a song clip with timed moves that
 the model can start with `[do:<name>]` (see `shows()` in `server.py`).
 

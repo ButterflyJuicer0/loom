@@ -26,9 +26,14 @@ def _packet(typ, flags, body):
 
 
 class MQTT:
-    def __init__(self, host, port, user, password, client_id, subs, on_message, on_connect=None):
+    def __init__(self, host, port, user, password, client_id, subs, on_message, on_connect=None,
+                 ssl_context=None, server_hostname=None):
         self.addr, self.user, self.password, self.client_id = (host, port), user, password, client_id
         self.subs, self.on_message, self.on_connect = subs, on_message, on_connect
+        # ssl_context: an ssl.SSLContext for a TLS CONNECT, or None for plaintext (unchanged legacy behaviour).
+        # server_hostname: SNI / certificate-identity override; defaults to the broker host.
+        self.ssl_context = ssl_context
+        self.server_hostname = server_hostname if server_hostname is not None else host
         self.writer = None
 
     @property
@@ -51,7 +56,15 @@ class MQTT:
             await asyncio.sleep(5)
 
     async def _session(self):
-        r, w = await asyncio.wait_for(asyncio.open_connection(*self.addr), 10)
+        if self.ssl_context is not None:
+            r, w = await asyncio.wait_for(
+                asyncio.open_connection(*self.addr, ssl=self.ssl_context,
+                                        server_hostname=self.server_hostname), 10)
+        else:
+            log.warning("mqtt %s:%s: TLS disabled; broker user/password and all PUBLISH traffic are "
+                        "transmitted in cleartext. Set mqtt.tls=true and mqtt.ca_file in config.json.",
+                        *self.addr)
+            r, w = await asyncio.wait_for(asyncio.open_connection(*self.addr), 10)
         try:
             w.write(_packet(CONNECT, 0, _str("MQTT") + bytes([4, 0xC2]) + (60).to_bytes(2, "big") +
                             _str(self.client_id) + _str(self.user) + _str(self.password)))

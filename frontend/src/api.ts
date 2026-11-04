@@ -69,6 +69,7 @@ export async function login(password: string): Promise<string> {
     body: JSON.stringify({ password }),
   })
   if (res.status === 401) throw new Error("invalid_password")
+  if (res.status === 429) throw new Error("too_many_attempts")
   if (!res.ok) throw new Error(`login failed: ${res.status}`)
   const data = await res.json()
   setToken(data.token)

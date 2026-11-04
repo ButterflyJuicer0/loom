@@ -47,6 +47,31 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   once the sentence is clearly complete (longer wait if it ends mid-thought);
   at most one filler, only when the reply is late.
 
+### Security
+From an AWS Continuum code scan (40 issues; the critical, high and medium ones
+handled here). Nothing changes for normal use.
+- Login: wrong passwords are throttled per client (5 tries, then a growing
+  wait up to 15 min) and globally, cost 300 ms each and are logged; the login
+  page says when to wait. An empty `LOOM_PASSWORD` no longer starts, and an
+  empty password never matches. Changing the password logs out every device
+  (tokens minted before this release still last their 30 days).
+- Meeting models and `bpe.vocab` are checked against pinned SHA-256 before
+  they are unpacked or served.
+- Session ids from headers or URLs must look like session ids, so none can
+  reach a path outside `~/.loom/sessions` (read or delete); the bell's
+  act-for-the-user gate also needs the session's header to name itself.
+- `claude` one-shots end their options with `--`, so a prompt starting with
+  `-` stays a prompt. Session titles in the Dream prompt are fenced and
+  stripped of control characters.
+- loom-node: the install script passes the token on stdin, not on the command
+  line; the MQTT broker drops users with an empty password; exec timeouts are
+  capped at 30 min; device-reported join fields are length-checked; a
+  cleartext `http://` loom URL logs a warning.
+- loom-home: optional TLS (`tls`, `mqtt.tls`), per-robot tokens
+  (`device_tokens`) or a Device-Id allowlist, an optional local API token; the
+  local API refuses browser requests (Origin/Referer, non-loopback Host) and
+  only calls tools the robot lists. Conversation history is capped.
+
 ## [0.5.0] – 2026-11-03
 
 ### Added
