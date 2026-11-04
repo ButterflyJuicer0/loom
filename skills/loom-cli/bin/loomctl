@@ -1,0 +1,424 @@
+#!/usr/bin/env python3
+"""loomctl: set up a Loom host and bring devices (loom-node) into it.
+
+  loomctl status                         is Loom up; sessions and devices at a glance
+  loomctl doctor                         check the host: service, URLs, CLIs, loom-node builds
+  loomctl config [show]                  this CLI's settings (~/.loom/cli.json)
+  loomctl config set KEY VALUE           url (the API, default http://127.0.0.1:4000),
+                                         public_url (what devices dial, e.g. https://x.cloudfront.net)
+  loomctl config unset KEY
+  loomctl login [--password-stdin]       exchange the Loom password for a 30-day token
+  loomctl logout
+  loomctl node list [--json]
+  loomctl node add NAME [--icon linux|mac|windows|android|bot] [--wait [SECONDS]]
+  loomctl node reinstall DEVICE [--wait [SECONDS]]
+  loomctl node wait DEVICE [--timeout SECONDS]
+  loomctl node rename DEVICE NEW_NAME
+  loomctl node rm DEVICE [--yes]
+  loomctl install                        link this script into ~/.local/bin
+
+DEVICE is a device id (n_…) or its name. `node add` and `node reinstall` print
+the one-line join command for each system; the code in it works once and only
+for 2 minutes, so run it on the device right away (`--wait` watches for it).
+
+The password is read from $LOOM_PASSWORD, or asked for. Nothing else needs it:
+the token is kept in ~/.loom/cli-token (mode 0600) until it expires.
+"""
+import argparse, getpass, json, os, shutil, stat, subprocess, sys, time
+import urllib.error, urllib.parse, urllib.request
+
+HOME = os.environ.get("LOOM_HOME") or os.path.expanduser("~/.loom")
+CONFIG = os.path.join(HOME, "cli.json")
+TOKEN = os.path.join(HOME, "cli-token")
+DEFAULT_URL = "http://127.0.0.1:4000"
+ICONS = ("linux", "mac", "windows", "android", "bot")
+INSTALL_TTL = 120  # seconds; Loom.Nodes @install_ttl
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))))
+
+
+def die(msg, code=1):
+    print(f"loomctl: {msg}", file=sys.stderr)
+    sys.exit(code)
+
+
+# ── Settings ──────────────────────────────────────────────────────────────
+
+def load_config():
+    try:
+        with open(CONFIG) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as e:
+        die(f"cannot read {CONFIG}: {e}")
+
+
+def save_config(cfg):
+    os.makedirs(HOME, exist_ok=True)
+    tmp = CONFIG + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(cfg, f, indent=2)
+        f.write("\n")
+    os.replace(tmp, CONFIG)
+
+
+def api_url():
+    return (os.environ.get("LOOM_URL") or load_config().get("url") or DEFAULT_URL).rstrip("/")
+
+
+def join_origin_from_build():
+    """The origin the frontend was built to show devices (rel/deploy.sh reads the same)."""
+    try:
+        with open(os.path.join(REPO, "frontend", ".env.production.local")) as f:
+            for line in f:
+                if line.startswith("VITE_NODE_JOIN_ORIGIN="):
+                    return line.split("=", 1)[1].strip() or None
+    except OSError:
+        return None
+
+
+def public_url(required=True):
+    """Where a device reaches Loom from outside; what it keeps dialling afterwards."""
+    url = os.environ.get("LOOM_PUBLIC_URL") or load_config().get("public_url") or join_origin_from_build()
+    if not url and required:
+        die("no public URL: devices need the address they reach Loom at, e.g.\n"
+            "  loomctl config set public_url https://your-host.example.com")
+    return url.rstrip("/") if url else None
+
+
+# ── HTTP ──────────────────────────────────────────────────────────────────
+
+def http(method, url, body=None, headers=None, timeout=30):
+    req = urllib.request.Request(url, method=method,
+                                 data=json.dumps(body).encode() if body is not None else None,
+                                 headers={"content-type": "application/json", **(headers or {})})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            raw = r.read()
+            try:
+                return r.status, (json.loads(raw) if raw else None)
+            except ValueError:
+                return r.status, None  # a page, not JSON
+    except urllib.error.HTTPError as e:
+        try:
+            data = json.loads(e.read() or b"null")
+        except ValueError:
+            data = None
+        return e.code, data
+    except urllib.error.URLError as e:
+        die(f"cannot reach Loom at {url.split('/api')[0]}: {e.reason}")
+
+
+def read_token():
+    try:
+        with open(TOKEN) as f:
+            return f.read().strip() or None
+    except OSError:
+        return None
+
+
+def login(password=None, quiet=False):
+    password = password or os.environ.get("LOOM_PASSWORD")
+    if not password:
+        if not sys.stdin.isatty():
+            die("not logged in: set LOOM_PASSWORD, or run `loomctl login` in a terminal")
+        password = getpass.getpass("Loom password: ")
+    status, data = http("POST", api_url() + "/api/login", {"password": password})
+    if status == 429:
+        die(f"too many wrong passwords; try again in {(data or {}).get('retry_after', '?')} s")
+    if status != 200 or not data or "token" not in data:
+        die("wrong password" if status == 401 else f"login failed ({status}): {data}")
+    os.makedirs(HOME, exist_ok=True)
+    fd = os.open(TOKEN, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(data["token"])
+    if not quiet:
+        print(f"logged in to {api_url()}")
+    return data["token"]
+
+
+def api(method, route, body=None):
+    """A browser-API call with the cached token, logging in again once if it was refused."""
+    for attempt in (0, 1):
+        token = read_token() or login(quiet=True)
+        status, data = http(method, api_url() + route, body, {"authorization": "Bearer " + token})
+        if status == 401 and attempt == 0:
+            try:
+                os.remove(TOKEN)
+            except OSError:
+                pass
+            continue
+        if status >= 400:
+            msg = (data or {}).get("error") if isinstance(data, dict) else data
+            die(f"{method} {route}: {msg or status}")
+        return data
+
+
+# ── Devices ───────────────────────────────────────────────────────────────
+
+def devices():
+    return api("GET", "/api/devices")["nodes"]
+
+
+def find_device(ref):
+    nodes = devices()
+    for n in nodes:
+        if n["id"] == ref:
+            return n
+    named = [n for n in nodes if (n.get("name") or "").lower() == ref.lower()]
+    if len(named) == 1:
+        return named[0]
+    if len(named) > 1:
+        die(f"{len(named)} devices are called {ref!r}; use the id: " + ", ".join(n["id"] for n in named))
+    die(f"no device {ref!r}; `loomctl node list` shows them")
+
+
+def ago(iso):
+    if not iso:
+        return "never"
+    try:
+        t = time.mktime(time.strptime(iso.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")) - time.timezone
+    except ValueError:
+        return iso
+    s = max(0, time.time() - t)
+    for unit, n in (("d", 86400), ("h", 3600), ("m", 60)):
+        if s >= n:
+            return f"{int(s // n)}{unit} ago"
+    return "just now"
+
+
+def print_join(node, code):
+    base = public_url()
+    url = f"{base}/node/install/{code}"
+    print(f"\nJoin {node['name']} ({node['id']}) — the code works once, for {INSTALL_TTL // 60} minutes:\n")
+    print("  macOS, Linux, WSL:")
+    print(f"    curl -fsSL {url} | sh\n")
+    print("  Windows PowerShell:")
+    print(f"    irm {url}/ps1 | iex\n")
+    print("  Android (the Loom Node app): open this on the phone, then paste the second URL into the app:")
+    print(f"    {base}/node/app/{code}")
+    print(f"    {url}\n")
+
+
+def wait_online(node_id, since, timeout):
+    """Until the device connects after `since` (a reinstall reconnects too)."""
+    deadline = time.time() + timeout
+    print(f"waiting up to {timeout}s for it to connect… (Ctrl-C to stop waiting; the code stays valid)", flush=True)
+    try:
+        while time.time() < deadline:
+            n = next((d for d in devices() if d["id"] == node_id), None)
+            if n is None:
+                die("the device was removed while waiting")
+            seen = n.get("last_seen_at") or ""
+            if n.get("online") and seen >= since:
+                print(f"✓ {n['name']} is online: {n.get('os')}/{n.get('arch')} {n.get('hostname') or ''} "
+                      f"loom-node {n.get('version') or '?'}")
+                return True
+            time.sleep(3)
+    except KeyboardInterrupt:
+        print("\nstopped waiting")
+        return False
+    print("✗ not connected yet. Check the device's output; `loomctl node reinstall` makes a fresh code.\n"
+          "  If its curl printed HTML (\"403 … Request blocked\"), the CDN or WAF in front of Loom refuses\n"
+          "  where it is: allow its country or IP there, or join through a public_url it can reach.")
+    return False
+
+
+def now_iso():
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 2))
+
+
+def cmd_node(a):
+    if a.node_cmd == "list":
+        nodes = devices()
+        if a.json:
+            print(json.dumps(nodes, indent=2))
+            return
+        if not nodes:
+            print("no devices yet: loomctl node add NAME")
+            return
+        print(f"{'ID':<12} {'NAME':<18} {'STATE':<8} {'SYSTEM':<14} {'LOOM-NODE':<10} LAST SEEN")
+        for n in sorted(nodes, key=lambda n: (not n.get("online"), (n.get("name") or "").lower())):
+            system = f"{n.get('os') or '-'}/{n.get('arch') or '-'}" if n.get("os") else "not installed"
+            print(f"{n['id']:<12} {(n.get('name') or '')[:18]:<18} {'online' if n.get('online') else 'offline':<8} "
+                  f"{system:<14} {(n.get('version') or '-')[:10]:<10} {ago(n.get('last_seen_at'))}")
+    elif a.node_cmd == "add":
+        public_url()  # fail before creating anything
+        since = now_iso()
+        data = api("POST", "/api/devices", {"name": a.name, **({"icon": a.icon} if a.icon else {})})
+        print_join(data["node"], data["code"])
+        if a.wait is not None:
+            sys.exit(0 if wait_online(data["node"]["id"], since, a.wait) else 1)
+    elif a.node_cmd == "reinstall":
+        public_url()
+        n = find_device(a.device)
+        since = now_iso()
+        data = api("POST", f"/api/devices/{n['id']}/install")
+        print_join(n, data["code"])
+        if a.wait is not None:
+            sys.exit(0 if wait_online(n["id"], since, a.wait) else 1)
+    elif a.node_cmd == "wait":
+        n = find_device(a.device)
+        if n.get("online"):
+            print(f"✓ {n['name']} is online")
+            return
+        sys.exit(0 if wait_online(n["id"], "", a.timeout) else 1)
+    elif a.node_cmd == "rename":
+        n = find_device(a.device)
+        api("PATCH", f"/api/devices/{n['id']}", {"name": a.new_name})
+        print(f"renamed {n['name']} → {a.new_name}")
+    elif a.node_cmd == "rm":
+        n = find_device(a.device)
+        if not a.yes:
+            if not sys.stdin.isatty():
+                die("refusing to remove without --yes when not in a terminal")
+            if input(f"Remove {n['name']} ({n['id']})? loom-node uninstalls itself from it. [y/N] ").strip().lower() != "y":
+                print("kept")
+                return
+        api("DELETE", f"/api/devices/{n['id']}")
+        print(f"removed {n['name']}" + ("" if n.get("online") else " (it uninstalls when it next connects)"))
+
+
+# ── Host ──────────────────────────────────────────────────────────────────
+
+def cmd_status(a):
+    status, _ = http("GET", api_url() + "/", timeout=10)
+    print(f"Loom      {api_url()}  (HTTP {status})")
+    pub = public_url(required=False)
+    print(f"public    {pub or '(not set: loomctl config set public_url URL)'}")
+    rev = subprocess.run(["git", "-C", REPO, "describe", "--tags", "--always", "--dirty"],
+                         capture_output=True, text=True).stdout.strip()
+    if rev:
+        print(f"source    {REPO} @ {rev}")
+    sessions = api("GET", "/api/agents")["sessions"]
+    busy = [s for s in sessions if s.get("status") not in ("idle", "interrupted")]
+    print(f"sessions  {len(sessions)}, {len(busy)} working")
+    for s in busy:
+        print(f"          · {s['id']} {s.get('backend', '')} {s.get('status')} {(s.get('title') or '')[:40]}")
+    nodes = devices()
+    online = [n for n in nodes if n.get("online")]
+    print(f"devices   {len(online)}/{len(nodes)} online" + (": " + ", ".join(n["name"] for n in online) if online else ""))
+
+
+def check(ok, label, hint=""):
+    print(f"  {'✓' if ok else '✗'} {label}" + ("" if ok or not hint else f"\n      → {hint}"))
+    return ok
+
+
+def cmd_doctor(a):
+    bad = 0
+    print("Loom host")
+    if shutil.which("systemctl"):
+        units = ("loom-backend", "loom")  # the dev unit, or the release's (rel/systemd/loom.service)
+        states = subprocess.run(["systemctl", "is-active", *units], capture_output=True, text=True).stdout.split()
+        live = [u for u, st in zip(units, states) if st == "active"]
+        bad += not check(bool(live), f"service: {', '.join(live) or 'none active'}",
+                         "sudo systemctl start loom-backend (dev) or loom (release)")
+    try:
+        status, _ = http("GET", api_url() + "/", timeout=10)
+        bad += not check(status == 200, f"API {api_url()} answers ({status})")
+    except SystemExit:
+        bad += not check(False, f"API {api_url()} answers", "is Loom running? loomctl config set url URL")
+    pub = public_url(required=False)
+    if pub:
+        try:
+            req = urllib.request.Request(pub + "/", method="GET")
+            with urllib.request.urlopen(req, timeout=15) as r:
+                bad += not check(r.status == 200, f"public URL {pub} reachable ({r.status})")
+        except Exception as e:
+            bad += not check(False, f"public URL {pub} reachable", str(e))
+    else:
+        bad += not check(False, "public URL set", "loomctl config set public_url https://…")
+    bad += not check(os.path.isfile(os.path.join(HOME, "node-cli.json")), "~/.loom/node-cli.json (agents' loom-node key)",
+                     "written by Loom on start")
+    print("Agent CLIs")
+    for cli in ("claude", "codex", "kiro-cli"):
+        p = shutil.which(cli)
+        check(bool(p), f"{cli}: {p or 'not on PATH'}")
+    print("loom-node")
+    builds = sorted(f for f in os.listdir(os.path.join(REPO, "priv", "node"))
+                    if f.startswith("loom-node")) if os.path.isdir(os.path.join(REPO, "priv", "node")) else []
+    bad += not check(bool(builds), "builds to hand out: " + (", ".join(builds) or "none"),
+                     "make -C node (needs Go), or rel/deploy.sh")
+    check(bool(shutil.which("loom-node")), f"loom-node on this host: {shutil.which('loom-node') or 'missing'}")
+    print("CLI")
+    check(bool(read_token()), "logged in" if read_token() else "not logged in (loomctl login)")
+    sys.exit(1 if bad else 0)
+
+
+def cmd_config(a):
+    cfg = load_config()
+    keys = ("url", "public_url")
+    if a.cfg_cmd in (None, "show"):
+        print(f"{CONFIG}")
+        print(f"  url         {cfg.get('url') or DEFAULT_URL + ' (default)'}")
+        pub = cfg.get("public_url") or (join_origin_from_build() and join_origin_from_build() + " (from the frontend build)")
+        print(f"  public_url  {pub or '(not set)'}")
+        print(f"  token       {'cached in ' + TOKEN if read_token() else 'none (loomctl login)'}")
+    elif a.cfg_cmd == "get":
+        print(cfg.get(a.key, ""))
+    elif a.cfg_cmd == "set":
+        if a.key not in keys:
+            die(f"unknown key {a.key!r}; one of: {', '.join(keys)}")
+        v = a.value.rstrip("/")
+        if not v.startswith(("http://", "https://")):
+            die("a URL starts with http:// or https://")
+        cfg[a.key] = v
+        save_config(cfg)
+        print(f"{a.key} = {v}")
+    elif a.cfg_cmd == "unset":
+        cfg.pop(a.key, None)
+        save_config(cfg)
+        print(f"{a.key} unset")
+
+
+def cmd_install(a):
+    bindir = os.path.expanduser("~/.local/bin")
+    os.makedirs(bindir, exist_ok=True)
+    dest = os.path.join(bindir, "loomctl")
+    me = os.path.realpath(__file__)
+    if os.path.islink(dest) or os.path.exists(dest):
+        os.remove(dest)
+    os.symlink(me, dest)
+    os.chmod(me, os.stat(me).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    print(f"{dest} → {me}")
+    if bindir not in os.environ.get("PATH", "").split(":"):
+        print(f"note: {bindir} is not on PATH")
+
+
+def main():
+    p = argparse.ArgumentParser(prog="loomctl", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = p.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("status").set_defaults(fn=cmd_status)
+    sub.add_parser("doctor").set_defaults(fn=cmd_doctor)
+    c = sub.add_parser("config")
+    c.set_defaults(fn=cmd_config)
+    cs = c.add_subparsers(dest="cfg_cmd")
+    cs.add_parser("show")
+    g = cs.add_parser("get"); g.add_argument("key")
+    s = cs.add_parser("set"); s.add_argument("key"); s.add_argument("value")
+    u = cs.add_parser("unset"); u.add_argument("key")
+    lg = sub.add_parser("login")
+    lg.add_argument("--password-stdin", action="store_true")
+    lg.set_defaults(fn=lambda a: login(sys.stdin.readline().rstrip("\n") if a.password_stdin else None))
+    sub.add_parser("logout").set_defaults(fn=lambda a: (os.path.exists(TOKEN) and os.remove(TOKEN), print("logged out")))
+    sub.add_parser("install").set_defaults(fn=cmd_install)
+
+    n = sub.add_parser("node", help="devices running loom-node")
+    n.set_defaults(fn=cmd_node)
+    ns = n.add_subparsers(dest="node_cmd", required=True)
+    nl = ns.add_parser("list"); nl.add_argument("--json", action="store_true")
+    na = ns.add_parser("add"); na.add_argument("name"); na.add_argument("--icon", choices=ICONS)
+    na.add_argument("--wait", nargs="?", type=int, const=INSTALL_TTL, metavar="SECONDS")
+    nr = ns.add_parser("reinstall"); nr.add_argument("device")
+    nr.add_argument("--wait", nargs="?", type=int, const=INSTALL_TTL, metavar="SECONDS")
+    nw = ns.add_parser("wait"); nw.add_argument("device"); nw.add_argument("--timeout", type=int, default=INSTALL_TTL)
+    nn = ns.add_parser("rename"); nn.add_argument("device"); nn.add_argument("new_name")
+    nd = ns.add_parser("rm"); nd.add_argument("device"); nd.add_argument("--yes", action="store_true")
+
+    a = p.parse_args()
+    a.fn(a)
+
+
+if __name__ == "__main__":
+    main()
