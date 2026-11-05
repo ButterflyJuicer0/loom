@@ -37,6 +37,12 @@ Some features are told only in the skill that uses them and in
   message: the loom-sessions skill (`skills/loom-sessions/SKILL.md`, "Sending
   into another session"). To start a new session with a brief instead, that
   is loom-handoff.
+- **Devices on a network with broken IPv6.** loom-node retries a failed dial
+  over IPv4 only, then keeps trying IPv4 first, so such a device comes online
+  without turning IPv6 off. It needs a loom-node with this fix: an older one
+  is updated by reinstalling (`loomctl node reinstall DEVICE`). Details:
+  `docs/architecture.md` §4.4, "Broken IPv6"; code: `dialSocket` in
+  `node/phx.go`.
 
 If the docs don't settle it, read the code: `lib/` (Elixir server),
 `frontend/src/` (UI), `node/` (loom-node). Say which you checked.
