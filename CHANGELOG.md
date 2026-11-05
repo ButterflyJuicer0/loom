@@ -37,6 +37,10 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   not set".
 - Device sessions: arguments reach the scan script through `json.loads`, so a
   `true` or `null` no longer breaks it.
+- loom-node falls back to IPv4 when the usual dial fails on the network, and
+  tries IPv4 first on later reconnects. A network whose IPv6 is broken past the
+  connect ("write: socket is not connected") used to keep the device offline
+  until IPv6 was turned off on it.
 
 ## [0.6.0] – 2026-11-04
 

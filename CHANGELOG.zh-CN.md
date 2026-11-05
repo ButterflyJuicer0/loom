@@ -22,6 +22,7 @@
 ### 修复
 - Codex 会话执行的命令里现在有 `LOOM_SESSION_ID`（通过 thread 的 `shell_environment_policy` 传入），`loom-session` 和 `loom-notice` 在 Codex 里也能用了，之前会报「LOOM_SESSION_ID is not set」。
 - 设备会话：传给扫描脚本的参数改用 `json.loads` 解析，`true`、`null` 不会再让脚本出错。
+- loom-node 连接失败（网络层面）时会改用 IPv4 再连一次，之后重连都先走 IPv4。之前设备所在网络的 IPv6 坏掉时（报「write: socket is not connected」），设备会一直离线，只能在设备上关掉 IPv6。
 
 ## [0.6.0] – 2026-11-04
 

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -91,6 +93,65 @@ func socketURL(origin, token string) (string, error) {
 	return u.String(), nil
 }
 
+// preferIPv4 is set once an IPv4-only dial got through where the usual one did
+// not, so later reconnects try IPv4 first instead of failing on IPv6 each time.
+var preferIPv4 atomic.Bool
+
+// dualClient is the usual dual-stack client (nil: the websocket default).
+// A variable so a test can stand in a network whose IPv6 is broken.
+var dualClient *http.Client
+
+// ipv4Client dials over IPv4 only. Some networks hand out an IPv6 address
+// whose path is broken past the connect: the TCP handshake looks fine, then
+// the first write fails ("socket is not connected"). Go's dual-stack fallback
+// only covers a connect that fails, so without this the device stays offline.
+var ipv4Client = func() *http.Client {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	d := &net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}
+	t.DialContext = func(ctx context.Context, _, addr string) (net.Conn, error) {
+		return d.DialContext(ctx, "tcp4", addr)
+	}
+	return &http.Client{Transport: t}
+}()
+
+// dialSocket opens the websocket: the usual dual-stack way, then IPv4 only
+// (or the other way round once IPv4 has been seen to work). Only a network
+// failure moves on to the other way; an HTTP answer, such as a 403, is final.
+// Each way gets its own 20s under parent, so one that hangs leaves the other
+// its full time.
+func dialSocket(parent context.Context, addr string) (*websocket.Conn, *http.Response, error) {
+	opts := func(c *http.Client) *websocket.DialOptions {
+		return &websocket.DialOptions{
+			HTTPClient: c,
+			HTTPHeader: http.Header{"User-Agent": {"loom-node/" + version}},
+		}
+	}
+	v4First := preferIPv4.Load()
+	first, second, secondName := dualClient, ipv4Client, "IPv4"
+	if v4First {
+		first, second, secondName = ipv4Client, dualClient, "dual stack"
+	}
+	try := func(c *http.Client) (*websocket.Conn, *http.Response, error) {
+		ctx, cancel := context.WithTimeout(parent, 20*time.Second)
+		defer cancel()
+		return websocket.Dial(ctx, addr, opts(c))
+	}
+	ws, resp, err := try(first)
+	if err == nil || resp != nil || parent.Err() != nil {
+		return ws, resp, err
+	}
+	ws, resp, err2 := try(second)
+	if err2 != nil {
+		return nil, resp, fmt.Errorf("%w; retried over %s: %v", err, secondName, err2)
+	}
+	// Remember whichever way got through, so the next reconnect starts there.
+	preferIPv4.Store(!v4First)
+	if !v4First {
+		log.Printf("connected over IPv4 after the usual dial failed; trying IPv4 first from now on")
+	}
+	return ws, resp, nil
+}
+
 // dial connects and joins, returning once loom has accepted the device.
 func dial(ctx context.Context, origin, token string, info map[string]string) (*conn, error) {
 	addr, err := socketURL(origin, token)
@@ -98,12 +159,7 @@ func dial(ctx context.Context, origin, token string, info map[string]string) (*c
 		return nil, err
 	}
 
-	dctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-	defer cancel()
-
-	ws, resp, err := websocket.Dial(dctx, addr, &websocket.DialOptions{
-		HTTPHeader: http.Header{"User-Agent": {"loom-node/" + version}},
-	})
+	ws, resp, err := dialSocket(ctx, addr)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusForbidden {
 			return nil, errRevoked
@@ -114,6 +170,10 @@ func dial(ctx context.Context, origin, token string, info map[string]string) (*c
 	}
 	// Files travel as 256 KiB chunks, base64'd; leave room.
 	ws.SetReadLimit(8 << 20)
+
+	// The join gets its own time, whichever way the socket came up.
+	dctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
 
 	c := &conn{ws: ws, out: make(chan []byte, 64)}
 	c.joinRef = c.nextRef()

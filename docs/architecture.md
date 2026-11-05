@@ -713,6 +713,13 @@ agent ──zsh──> loom-node exec mac -- '…'      CLI, on this host
   `~/.loom/node-cli.json`, a mode-600 file that loom writes at boot, so only
   this user can read it. They also refuse any request carrying `cf-ray`,
   whatever key it presents.
+- **Broken IPv6.** The daemon dials the usual dual-stack way first. When
+  that fails on the network (no HTTP answer), it dials again over IPv4 only
+  (`dialSocket` in `node/phx.go`), and once IPv4 got through it tries IPv4
+  first on every reconnect. Go's own fallback covers only a connect that
+  fails. Some networks connect over IPv6 and then fail the first write
+  ("socket is not connected"), so that fallback never starts. An HTTP answer,
+  such as a 403 from the WAF, is final and is not retried another way.
 - **Online state.** A device is online while its channel is alive. Joins and
   drops are pushed on the lobby channel. Neither side polls.
 - **Requests.** Each request (`exec`, `read`, `write`) gets an id. The
