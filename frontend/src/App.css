@@ -1788,9 +1788,11 @@
   font-weight: 600;
 }
 
-/* Interrupted stays: something is parked there, waiting for the user. */
+/* Interrupted stays: something is parked there, waiting for the user. An idle
+   one keeps its place, so every row's engine icon and title line up whether
+   or not a dot shows in front of them. */
 .sidebar .session .dot.idle {
-  display: none;
+  visibility: hidden;
 }
 
 .sidebar .session .session-when {

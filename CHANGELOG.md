@@ -17,6 +17,9 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Engine icon in the sidebar**: each session row shows whether it runs on
+  Claude Code, Codex or Kiro, after its status dot; titles stay lined up
+  whether or not the dot shows.
 - **Send a message into another session**: a session's `…` menu →
   **Send a message…** writes into it without opening it; an agent does the
   same with `loom-session send ID --text …`, once the user agreed (the

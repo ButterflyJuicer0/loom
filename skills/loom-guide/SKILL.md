@@ -37,6 +37,12 @@ Some features are told only in the skill that uses them and in
   message: the loom-sessions skill (`skills/loom-sessions/SKILL.md`, "Sending
   into another session"). To start a new session with a brief instead, that
   is loom-handoff.
+- **Which engine a session runs on.** Every row in the sidebar shows the
+  engine's icon — Claude Code, Codex or Kiro — after the status dot, with its
+  name on hover (`BackendIcon` in `frontend/src/Sidebar.tsx`). An idle row
+  keeps the dot's place, so titles line up. The engine is fixed for a
+  session's life; to carry one on in another, use its … menu → *Continue in
+  new chat* and the arrow beside it.
 - **Devices on a network with broken IPv6.** loom-node retries a failed dial
   over IPv4 only, then keeps trying IPv4 first, so such a device comes online
   without turning IPv6 off. It needs a loom-node with this fix: an older one

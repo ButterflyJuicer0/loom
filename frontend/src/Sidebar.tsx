@@ -26,6 +26,7 @@ import {
 import { useEffect, useState, type MouseEvent } from "react"
 import { HOST_DEVICE, type AgentBackend, type AgentInfo, type Device, type Employee, type Notice, type Project } from "./api"
 import { Avatar, BudgetRing, short, STATUS, StatusIcon } from "./Employees"
+import { BackendIcon } from "./BackendIcon"
 import { BellButton } from "./Notices"
 import { RenameInput } from "./Confirm"
 import { DeviceIcon, deviceIcon } from "./DeviceIcon"
@@ -268,6 +269,7 @@ export function Sidebar({
       {/* In front, as on every row. A two-line Working row puts both lines
           after it, so the title and the line under it start together. */}
       <span className={"dot " + s.status} title={s.status} />
+      <BackendIcon backend={s.backend} title={s.backend_label} />
       {s.kind === "incognito" && <HatGlasses className="session-incognito" aria-label="Incognito" />}
       {s.id === renamingId ? (
         <RenameInput value={s.title ?? s.id} stem={false} onDone={(title) => onRenamed(s.id, title)} />
