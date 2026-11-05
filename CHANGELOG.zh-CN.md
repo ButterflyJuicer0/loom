@@ -16,6 +16,7 @@
 ## [Unreleased]
 
 ### 新增
+- **侧边栏显示引擎图标**：每个会话前面显示它跑在 Claude Code、Codex 还是 Kiro 上，在状态点后面；不管有没有状态点，标题都对齐。
 - **往另一个会话发消息**：会话的 `…` 菜单 → **Send a message…**，不用打开就能写进去；agent 经用户同意后也能用 `loom-session send ID --text …` 发（见 loom-sessions skill）。目标会话正在跑时会等这一轮结束。agent 发的消息显示为「↪ From <会话>」，收到的 agent 会被告知这不是用户本人。只能发给用户自己的会话。Claude Code、Codex、Kiro 之间任意方向都能互发。
 - **删除设备上的会话**：在 Sessions 里（某台设备或本服务器）打开一个会话，点垃圾桶按钮，它的文件会移到那台机器的废纸篓——macOS 是废纸篓，Linux 是 XDG Trash，都写不进时放到 `~/.loom-trash`——随时能放回去。会话还在运行时不能删。删的是 Loom 自己的会话时，它也会从侧边栏消失，进 Loom 的回收站。
 
