@@ -49,6 +49,12 @@ Some features are told only in the skill that uses them and in
   is updated by reinstalling (`loomctl node reinstall DEVICE`). Details:
   `docs/architecture.md` §4.4, "Broken IPv6"; code: `dialSocket` in
   `node/phx.go`.
+- **Device sessions in the sidebar: lit vs grey.** A device row is lit
+  whenever the device is online, grey only when it is offline. Only macOS and
+  Linux rows open the sessions view (it runs `python3` on the device); an
+  online Windows or Android row is lit but does not open, and says so on
+  hover. Code: the `devices.map` under "Device sessions" in
+  `frontend/src/Sidebar.tsx`.
 
 If the docs don't settle it, read the code: `lib/` (Elixir server),
 `frontend/src/` (UI), `node/` (loom-node). Say which you checked.

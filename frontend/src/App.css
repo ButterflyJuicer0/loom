@@ -2297,6 +2297,10 @@
   cursor: default;
 }
 
+.device-session-row.no-open {
+  cursor: default;
+}
+
 .dsess-agent.kiro {
   color: #9b6bff;
   background: color-mix(in srgb, #9b6bff 15%, transparent);
