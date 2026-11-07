@@ -32,12 +32,22 @@ if command -v go >/dev/null 2>&1; then
   # The Android app (one APK, no Termux), served at GET /node/app/:code. Needs a
   # JDK + Android SDK + host-arch aapt2/zipalign; a host without them still
   # deploys, Android devices just won't get the app.
-  if command -v aapt2 >/dev/null 2>&1 && [ -x node/android/build.sh ]; then
+  # The SDK's build-tools (aapt2, zipalign) count too, not just a distro aapt2
+  # on PATH: on x86_64 the SDK's own binaries are the host-arch ones.
+  : "${ANDROID_HOME:=$HOME/android-sdk}"
+  export ANDROID_HOME
+  if [ -x "$ANDROID_HOME/build-tools/34.0.0/aapt2" ]; then
+    PATH="$ANDROID_HOME/build-tools/34.0.0:$PATH"
+  fi
+  if command -v aapt2 >/dev/null 2>&1 && command -v javac >/dev/null 2>&1 && [ -f node/android/build.sh ]; then
     # Same join origin the frontend bakes in, so the app accepts a bare code.
     LOOM_JOIN_ORIGIN=$(sed -n 's/^VITE_NODE_JOIN_ORIGIN=//p' frontend/.env.production.local 2>/dev/null) \
       sh node/android/build.sh && cp node/android/build/loom-node.apk priv/node/loom-node.apk
+  elif [ -f priv/node/loom-node.apk ]; then
+    echo "deploy: no Android build toolchain; keeping the existing priv/node/loom-node.apk (may be stale)" >&2
   else
-    echo "deploy: no Android build toolchain; skipping the Android app" >&2
+    echo "deploy: WARNING no Android build toolchain and no APK: Android devices will get" >&2
+    echo "deploy:   'the Android app was not built on this host'. See skills/loom-cli." >&2
   fi
   case "$(uname -m)" in aarch64|arm64) arch=arm64 ;; *) arch=amd64 ;; esac
   mkdir -p "$HOME/.local/bin"

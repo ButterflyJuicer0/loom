@@ -345,6 +345,13 @@ def cmd_doctor(a):
     hint = (f"missing {' '.join(missing)} — a device of that kind gets a 404 on install. "
             f"Build them: {go_hint()} make -C node {' '.join(missing)}") if missing else ""
     bad += not check(not missing, "builds to hand out: " + (", ".join(sorted(have)) or "none"), hint)
+    # The Android app is a separate artifact from the android-arm64 daemon above:
+    # without it the phone's /node/app/CODE page says "not built on this host".
+    apk = os.path.isfile(os.path.join(pdir, "loom-node.apk"))
+    bad += not check(apk, "Android app (loom-node.apk)" + ("" if apk else " missing"),
+                     "" if apk else "phones can't join. Needs a JDK + Android SDK; build with "
+                     f"{go_hint()} sh node/android/build.sh and copy build/loom-node.apk to priv/node/ "
+                     "(steps: skills/loom-cli, 'When a device does not connect')")
     check(bool(shutil.which("loom-node")), f"loom-node on this host: {shutil.which('loom-node') or 'missing'}")
     print("CLI")
     check(bool(read_token()), "logged in" if read_token() else "not logged in (loomctl login)")

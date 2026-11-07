@@ -84,6 +84,30 @@ DEVICE is the id (`n_…`) or the name.
   has no build for that system. `loomctl doctor` lists what is missing and
   the `make -C node …` line that builds it (with the Go version `node/go.mod`
   needs, fetched and checksum-verified).
+- The phone opens `…/node/app/CODE` and sees **the Android app was not built
+  on this host**: `priv/node/loom-node.apk` is missing because the host had no
+  Android toolchain, and `rel/deploy.sh` skipped the APK silently. `doctor`
+  still shows ✓ because the `android-arm64` *daemon* binary exists; the APK is
+  separate. Build it once (x86_64 host, 2026-11-07):
+  ```
+  sudo dnf install -y java-17-amazon-corretto-devel
+  # Android cmdline-tools → ~/android-sdk/cmdline-tools/latest, then:
+  yes | ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk "platforms;android-34" "build-tools;34.0.0"
+  GOSUMDB=sum.golang.org GOTOOLCHAIN=go<version from node/go.mod> \
+  ANDROID_HOME=$HOME/android-sdk LOOM_JOIN_ORIGIN=<public_url> \
+  PATH=$HOME/android-sdk/build-tools/34.0.0:$PATH sh node/android/build.sh
+  cp node/android/build/loom-node.apk priv/node/loom-node.apk
+  ```
+  No restart needed; the old code's page still says "not built", so make a
+  fresh one with `loomctl node reinstall DEVICE`. Check free disk first (SDK +
+  JDK ≈ 1 GB). The system Go may be older than `go.mod` with
+  `GOTOOLCHAIN=local` and `GOSUMDB=off` set globally, so pass both variables or
+  the toolchain download is refused.
+- `there is already a device called NAME` after a `node add` that seemed to
+  print nothing: the device was created but the output was lost (`loomctl` output
+  is buffered when piped or killed by `timeout`). Use `loomctl node reinstall
+  NAME`; run long `--wait` calls in the background writing to a file
+  (`stdbuf -oL loomctl … > f &`) so the code is visible right away.
 - Windows or Android and the device sessions view: that view needs `python3`
   on the device (macOS/Linux).
 - Once online, reach it with `loom-node` (see the loom-nodes skill).

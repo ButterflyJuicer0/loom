@@ -155,7 +155,7 @@ public class MainActivity extends Activity {
             } catch (Exception e) {
                 ui.post(() -> {
                     connect.setEnabled(true);
-                    setStatus("失败：" + e.getMessage());
+                    setStatus("失败：" + describe(e));
                 });
             }
         }).start();
@@ -193,14 +193,51 @@ public class MainActivity extends Activity {
         c.setConnectTimeout(15000);
         c.setReadTimeout(15000);
         c.setInstanceFollowRedirects(true);
-        try (BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream()))) {
+        try {
+            int code = c.getResponseCode();
+            // getInputStream() on a 4xx throws FileNotFoundException whose message
+            // is just the URL, which told the user nothing; read the body instead.
+            String body = read(code >= 400 ? c.getErrorStream() : c.getInputStream());
+            if (code == 404)
+                throw new Exception("激活码已用过或已过期（只能用一次、2 分钟内有效）。去 Loom 的 Devices 重新生成一个再试。");
+            if (code == 403)
+                throw new Exception("被 Loom 前面的 CDN/防火墙拦截（HTTP 403），当前网络或地区不在允许范围内。换个网络，或让管理员放行。");
+            if (code >= 400)
+                throw new Exception("服务器返回 HTTP " + code + "：" + snippet(body));
+            return body;
+        } finally {
+            c.disconnect();
+        }
+    }
+
+    private static String read(java.io.InputStream in) throws Exception {
+        if (in == null) return "";
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(in))) {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = r.readLine()) != null) sb.append(line).append('\n');
             return sb.toString();
-        } finally {
-            c.disconnect();
         }
+    }
+
+    private static String snippet(String s) {
+        s = s.trim();
+        return s.length() > 200 ? s.substring(0, 200) + "…" : s;
+    }
+
+    // Network exceptions often carry only a host or URL as their message
+    // (UnknownHostException: "example.com"), so say what kind of failure it was.
+    private static String describe(Exception e) {
+        String m = e.getMessage();
+        if (e instanceof java.net.UnknownHostException)
+            return "解析不了 Loom 的地址（" + m + "），检查网络或 DNS。";
+        if (e instanceof java.net.SocketTimeoutException)
+            return "连接 Loom 超时，检查网络后重试。";
+        if (e instanceof javax.net.ssl.SSLException)
+            return "HTTPS 握手失败：" + m;
+        if (e instanceof java.io.IOException && e.getClass() != java.io.IOException.class)
+            return e.getClass().getSimpleName() + "：" + m;
+        return m == null ? e.getClass().getSimpleName() : m;
     }
 
     private static String extract(String s, String re) {
