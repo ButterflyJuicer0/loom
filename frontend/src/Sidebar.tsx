@@ -484,11 +484,12 @@ export function Sidebar({
             </div>
             {devices.map((d) => {
               const unsupported = d.os === "windows" || d.os === "android"
+              // Lit whenever the device is online; only macOS/Linux can be opened.
               const usable = d.online && !unsupported
               return (
                 <div
                   key={d.id}
-                  className={"project-row device-session-row" + (usable ? "" : " disabled") + (d.id === sessionsOf ? " current" : "")}
+                  className={"project-row device-session-row" + (d.online ? "" : " disabled") + (d.online && unsupported ? " no-open" : "") + (d.id === sessionsOf ? " current" : "")}
                   role="button"
                   aria-disabled={!usable}
                   onClick={() => usable && setSessionsOf(d.id)}
