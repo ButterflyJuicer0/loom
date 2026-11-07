@@ -69,6 +69,14 @@ the distro's (`apt install aapt zipalign`); d8/apksigner are JVM wrappers.
 
 `rel/deploy.sh` runs this when a toolchain is present and serves the APK at
 `GET /node/app/:code`; a host without the toolchain still deploys.
+That skip is silent: the phone then gets "the Android app was not built on this
+host", while `loomctl doctor` still lists `android-arm64` (that is the daemon
+binary, not the APK). deploy.sh only looks for `aapt2` on PATH, so with the SDK
+in `~/android-sdk` put `build-tools/34.0.0` on PATH or build by hand and copy
+`build/loom-node.apk` to `priv/node/loom-node.apk` (steps: skills/loom-cli).
+`go.mod` may need a newer Go than the system one; with `GOTOOLCHAIN=local` and
+`GOSUMDB=off` in the environment, build with
+`GOSUMDB=sum.golang.org GOTOOLCHAIN=go<version>`.
 
 ## Field notes (what actually bit us)
 

@@ -49,6 +49,11 @@ Some features are told only in the skill that uses them and in
   is updated by reinstalling (`loomctl node reinstall DEVICE`). Details:
   `docs/architecture.md` §4.4, "Broken IPv6"; code: `dialSocket` in
   `node/phx.go`.
+- **Android phone: "the Android app was not built on this host".** The APK
+  is only built when the host has a JDK and Android SDK, and deploy skips it
+  without saying so. Build it once and copy it to `priv/node/loom-node.apk`,
+  then make a fresh install code. Steps: skills/loom-cli, "When a device does
+  not connect"; background: `node/android/README`.
 - **Device sessions in the sidebar: lit vs grey.** A device row is lit
   whenever the device is online, grey only when it is offline. Only macOS and
   Linux rows open the sessions view (it runs `python3` on the device); an
