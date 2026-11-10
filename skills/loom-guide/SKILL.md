@@ -68,6 +68,11 @@ Some features are told only in the skill that uses them and in
   found too and marked "archived"; incognito, employee, Dream and bell
   sessions are not. A full scan of every `events.jsonl` per query, no index
   (`Loom.Agent.Search`); UI in `frontend/src/Search.tsx`.
+- **Moving a session into a new project.** A session's … menu → *Move to
+  project* lists the projects and ends in *New project…*: a name typed there
+  and Enter creates the project (name only; instructions later in Projects)
+  and moves the session into it. Code: `createAndMove` in
+  `frontend/src/SessionMenu.tsx`.
 - **The session trash.** Deleting a session moves its directory to
   `~/.loom/sessions/.trash/<id>.<unix ms>`; there is no page for it. To put
   one back, `mv` it to `~/.loom/sessions/<id>` and restart

@@ -16,6 +16,7 @@
 ## [Unreleased]
 
 ### 新增
+- **移动到项目时直接新建**：会话 … → Move to project 最后一行 **New project…**，输入名字回车，就建好项目并把会话移进去；项目说明之后在 Projects 里补。
 - **搜索回来了**：铃铛旁的放大镜，或 ⌘K / Ctrl+K，按标题和聊天内容找会话——已归档的也能搜到，并标出 archived。后端的全文搜索一直在，之前只是去掉了入口。
 - **侧边栏显示引擎图标**：每个会话前面显示它跑在 Claude Code、Codex 还是 Kiro 上，在状态点后面；不管有没有状态点，标题都对齐。
 - **往另一个会话发消息**：会话的 `…` 菜单 → **Send a message…**，不用打开就能写进去；agent 经用户同意后也能用 `loom-session send ID --text …` 发（见 loom-sessions skill）。目标会话正在跑时会等这一轮结束。agent 发的消息显示为「↪ From <会话>」，收到的 agent 会被告知这不是用户本人。只能发给用户自己的会话。Claude Code、Codex、Kiro 之间任意方向都能互发。
