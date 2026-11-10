@@ -65,17 +65,22 @@ defmodule Loom.Notices.Prompt do
       source session around the turn it came from (`loom-session read …`,
       the `loom-sessions` skill) instead of guessing. Say what you found
       plainly, in the user's language.
-    - When the user decides, tell the source: `loom-notice act ID approve`,
-      `reject`, or `reply "text"` (it goes to the source session as the
-      user's own message, quoting the notice — write what the user decided,
-      in their words, nothing they did not say). `loom-notice act ID done`
-      settles it with nothing to pass on. Only on the user's word; when it is
-      unclear what they want said, ask.
-    - One act per decision. A plain yes or no is `approve` or `reject`,
-      nothing more; when the user adds conditions or other words ("yes, but
-      tonight"), send those with `reply` alone, not both.
-    - The source's work stays the source's: pass the decision on rather than
-      doing its job here, unless the user asks you to.
+    - When the user decides, do it here yourself: merge, deploy, roll back,
+      fix, send — whatever the decision asks for — and check it worked, then
+      say what you did. Loom told you where the source works and where its
+      context is; work in that directory and read that context as you need.
+      The task ends here: don't hand it back to the source, and don't send
+      the source a message about it. Ask first only when it is unclear what
+      they want done.
+    - Then settle the notice with `loom-notice act ID done "note"`: a short
+      factual note of the decision and what this session did, e.g.
+      "Rejected — rolled back here: branch deleted, dev unchanged." Nothing
+      goes to the source session; it reads the note the next time it looks
+      over its notices, so it does not redo the work.
+    - Message the source (`approve`, `reject` or a `reply` in the user's
+      words) only when the user says so ("tell 钱多多 to …"), or when only the
+      source can do the work (its own running job, a device or account this
+      session cannot reach).
     - A later update of the same notice may arrive here as another brief.
     """
   end

@@ -205,6 +205,26 @@ defmodule Loom.EmployeesTest do
     assert e["attention"] == nil
   end
 
+  test "a wake-up sends what the session already has, unchanged, as one line",
+       %{server: server} do
+    {:ok, e} = Employees.create(%{"name" => "小省", "role" => "盯邮件"}, server)
+    work = e["work_session"]
+    {:ok, _} = Employees.wake(e["id"], nil, server)
+    assert BackendStub.await_turn() =~ "role: 盯邮件"
+    end_turn(work, card(%{}), server)
+
+    {:ok, _} = Employees.wake(e["id"], nil, server)
+    second = BackendStub.await_turn()
+    refute second =~ "role: 盯邮件"
+    assert second =~ "as in your last"
+    assert second =~ "Budget today:"
+    end_turn(work, card(%{}), server)
+
+    {:ok, _} = Employees.update(e["id"], %{"role" => "盯微信"}, server)
+    {:ok, _} = Employees.wake(e["id"], nil, server)
+    assert BackendStub.await_turn() =~ "role: 盯微信"
+  end
+
   test "a long work session is turned over, once there is a handoff to carry it",
        %{server: server} do
     {:ok, e} = Employees.create(%{"name" => "小轮"}, server)
@@ -216,7 +236,7 @@ defmodule Loom.EmployeesTest do
     grow = fn ->
       meta = Path.join(Agent.Store.session_dir(first), "meta.json")
       raw = meta |> File.read!() |> Jason.decode!()
-      File.write!(meta, Jason.encode!(Map.merge(raw, %{"context_tokens" => 70_000})))
+      File.write!(meta, Jason.encode!(Map.merge(raw, %{"context_tokens" => 160_000})))
     end
 
     # No HANDOFF.md yet: it is asked to write one, in the session it has.
@@ -357,6 +377,34 @@ defmodule Loom.EmployeesTest do
     assert [%{"title" => "Research X", "priority" => "high", "status" => "todo"}] = e["kpis"]
     assert e["pending_notes"] == 1
     assert e["wake_at"] <= System.system_time(:millisecond)
+  end
+
+  test "the chat removes a KPI it added, never the boss's", %{server: server} do
+    {:ok, e} = Employees.create(%{"name" => "小研"}, server)
+
+    {:ok, %{"kpis" => [%{"id" => boss_kpi}]}} =
+      Employees.add_kpi(e["id"], %{"title" => "Boss's"}, server)
+
+    {:ok, _} = Agent.submit(e["chat_session"], "track Y")
+    BackendStub.await_turn()
+    end_turn(e["chat_session"], card(%{"kpi_add" => [%{"title" => "Y"}]}), server)
+
+    {:ok, e} = Employees.get(e["id"], server)
+    [_, %{"id" => own, "by" => "employee"}] = e["kpis"]
+
+    {:ok, _} = Agent.submit(e["chat_session"], "don't make KPIs")
+    BackendStub.await_turn()
+
+    end_turn(
+      e["chat_session"],
+      card(%{
+        "kpis" => [%{"id" => own, "remove" => true}, %{"id" => boss_kpi, "remove" => true}]
+      }),
+      server
+    )
+
+    {:ok, e} = Employees.get(e["id"], server)
+    assert [%{"id" => ^boss_kpi}] = e["kpis"]
   end
 
   test "the boss profile: heard by one, followed by all, kept by the boss", %{

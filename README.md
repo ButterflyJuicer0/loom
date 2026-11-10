@@ -68,7 +68,7 @@ commits on top. It does not track upstream.
 | Copying | Select text | Tap inline code to copy; copy button under every message |
 | Scheduling | `/cron` | **Tasks page**, HTTP API, wall-clock times, tasks described in plain words |
 | Autonomy | — | **Virtual employees** (budget, KPIs, workstation on one device, shared boss profile), **Sleep / Dream** memory consolidation |
-| Notifications | Push when a turn ends | **The bell**: prioritised notices (0–10) posted by agents, with background, answers, Later; plus your to-do list. Only the bell rings the phone; 0–1 can ring through silent mode (Bark) |
+| Notifications | Push when a turn ends | **The bell**: prioritised notices (0–10) posted by agents, each opening a session of its own with the full brief, where you ask and decide; Later and Done; plus your to-do list. Only the bell rings the phone; 0–1 can ring through silent mode (Bark) |
 | Meetings | — | **Meeting mode**: live transcript in the browser (mic + shared screen), hints every ~30 s, minutes at the end, hotwords the agent learns |
 | Home | — | **loom-home**: an MQTT broker in `loom-node` and a voice server for xiaozhi-protocol robots that control home devices by speech |
 | Housekeeping | — | `loom-tidy` / `loom-retitle`: retitle, archive, merge sessions, on a schedule |
@@ -128,7 +128,13 @@ See the [changelog](CHANGELOG.md) for what came in which version.
   their own workspace), stay out of Recents, memory and projects, and are
   deleted 30 days after their last message unless kept or pinned.
 - **Continue in a new chat**: carry a long session on, by forking it or by
-  having the new one read it.
+  having the new one read it, on the same backend or another.
+- **Reference a chat**: the composer's + attaches a recent chat; the agent
+  reads it only if the request needs it.
+- **Share as an image**: pick the exchanges to show and get one long image
+  (no tool calls), to share, save or copy.
+- **Titles that keep up**: a session is retitled from its first message to
+  what it is about, and to "old topic · new topic" when the talk moves on.
 - **Tidy**: the `loom-tidy` and `loom-retitle` skills retitle, archive and
   merge sessions in one go, as a daily task if you like. Archived sessions
   are in Settings.
@@ -151,9 +157,10 @@ See the [changelog](CHANGELOG.md) for what came in which version.
   sessions and consolidates Claude Code's memory, writes a report, and only
   proposes changes outside the memory directory. The memory is a git
   repository, so a night can be undone.
-- **The bell.** Agents post notices with a priority from 0 to 10, a
-  background and suggested answers; opening one jumps to the turn it is about,
-  and Later puts it off. Your to-dos sit beside them.
+- **The bell.** Agents post notices with a priority from 0 to 10 and a
+  brief. Each notice opens a session of its own: ask there and decide, and
+  the decision goes back to the session that asked. Later puts it off, Done
+  clears it. Your to-dos sit beside them.
 - **Safety classifier stops** are handled: a flagged session is set aside and
   can be continued in a fresh one.
 

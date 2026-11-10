@@ -784,7 +784,7 @@ defmodule Loom.Agent.Session do
     if title == "" do
       {:reply, {:error, :empty}, state}
     else
-      state = emit(%{state | title: title, title_by: by}, :renamed, %{title: title})
+      state = put_title(state, title, by)
       persist_meta(state)
       {:reply, :ok, state}
     end
@@ -1109,9 +1109,10 @@ defmodule Loom.Agent.Session do
     session = self()
     module = recapper()
     messages = recap_messages(state.transcript)
+    title = state.title
 
     Task.Supervisor.start_child(Loom.Agent.TaskSupervisor, fn ->
-      send(session, {:recapped, seq, module.recap(messages)})
+      send(session, {:recapped, seq, module.recap(messages, title)})
     end)
 
     {:noreply, state}
@@ -1119,8 +1120,25 @@ defmodule Loom.Agent.Session do
 
   def handle_info({:recap, _seq}, state), do: {:noreply, state}
 
-  def handle_info({:recapped, seq, recap}, %{seq: seq} = state) when is_binary(recap) do
-    state = %{state | recap: recap}
+  # The title comes with it: the Working row is the session's title, and a
+  # first-message one says little, nor does one from before the talk moved on.
+  # Only over a first-message or tidied title (nil may be the user's, from
+  # before this was kept), and not in a meeting's chat; given as "tidy", the
+  # same as a `retitle/2`.
+  def handle_info({:recapped, seq, %{} = got}, %{seq: seq} = state) do
+    state = if is_binary(got[:recap]), do: %{state | recap: got[:recap]}, else: state
+
+    state =
+      case got[:title] do
+        title when is_binary(title) and title != "" ->
+          if state.title_by in ["auto", "tidy"] and title != state.title and not meeting?(state),
+            do: put_title(state, title, "tidy"),
+            else: state
+
+        _ ->
+          state
+      end
+
     persist_meta(state)
     {:noreply, state}
   end
@@ -1305,6 +1323,13 @@ defmodule Loom.Agent.Session do
   end
 
   defp schedule_recap(state), do: state
+
+  # A meeting's chat keeps the name the meeting gave it (`Loom.Meeting`, which
+  # keeps its transcripts in the session's `meeting/`).
+  defp meeting?(state), do: File.dir?(Path.join(Store.session_dir(state.id), "meeting"))
+
+  defp put_title(state, title, by),
+    do: emit(%{state | title: title, title_by: by}, :renamed, %{title: title})
 
   defp recapper, do: Application.get_env(:loom, :recap, Loom.Agent.Recap)
 

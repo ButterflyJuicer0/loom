@@ -6,7 +6,7 @@
 
 | 版本 | 日期 | 主题 |
 | --- | --- | --- |
-| [0.6.0](#060--2026-11-04) | 2026-11-04 | 消息排队、设备会话、引用会话、分享长图、回收站、安全修复 |
+| [0.6.0](#060--2026-11-04) | 2026-11-04 | 消息排队、设备会话、引用会话、分享长图、标题跟着话题走、每条铃铛通知一个 session、回收站、安全修复 |
 | [0.5.0](#050--2026-11-03) | 2026-11-03 | 会议模式、用对话招聘、员工硬权限、只有铃铛会响、loom-home |
 | [0.4.0](#040--2026-11-02) | 2026-11-02 | 按会话选模型、Continue、无痕会话、Working、Android |
 | [0.3.0](#030--2026-10-31) | 2026-10-31 | 铃铛、会话整理、员工工位、更安全的设备 |
@@ -20,7 +20,22 @@
 - **往另一个会话发消息**：会话的 `…` 菜单 → **Send a message…**，不用打开就能写进去；agent 经用户同意后也能用 `loom-session send ID --text …` 发（见 loom-sessions skill）。目标会话正在跑时会等这一轮结束。agent 发的消息显示为「↪ From <会话>」，收到的 agent 会被告知这不是用户本人。只能发给用户自己的会话。Claude Code、Codex、Kiro 之间任意方向都能互发。
 - **删除设备上的会话**：在 Sessions 里（某台设备或本服务器）打开一个会话，点垃圾桶按钮，它的文件会移到那台机器的废纸篓——macOS 是废纸篓，Linux 是 XDG Trash，都写不进时放到 `~/.loom-trash`——随时能放回去。会话还在运行时不能删。删的是 Loom 自己的会话时，它也会从侧边栏消失，进 Loom 的回收站。
 
+### 变更
+- **铃铛直接办你的决定**：通知打开的会话会自己执行你的决定，办完再告诉
+  发起的员工或任务做了什么。
+- **通知会话里有预选回复**：员工或任务预想的几种回答，显示在会话里 brief
+  下面，读完一点就能回；卡片上仍然没有。
+- **一夜睡眠一张卡**：所有项目的 Dream 建议合成一条通知；它的会话按项目
+  各问一个问题，没什么要问的项目不发。
+- **员工在 chat 里当场做**：你在员工的 chat 里交代的事，它当场就做；只有你
+  要求才建 KPI，自己建的 KPI 可以删。看不到的记录（电话、SFDC）先问"做了吗？"，
+  不说你没做。
+- **员工空闲醒来更省钱**：员工的工作会话到 150k token 才换新（原来 60k）；
+  没变化的醒来段落合成一行发。
+
 ### 修复
+- **iPhone 弹窗避开刘海**：iPhone 主屏 App 里，设备等较高的弹窗不再被顶部
+  刘海和底部横条挡住。
 - Codex 会话执行的命令里现在有 `LOOM_SESSION_ID`（通过 thread 的 `shell_environment_policy` 传入），`loom-session` 和 `loom-notice` 在 Codex 里也能用了，之前会报「LOOM_SESSION_ID is not set」。
 - 设备会话：传给扫描脚本的参数改用 `json.loads` 解析，`true`、`null` 不会再让脚本出错。
 - loom-node 连接失败（网络层面）时会改用 IPv4 再连一次，之后重连都先走 IPv4。之前设备所在网络的 IPv6 坏掉时（报「write: socket is not connected」），设备会一直离线，只能在设备上关掉 IPv6。
@@ -35,7 +50,10 @@
 - **侧边栏顶部的 Device sessions**：在 Tasks 下面，展开后点一台设备，直接打开它的会话列表，不用再进 Devices 对话框。
 - **Device sessions 里的 This server**：Loom 所在的服务器排在最前，主 agent 自己的历史也能像设备一样查看和选择。Loom 自己的会话会有标记，点开就是原会话，不会再复制一份；在设备上用智能选择时也会一起搜这台服务器的会话。
 - **Kiro 会话**：和 Claude Code、Codex 一起列出（不含它的子 agent 会话），可以看对话记录，也能在 Loom 里继续。
-- **引用最近的会话**：输入框的 + 变成菜单——Files，或最近 8 个会话之一。选中的会话以
+- **标题跟着话题走**：一轮结束 10 分钟后，写 Working 摘要的那次小模型调用顺带改标题——
+  从第一句话改成说清是什么事的标题；话题变了就写成「旧话题 · 新话题」。用户自己起的标题和会议会话的标题不动。
+- **引用最近的会话**：输入框的 + 变成菜单——Files，或「Reference a chat…」，
+  弹窗里列出最近的会话，可按标题筛选。选中的会话以
   chip 随消息发出；agent 只得到标题、id 和目录，需要时才用 `loom-session read` 去读。
   点已发消息里的 chip 可打开那个会话。
 - **对话一键分享长图**：会话菜单里的 "Share…" 把对话按一问一答列出来，默认全选，
@@ -56,6 +74,7 @@
 - 斜杠命令菜单：选中项明显高亮，鼠标悬停即选中；手机键盘的回车键显示为"发送"。（来自 EthanLLL/loom）
 - `rel/systemd/loom.service`：内存不足时只杀掉占内存的那个进程，不再带走整个 Loom。（来自 EthanLLL/loom）
 - **每条铃铛通知自带一个 session**：通知一发出就新建一个 session，开头就是发通知的 agent 写的完整说明（上限放宽到 6000 字，markdown；`loom-notice post --detail-file`）。点卡片或推送都进这个 session，在里面问清楚、做决定，它的 agent 把决定传回原 session。你在里面说过话，它才出现在 Recents。卡片只剩 Later、Done 和说明的前两行；预设答案、Approve/Reject、卡片内回复都去掉了，铃铛的 Chat 标签页也去掉了。
+- 设备：在线设备按类型分组（Linux、Windows、Mac、Android、Bot），离线的排在最后。
 - 员工页标签："更新"排第一。
 - 会议栏：去掉人头图标和单独的行数，它们容易被看成参会人数和轮数。
 - loom-home：设备打开通道时就预热 Bedrock 连接，保持 75 秒，首句回复更快。
@@ -166,6 +185,7 @@
 
 fork 的起点：[EthanLLL/loom](https://github.com/EthanLLL/loom) 的 `cf1facd`。包含 Claude Code 和 Codex 会话、终端、canvas、幻灯片、定时提示、支持 macOS/Linux/WSL 的 `loom-node`、共享浏览器、PWA 和推送通知。
 
+[0.6.0]: https://github.com/quanquan1996/loom/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/quanquan1996/loom/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/quanquan1996/loom/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/quanquan1996/loom/compare/v0.2.0...v0.3.0

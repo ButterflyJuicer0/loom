@@ -93,8 +93,11 @@ defmodule LoomWeb.NoticeController do
   # GET /api/notice/mine
   def mine(conn, _params) do
     case source(conn) do
-      {:ok, _session, source} -> json(conn, %{notices: Notices.open_of(source.id)})
-      error -> reply(conn, error)
+      {:ok, _session, source} ->
+        json(conn, %{notices: Notices.open_of(source.id), settled: Notices.settled_of(source.id)})
+
+      error ->
+        reply(conn, error)
     end
   end
 

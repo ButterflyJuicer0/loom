@@ -392,7 +392,9 @@ for 3–5.
   shows the summary and two lines of the brief, and has only Later (0–5)
   and Done; tapping it opens its session. Approve, reject, reply and
   options on the card were removed the same day: deciding from a card,
-  without the matter in view, was not safe.
+  without the matter in view, was not safe. The source's `options` (≤5)
+  now end the brief in the notice's session as a `loom:replies` block, so
+  they show as the chat's suggested replies, under the brief.
 - **To-dos** sit beside the notices, in the same file: added in the bell, or
   by an agent the user told to (`loom-notice todo add`; the skill says only
   when asked — soft). Pushed as `todos`.

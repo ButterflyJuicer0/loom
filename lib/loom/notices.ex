@@ -37,6 +37,9 @@ defmodule Loom.Notices do
     notification.
   - **A key per source** makes a notice something to update rather than
     repeat: posting the same key again replaces the open one.
+    Sleep reports (`kind: "dream"`, key `sleep`) are the one exception that
+    spans sources: every project's lands in one open notice (`parts`), so a
+    night is one card, its session one question per project.
   - **Done** is the user's: answering in the source session (any message
     they type there), deciding in the notice's own session (its agent
     relays it), Done in the bell, or, for one that only asks to be read,
@@ -100,6 +103,14 @@ defmodule Loom.Notices do
 
   @doc "A source's open notices, for it to look over."
   def open_of(source_id, server \\ @name), do: GenServer.call(server, {:open_of, source_id})
+
+  @doc """
+  A source's notices settled in the last day, newest first: how the user's
+  decision reaches it when the notice's own session did the work and sent
+  nothing back (the `answer` says what was done).
+  """
+  def settled_of(source_id, server \\ @name),
+    do: GenServer.call(server, {:settled_of, source_id})
 
   @doc "The user opened it: done if it only asked to be read."
   def read(id, server \\ @name), do: GenServer.call(server, {:read, id})
@@ -264,6 +275,7 @@ defmodule Loom.Notices do
   def handle_call({:post, source, attrs}, _from, state) do
     case validate(source, attrs) do
       {:ok, source, attrs} ->
+        {source, attrs} = gather(state, source, attrs)
         {n, state} = upsert(state, source, attrs)
         {:reply, {:ok, view(n)}, changed(state)}
 
@@ -292,6 +304,22 @@ defmodule Loom.Notices do
       |> Enum.map(&view/1)
 
     {:reply, open, state}
+  end
+
+  def handle_call({:settled_of, source_id}, _from, state) do
+    since = state.clock.() - :timer.hours(24)
+
+    settled =
+      state.notices
+      |> Map.values()
+      |> Enum.filter(
+        &(&1["status"] != "open" and &1["source"]["id"] == source_id and
+            (&1["done_at"] || 0) >= since)
+      )
+      |> Enum.sort_by(&(-&1["done_at"]))
+      |> Enum.map(&view/1)
+
+    {:reply, settled, state}
   end
 
   def handle_call({:read, id}, _from, state) do
@@ -432,6 +460,7 @@ defmodule Loom.Notices do
         "reject" -> {"❌ Rejected: #{n["summary"]}", "reject", "Rejected"}
         "reply" when text != "" -> {"↩ #{n["summary"]}\n\n#{text}", text, "Answered"}
         "reply" -> {:error, "an empty reply", nil}
+        "done" when text != "" -> {nil, text, "Done"}
         "done" -> {nil, nil, "Done"}
         _ -> {:error, "action is approve, reject, reply or done", nil}
       end
@@ -560,6 +589,63 @@ defmodule Loom.Notices do
     n = if rose?, do: alert(state, n, now), else: Map.put(n, "held", old["held"] || false)
     {n, put_in(state.notices[n["id"]], n)}
   end
+
+  # Sleep reports, one per project a night, gather in one notice: one card
+  # to go through, each project a question of its own in its session. A
+  # project posting again replaces its part; the rest stay until settled.
+  @sleep_source "dream"
+  @sleep_key "sleep"
+
+  defp gather(state, %{"kind" => "dream"} = source, %{"key" => @sleep_key} = attrs) do
+    old = find_open(state, @sleep_source, @sleep_key)
+
+    part =
+      attrs
+      |> Map.take(["summary", "detail", "options", "priority", "session"])
+      |> Map.merge(%{"source" => source["id"], "name" => project_name(source["name"])})
+
+    parts =
+      ((old && old["parts"]) || [])
+      |> Enum.reject(&(&1["source"] == source["id"]))
+      |> Kernel.++([part])
+
+    summary =
+      parts
+      |> Enum.map_join(" ｜ ", &"#{&1["name"]}: #{&1["summary"]}")
+      |> then(
+        &if(String.length(&1) > @summary_max,
+          do: String.slice(&1, 0, @summary_max - 1) <> "…",
+          else: &1
+        )
+      )
+
+    detail =
+      Enum.map_join(parts, "\n\n", fn p ->
+        Enum.join(
+          Enum.reject(["### #{p["name"]}", p["summary"], p["detail"]], &is_nil/1),
+          "\n\n"
+        )
+      end)
+
+    attrs =
+      Map.merge(attrs, %{
+        "summary" => summary,
+        "detail" => detail(detail),
+        "priority" => parts |> Enum.map(& &1["priority"]) |> Enum.min(),
+        "needs" => "reply",
+        "options" => [],
+        "session" => nil,
+        "anchor" => nil,
+        "parts" => parts
+      })
+
+    {%{"kind" => "dream", "id" => @sleep_source, "name" => "Dream"}, attrs}
+  end
+
+  defp gather(_state, source, attrs), do: {source, attrs}
+
+  defp project_name("Dream · " <> name), do: name
+  defp project_name(name), do: name
 
   # Its own session: made with the first brief, given each new one. Without
   # one (it could not start), the card leads to the source as before.
@@ -872,22 +958,52 @@ defmodule Loom.Notices do
     :exit, _ -> chat(n, nil)
   end
 
-  # What the user sees first: who, what it needs, and the brief.
-  defp brief(n) do
+  # What the user sees first: who, what it needs, and the brief — ending on
+  # the source's foreseen answers as suggested replies (the chat's choice card).
+  @doc false
+  def brief(n) do
     head = "**#{n["source"]["name"]}** · P#{n["priority"]} · #{label(n)}"
-    Enum.join(Enum.reject([head, n["summary"], n["detail"]], &is_nil/1), "\n\n")
+    Enum.join(Enum.reject([head, n["summary"], n["detail"], replies(n)], &is_nil/1), "\n\n")
   end
 
-  # What the agent is told ahead of the user's first message.
+  defp replies(%{"parts" => [_ | _] = parts}) do
+    questions =
+      parts
+      |> Enum.filter(&match?([_ | _], &1["options"]))
+      |> Enum.take(5)
+      |> Enum.map(fn p ->
+        "#+ " <> p["name"] <> "\n" <> Enum.join(Enum.take(p["options"], 5), "\n")
+      end)
+
+    if questions != [], do: "<!-- loom:replies\n" <> Enum.join(questions, "\n") <> "\n-->"
+  end
+
+  defp replies(%{"options" => [_ | _] = options}),
+    do: "<!-- loom:replies\n" <> Enum.join(Enum.take(options, 5), "\n") <> "\n-->"
+
+  defp replies(_), do: nil
+
+  # What the agent is told ahead of the user's first message: the notice, and
+  # where its source works and keeps its context, so this session can carry
+  # the work out itself.
   defp about(n, new?) do
     from =
-      case n["session"] do
-        s when is_binary(s) ->
+      case {n["parts"], n["session"]} do
+        {parts, _} when is_list(parts) ->
+          "gathering each project's sleep report, from their sleep sessions: " <>
+            Enum.map_join(
+              parts,
+              "; ",
+              &"#{&1["name"]} — #{&1["session"]}#{where(&1["session"])}"
+            ) <>
+            ". Carry out what the user agrees to for each project in its own working directory"
+
+        {_, s} when is_binary(s) ->
           "from session #{s}" <>
             if(is_integer(n["anchor"]),
               do: " (the turn that starts at seq #{n["anchor"]})",
               else: ""
-            )
+            ) <> where(s)
 
         _ ->
           "with no session behind it"
@@ -901,6 +1017,20 @@ defmodule Loom.Notices do
       else:
         "[Loom: #{n["source"]["name"]} updated notice #{n["id"]}; the message above " <>
           "is its new brief (priority #{n["priority"]}, needs: #{n["needs"]}).]"
+  end
+
+  defp where(session) do
+    cwd =
+      case Agent.Store.read_meta(session) do
+        {:ok, %{cc_cwd: cwd}} when is_binary(cwd) -> "; it works in `#{cwd}`"
+        _ -> ""
+      end
+
+    cwd <>
+      "; its context: `loom-session read #{session}`, transcript " <>
+      "`#{Agent.Store.events_path(session)}`"
+  rescue
+    _ -> ""
   end
 
   defp submit(session, text) do
@@ -955,7 +1085,13 @@ defmodule Loom.Notices do
   defp options(list) when is_list(list) do
     list
     |> Enum.filter(&is_binary/1)
-    |> Enum.map(&(&1 |> String.trim() |> String.slice(0, @option_max)))
+    |> Enum.map(
+      &(&1
+        |> String.replace(~r/\s+/u, " ")
+        |> String.replace("-->", "→")
+        |> String.trim()
+        |> String.slice(0, @option_max))
+    )
     |> Enum.reject(&(&1 == ""))
     |> Enum.uniq()
     |> Enum.take(@options_max)
