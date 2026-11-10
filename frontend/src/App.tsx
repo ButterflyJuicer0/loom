@@ -735,6 +735,7 @@ function App() {
   const sidebar = (
     <Sidebar
       sessions={sessions}
+      searchable={ordinary}
       projects={projects}
       toggled={toggled}
       onToggle={toggle}

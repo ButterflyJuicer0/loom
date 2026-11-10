@@ -17,6 +17,7 @@ import {
   MoreHorizontal,
   PanelLeft,
   PinOff,
+  Search,
   Settings,
   SquarePen,
   UserPlus,
@@ -37,6 +38,7 @@ import { MoonButton, scopeOf } from "./Sleep"
 import { NewMenu } from "./NewMenu"
 import type { Push } from "./push"
 import { lastActive } from "./useLobby"
+import { SearchSheet } from "./Search"
 import { useNarrow } from "./useNarrow"
 
 /**
@@ -121,6 +123,8 @@ export function sidebarOrder(sessions: AgentInfo[], projects: Project[], toggled
 
 type Props = {
   sessions: AgentInfo[]
+  // What Search looks through: the user's own sessions, archived ones too.
+  searchable: AgentInfo[]
   projects: Project[]
   // What is folded or unfolded against its default; see `isOpen`.
   toggled: Set<string>
@@ -176,6 +180,7 @@ type Props = {
 
 export function Sidebar({
   sessions,
+  searchable,
   projects,
   toggled,
   onToggle,
@@ -226,6 +231,23 @@ export function Sidebar({
     return () => clearInterval(timer)
   }, [])
   const [devicesOpen, setDevicesOpen] = useState(false)
+  const [searching, setSearching] = useState(false)
+  // ⌘K / Ctrl+K opens Search from anywhere, as in ChatGPT.
+  useEffect(() => {
+    // ⌘ on Apple devices, Ctrl elsewhere — so a Mac's Ctrl+K still kills to
+    // the end of the line — and never from inside the terminal, whose Ctrl+K
+    // is the shell's.
+    const apple = /Mac|iPhone|iPad/.test(navigator.platform)
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.target as Element | null)?.closest?.(".xterm")) return
+      if ((apple ? e.metaKey : e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") {
+        e.preventDefault()
+        setSearching((v) => !v)
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
   // The device whose sessions are open, picked from the top of the sidebar.
   const [sessionsOf, setSessionsOf] = useState<string | null>(null)
   const sessionsDevice = sessionsOf === HOST_DEVICE.id ? HOST_DEVICE : (devices.find((d) => d.id === sessionsOf) ?? null)
@@ -336,6 +358,9 @@ export function Sidebar({
         <span className="brand">loom</span>
         <span className="sidebar-actions">
           <BellButton notices={notices} onClick={onOpenBell} />
+          <button className="icon-btn search-btn" onClick={() => setSearching(true)} title="Search chats (⌘K)">
+            <Search />
+          </button>
           {/* A phone's drawer is put away by a swipe or a tap beside it. */}
           {!narrow && (
             <button className="icon-btn" onClick={onCollapse} title="Hide sidebar">
@@ -667,6 +692,7 @@ export function Sidebar({
           }}
         />
       )}
+      {searching && <SearchSheet sessions={searchable} onSelect={onSelect} onClose={() => setSearching(false)} />}
       {devicesOpen && (
         <DevicesDialog
           devices={devices}
