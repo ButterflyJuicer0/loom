@@ -115,4 +115,28 @@ defmodule Loom.Agent.StoreTest do
       assert Store.delete_session("a_never") == :ok
     end
   end
+
+  describe "purge_trash/2" do
+    @day 24 * 60 * 60 * 1000
+
+    test "removes what was deleted at least max_age ago and keeps the rest" do
+      now = System.system_time(:millisecond)
+      trash = Store.trash_dir()
+
+      for name <- ["a_old.#{now - 31 * @day}", "a_new.#{now - @day}", "not-loom", "..x.#{now - 31 * @day}"] do
+        File.mkdir_p!(Path.join(trash, name))
+      end
+
+      # A session still in its place is never touched.
+      Store.write_meta("a_live", %{id: "a_live"})
+
+      assert Store.purge_trash(now, 30 * @day) == ["a_old.#{now - 31 * @day}"]
+      assert Enum.sort(File.ls!(trash)) == Enum.sort(["a_new.#{now - @day}", "not-loom", "..x.#{now - 31 * @day}"])
+      assert {:ok, _} = Store.read_meta("a_live")
+    end
+
+    test "no trash yet is fine" do
+      assert Store.purge_trash(System.system_time(:millisecond), 0) == []
+    end
+  end
 end
