@@ -2033,9 +2033,8 @@ h3.md-h {
   left: 0;
   bottom: calc(100% + 12px);
   z-index: 5;
-  width: min(20rem, 100%);
-  max-height: min(60vh, 26rem);
-  overflow-y: auto;
+  width: max-content;
+  min-width: 12rem;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -2079,11 +2078,6 @@ h3.md-h {
   cursor: default;
 }
 
-.plus-head {
-  padding: 10px 10px 4px;
-  color: var(--fg-dim);
-  font-size: 0.8125rem;
-}
 
 /* A referenced chat: one line, in the tray and in the sent bubble. */
 .ref-chip {
@@ -2139,4 +2133,79 @@ h3.md-h {
 .ref-chip-x svg {
   width: 0.8rem;
   height: 0.8rem;
+}
+
+/* "Reference a chat…": a dialog, since it is not an everyday thing. */
+.modal.chat-picker {
+  width: min(28rem, 100%);
+  max-height: min(80vh, 36rem);
+  font-family: var(--ui);
+}
+
+.chat-picker-search {
+  margin: 10px 12px 0;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  color: var(--fg);
+  font: inherit;
+  font-size: 16px; /* under 16px iOS zooms in on focus */
+  outline: none;
+}
+
+.chat-picker-hint {
+  padding: 8px 16px 4px;
+  color: var(--fg-dim);
+  font-size: 0.8125rem;
+}
+
+.chat-picker-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 6px 8px;
+}
+
+.chat-picker-list button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.923rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-picker-list button svg {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  color: var(--fg-dim);
+}
+
+.chat-picker-list button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+
+.chat-picker-list button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.chat-picker-list .chat-picker-on {
+  margin-left: auto;
+}
+
+.chat-picker-none {
+  padding: 16px;
+  color: var(--fg-dim);
+  text-align: center;
+  font-size: 0.875rem;
 }

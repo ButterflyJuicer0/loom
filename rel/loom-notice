@@ -4,13 +4,15 @@
   loom-notice post --priority N [--key KEY] [--needs read|reply|approve]
                    [--detail TEXT | --detail-file F] SUMMARY
   loom-notice withdraw KEY
-  loom-notice list                       your notices still open
+  loom-notice list                       your notices still open, and those
+                                         settled in the last day
   loom-notice todos                      the user's to-do list
   loom-notice todo add TEXT [--due DATE] only when the user asked for it
   loom-notice todo done|undo|rm ID
   loom-notice all                        (the bell's chat) every open notice
-  loom-notice act ID approve|reject|done (the bell's chat, or the notice's
-  loom-notice act ID reply TEXT           own session) for the user
+  loom-notice act ID approve|reject     (the bell's chat, or the notice's
+  loom-notice act ID done [NOTE]          own session) for the user; done
+  loom-notice act ID reply TEXT           tells the source nothing
 
 The session is LOOM_SESSION_ID, which Loom sets for every session it starts;
 the address and key are in LOOM_CLI (default ~/.loom/node-cli.json), as for
@@ -73,11 +75,12 @@ def main():
     post.add_argument("--needs", choices=["read", "reply", "approve"])
     post.add_argument("--detail", "-d", help="the brief its own session opens on (markdown)")
     post.add_argument("--detail-file", help="the brief, from a file ('-' for stdin)")
-    post.add_argument("--option", "-o", action="append", default=[], help=argparse.SUPPRESS)
+    post.add_argument("--option", "-o", action="append", default=[],
+                      help="a foreseen answer (repeat, max 5): suggested replies in the notice's session")
     post.add_argument("summary", nargs="+")
     w = sub.add_parser("withdraw", help="take back your open notice with KEY")
     w.add_argument("key")
-    sub.add_parser("list", help="your notices still open")
+    sub.add_parser("list", help="your notices still open, and those settled in the last day")
     sub.add_parser("todos", help="the user's to-do list")
     td = sub.add_parser("todo", help="add to the user's to-dos (only when they asked), or tick one off")
     td.add_argument("op", choices=["add", "done", "undo", "rm"])
@@ -105,11 +108,15 @@ def main():
         call("POST", "withdraw", {"key": a.key})
         print(f"withdrawn: {a.key}")
     elif a.cmd == "list":
-        notices = call("GET", "mine")["notices"]
+        r = call("GET", "mine")
+        notices = r["notices"]
         if not notices:
             print("none open")
         for n in notices:
             show(n)
+        for n in r.get("settled") or []:
+            answer = f" — {n['answer']}" if n.get("answer") else ""
+            print(f"settled [{n.get('key') or '-'}] {n['summary']}  ({n.get('note')}){answer}")
     elif a.cmd == "todos":
         todos = call("GET", "todos")["todos"]
         if not todos:

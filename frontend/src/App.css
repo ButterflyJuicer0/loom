@@ -308,7 +308,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  /* The page draws under the notch and home indicator (viewport-fit=cover),
+     so a dialog keeps clear of them or its head and foot run off screen. */
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background: rgb(0 0 0 / 55%);
 }
 

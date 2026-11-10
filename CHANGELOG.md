@@ -7,7 +7,7 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 
 | Version | Date | Theme |
 | --- | --- | --- |
-| [0.6.0](#060--2026-11-04) | 2026-11-04 | Message queue, device sessions, reference a chat, share as image, trash, security fixes |
+| [0.6.0](#060--2026-11-04) | 2026-11-04 | Message queue, device sessions, reference a chat, share as image, titles that keep up, a session per bell notice, trash, security fixes |
 | [0.5.0](#050--2026-11-03) | 2026-11-03 | Meeting mode, hiring in a chat, hard employee permissions, only the bell rings, loom-home |
 | [0.4.0](#040--2026-11-02) | 2026-11-02 | Model picker, Continue, incognito, Working, Android |
 | [0.3.0](#030--2026-10-31) | 2026-10-31 | The bell, tidy, employee workstations, safer devices |
@@ -33,7 +33,26 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   can be written — so it can be put back. Refused while the session runs. One
   of Loom's own leaves the sidebar too, into Loom's trash.
 
+### Changed
+- **The bell acts on your answer**: a notice's session now carries out what you
+  decided itself, then tells the employee or task that asked what it did.
+- **Suggested answers in a notice's session**: the answers the employee or task
+  foresaw show as one-tap replies under the brief — in the session, after
+  you have read it, not on the card.
+- **One card for the night's sleep**: every project's Dream proposals gather in
+  one notice; its session asks one question per project, and a project with
+  nothing to ask posts nothing.
+- **Employees do it in the chat**: when you ask an employee something in its
+  chat, it does it there; it adds a KPI only when you ask for one, and can
+  remove a KPI it added. What it can't see (calls, SFDC), it asks about
+  ("done yet?") instead of calling it undone.
+- **Cheaper idle wake-ups**: an employee's work session turns over at 150k
+  tokens instead of 60k, and wake-up sections that haven't changed are sent
+  as one line.
+
 ### Fixed
+- **iPhone dialogs clear the notch**: in the iPhone home-screen app, tall
+  dialogs such as Devices no longer run under the notch and home indicator.
 - Codex sessions now get `LOOM_SESSION_ID` in their shell commands (through the
   thread's `shell_environment_policy`), so `loom-session` and `loom-notice` work
   there as in Claude Code and Kiro; before, they failed with "LOOM_SESSION_ID is
@@ -77,8 +96,12 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   server's sessions too.
 - **Kiro sessions** are listed beside Claude Code and Codex (its subagent
   sessions left out), with their transcripts, and can be continued in Loom.
-- **Reference a recent chat**: the composer's + opens a menu — Files, or one
-  of the 8 latest chats. A picked chat rides along as a chip; the agent is told
+- **Titles that keep up**: ten minutes after a turn, the same small-model call
+  that writes a Working row's recap also retitles the session — from its first
+  message to what it is about, and to "old topic · new topic" once the talk
+  moves on. Never over a title the user gave, nor in a meeting's chat.
+- **Reference a recent chat**: the composer's + opens a menu — Files, or
+  "Reference a chat…", a dialog of recent chats with a title filter. A picked chat rides along as a chip; the agent is told
   its title, id and directory and reads it with `loom-session read` only if the
   request needs it. Tap the chip in a sent message to open that chat.
 - **Share a chat as an image**: "Share…" in the chat's menu lists the
@@ -117,6 +140,8 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   source session. It shows in Recents once you write in it. The card keeps
   only Later and Done, plus two lines of the brief: the one-tap answers,
   Approve/Reject and the inline reply are gone, and so is the bell's Chat tab.
+- Devices: online ones are grouped by kind (Linux, Windows, Mac, Android,
+  Bot), offline ones last.
 - Employee page tabs: Updates comes first.
 - Meeting bar: the people icon and the bare line count are gone; they read as
   attendees and rounds.
@@ -318,6 +343,7 @@ The fork point: [EthanLLL/loom](https://github.com/EthanLLL/loom) at
 scheduled prompts, `loom-node` for macOS/Linux/WSL, the shared browser, PWA
 and push notifications.
 
+[0.6.0]: https://github.com/quanquan1996/loom/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/quanquan1996/loom/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/quanquan1996/loom/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/quanquan1996/loom/compare/v0.2.0...v0.3.0

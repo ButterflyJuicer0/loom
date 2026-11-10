@@ -2350,14 +2350,15 @@ function Composer({
   )
 }
 
-// How many recent chats the + menu offers, and how many one message may name.
-const RECENT_SHOWN = 8
+// How many recent chats the picker lists, and how many one message may name.
+const RECENT_SHOWN = 30
 const MAX_REFS = 5
 
 /**
- * The composer's +: attach files, or point the message at a recent chat. The
- * chat is not loaded into the message — the agent is told where it is and
- * reads it if it needs to (`Loom.Agent.Refs`).
+ * The composer's +: attach files, or — less often, so one row and a dialog —
+ * point the message at an earlier chat. The chat is not loaded into the
+ * message: the agent is told where it is and reads it if it needs to
+ * (`Loom.Agent.Refs`).
  */
 function PlusMenu({
   recent,
@@ -2371,6 +2372,7 @@ function PlusMenu({
   onRef: (ref: SessionRef) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [choosing, setChoosing] = useState(false)
   const root = useRef<HTMLDivElement>(null)
 
   // Closed by a tap anywhere else, or Escape.
@@ -2388,15 +2390,11 @@ function PlusMenu({
     }
   }, [open])
 
-  const taken = new Set(picked.map((r) => r.id))
-  const shown = recent.filter((s) => !taken.has(s.id)).slice(0, RECENT_SHOWN)
-  const full = picked.length >= MAX_REFS
-
   return (
     <div className="plus" ref={root}>
       <button
         className={"composer-btn attach" + (open ? " open" : "")}
-        title="Attach files or a recent chat — or drop files anywhere in the conversation"
+        title="Attach files or a chat — or drop files anywhere in the conversation"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
@@ -2408,22 +2406,97 @@ function PlusMenu({
             <Paperclip />
             <span className="session-menu-label">Files</span>
           </button>
-          {shown.length > 0 && <div className="plus-head">Recent chats</div>}
-          {shown.map((s) => (
-            <button
-              key={s.id}
-              role="menuitem"
-              disabled={full}
-              title={full ? `At most ${MAX_REFS} chats per message` : (s.title ?? "")}
-              onClick={() => (setOpen(false), onRef({ id: s.id, title: s.title ?? "Untitled" }))}
-            >
+          {recent.length > 0 && (
+            <button role="menuitem" onClick={() => (setOpen(false), setChoosing(true))}>
               <MessageSquare />
-              <span className="session-menu-label">{s.title ?? "Untitled"}</span>
+              <span className="session-menu-label">Reference a chat…</span>
             </button>
-          ))}
+          )}
         </div>
       )}
+      {choosing && (
+        <ChatPicker
+          recent={recent}
+          picked={picked}
+          onPick={(r) => (setChoosing(false), onRef(r))}
+          onClose={() => setChoosing(false)}
+        />
+      )}
     </div>
+  )
+}
+
+/** The dialog behind "Reference a chat…": recent chats, newest first, with a filter. */
+function ChatPicker({
+  recent,
+  picked,
+  onPick,
+  onClose,
+}: {
+  recent: AgentInfo[]
+  picked: SessionRef[]
+  onPick: (ref: SessionRef) => void
+  onClose: () => void
+}) {
+  const [q, setQ] = useState("")
+  const input = useRef<HTMLInputElement>(null)
+  // A phone's keyboard would cover half the list: focus only with a mouse.
+  useEffect(() => {
+    if (!matchMedia("(pointer: coarse)").matches) input.current?.focus()
+  }, [])
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose()
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose])
+
+  const taken = new Set(picked.map((r) => r.id))
+  const full = picked.length >= MAX_REFS
+  const words = q.trim().toLowerCase()
+  const shown = recent
+    .filter((s) => !words || (s.title ?? "").toLowerCase().includes(words))
+    .slice(0, RECENT_SHOWN)
+
+  return createPortal(
+    <div className="modal-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal chat-picker" role="dialog" aria-label="Reference a chat">
+        <div className="modal-head">
+          <span>Reference a chat</span>
+          <button className="icon-btn" title="Close" onClick={onClose}>
+            <X />
+          </button>
+        </div>
+        <input
+          ref={input}
+          className="chat-picker-search"
+          placeholder="Filter by title"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <div className="chat-picker-hint">
+          The agent gets where it is, and reads it only if it needs to.
+          {full && ` At most ${MAX_REFS} per message.`}
+        </div>
+        <div className="chat-picker-list">
+          {shown.map((s) => {
+            const on = taken.has(s.id)
+            return (
+              <button
+                key={s.id}
+                disabled={on || full}
+                onClick={() => onPick({ id: s.id, title: s.title ?? "Untitled" })}
+              >
+                <MessageSquare />
+                <span className="session-menu-label">{s.title ?? "Untitled"}</span>
+                {on && <Check className="chat-picker-on" />}
+              </button>
+            )
+          })}
+          {shown.length === 0 && <div className="chat-picker-none">No chat matches.</div>}
+        </div>
+      </div>
+    </div>,
+    document.body,
   )
 }
 

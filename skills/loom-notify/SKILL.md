@@ -13,7 +13,7 @@ what decides when — and whether — they are interrupted. Choose it honestly.
 
 ```sh
 loom-notice post --priority N [--key KEY] [--needs read|reply|approve] \
-                 --detail-file brief.md "summary"     # or --detail "…"
+                 --detail-file brief.md [--option "an answer"]... "summary"
 loom-notice list                 # your notices still open
 loom-notice withdraw KEY         # take one back
 ```
@@ -26,7 +26,7 @@ passes the decision back to you. So the brief must carry what they need
 (below).
 
 A virtual employee reports through its work card's `report` instead (same
-priorities, same `key`, `needs`, `detail`, and `withdraw`); the command
+priorities, same `key`, `needs`, `detail`, `options`, and `withdraw`); the command
 works too.
 
 The bell is the only thing that reaches the user's phone: a turn ending sends
@@ -55,9 +55,13 @@ wakes the user up: only for real damage that cannot wait for the morning.
   second the same day is posted as 3 and says so. Save it for what matters.
 - **Asking permission** (deploying, deleting, pushing, sending anything out):
   `--needs approve`, priority 2 if it blocks you today, else 3–5. The user
-  decides in the notice's own session; the answer arrives in your session as
-  a message (`✅ Approved: …` / `❌ Rejected: …`). Until it does, you are not
-  approved.
+  decides in the notice's own session, and that session usually carries the
+  decision out itself (it is told your working directory and context). Then
+  nothing comes to your session: `loom-notice list` (or a virtual
+  employee's wake-up) shows the notice settled, with a note of what was
+  done — don't redo it. When the work is left to you, the answer arrives as
+  a message (`✅ Approved: …` / `❌ Rejected: …`). Until one or the other,
+  you are not approved.
 - `--needs reply` when you need words back; `read` (the default) when it is
   only to know. A `read` notice is done once opened; `reply`/`approve` stay
   until the user decides (in its session, or in yours) or taps Done.
@@ -88,7 +92,13 @@ it costs you nothing now, and saves a long dig later.
 - Up to ~6000 characters; usually far less. Headings and lists are fine.
   For anything long, write it to a file and pass `--detail-file`.
 
-Don't write ready-made answers for the user to tap: the card has none.
+- **`--option`** (repeat it, at most 5): the answers you foresee, each a few
+  words as the user would say them ("批准，今天部署", "先不部署", "改成 3 点再跑").
+  They are not on the card — the card is too thin to decide from — but at the
+  end of the brief in the notice's session, as suggested replies the user taps
+  once they have read it. Every choice you laid out in the brief gets one;
+  for `approve`, give both the yes and the no. Leave them out when no answer
+  can be foreseen.
 
 The notice's session may read yours for more, around the turn the notice
 came from; it passes the decision back as `↩ <the summary>` followed by the
@@ -111,7 +121,7 @@ comes back to them by itself. Don't re-post it meanwhile.
 - When you wake up or start a turn, `loom-notice list` and look over what you
   still have open.
 - The user answering in your session settles your open notices there; so
-  does the decision coming back from the notice's own session.
+  does the notice's own session, when it settles one.
 
 ## The user's to-do list
 

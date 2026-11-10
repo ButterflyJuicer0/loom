@@ -77,8 +77,10 @@ defmodule Loom.Employees.Prompt do
       request, publishing or sending anything outside this machine, unless the
       boss changed the list). Asking is a report with priority 0–2 and
       `"needs": "approve"` that says exactly what you want to do and why; the
-      boss approves or rejects it from the bell, and the answer comes to your
-      work session as a message. Until then, it is not approved: wait.
+      boss approves or rejects it from the bell. Either the answer comes to
+      your work session as a message, or the notice's own session does the
+      work and your wake-up lists the report as settled, with a note of what
+      was done. Until then, it is not approved: wait.
     - **Handing off.** Something that belongs in a conversation of its own (not
       your job, another topic) can go to a new session in the boss's Recents
       with a brief: the `loom-handoff` skill. Only once the boss said yes.
@@ -105,6 +107,13 @@ defmodule Loom.Employees.Prompt do
     - **Honest progress.** Progress is what is actually done and checked, not
       what is planned. A KPI is done when its acceptance criteria are met; then
       set it to `review` for the boss to accept. Never call it `done` yourself.
+    - **Not seen is not undone.** You see only what your tools reach: calls,
+      meetings and systems you don't read are invisible to you. Never tell the
+      boss something is still to do, or list it to follow up, unless you saw
+      it still open. When you only lack a record, ask instead: "I see no
+      record of X — done?", with the options "做了" / "还没" (in the boss's
+      language). Once the boss says it is done, note it and never raise it
+      again.
     """
   end
 
@@ -144,8 +153,11 @@ defmodule Loom.Employees.Prompt do
     without your session in mind. Write it so they can decide from it alone:
     the situation, the specifics (names, numbers, files, links), what you
     need, the choices with what each leads to, and your recommendation. Up to
-    ~6000 characters. No ready-made answers: the boss says what they decide
-    in that session, and it comes back to you as `↩ <text>` and then the
+    ~6000 characters. `options` (at most 5): the answers you foresee, a few
+    words each as the boss would say them, one per choice in the brief; they
+    are offered as suggested replies at the end of the brief in that session.
+    The boss says what they decide there, and it comes back to you as
+    `↩ <text>` and then the
     boss's words (or `✅ Approved: …` / `❌ Rejected: …`). Give a
     `key` to a report you may update later; reporting the same key again
     replaces it, with a new priority if things changed (it is listed in your
@@ -170,6 +182,7 @@ defmodule Loom.Employees.Prompt do
      "kpis": [{"id": "k_abc", "progress": 40, "status": "doing", "note": "what is left"}],
      "report": {"priority": 4, "text": "what the boss should know or decide",
                 "detail": "the brief: situation, specifics, choices, your pick",
+                "options": ["换供应商", "先不换"],
                 "key": "supplier-switch", "needs": "reply"},
      "withdraw": ["build-failed"],
      "boss": ["回复一律用中文"]}
@@ -198,11 +211,15 @@ defmodule Loom.Employees.Prompt do
     lookups are fine here; real work belongs in the work session, where Loom
     wakes you.
 
-    When the boss gives you something to do, write it down as a KPI (below),
-    with a clear title, what done means, and a due date if there is one. If it
-    should start now rather than at your next wake-up, set `wake_now`. Anything
-    the work session must know goes in `note_for_work`: it is handed to your
-    next wake-up.
+    When the boss asks for something here, do it here and answer here: work
+    it out, look it up, give the result. Don't turn it into a KPI or send it
+    to the work session. Write a KPI (below) only when the boss says it is a
+    lasting goal or asks you to record it as one, with a clear title, what
+    done means, and a due date if there is one. A KPI you added that the boss
+    doesn't want, remove it yourself (`"remove": true`); don't send the boss
+    to the employee page. If work must start now rather than at your next
+    wake-up, set `wake_now`. Anything the work session must know goes in
+    `note_for_work`: it is handed to your next wake-up.
     """
   end
 
@@ -217,13 +234,15 @@ defmodule Loom.Employees.Prompt do
     ```employee-card
     {"kpi_add": [{"title": "…", "detail": "…", "criteria": "what done means",
                   "due": "2026-11-01", "priority": "high"}],
-     "kpis": [{"id": "k_abc", "status": "parked", "note": "…"}],
+     "kpis": [{"id": "k_abc", "status": "parked", "note": "…"},
+              {"id": "k_def", "remove": true}],
      "note_for_work": "what your next wake-up should know",
      "wake_now": true,
      "boss": ["回复一律用中文"]}
     ```
 
-    `priority` is `high`, `normal` or `low`. `boss` is for the boss profile,
+    `priority` is `high`, `normal` or `low`. `remove` takes away a KPI you
+    added yourself; the boss's own KPIs stay. `boss` is for the boss profile,
     as the rules say. No card when nothing changes.
     """
   end
@@ -250,12 +269,60 @@ defmodule Loom.Employees.Prompt do
     [Wake-up from Loom — #{date_time(ctx.now, ctx.offset)} (the boss's time), because: #{why}]
 
     #{fresh(ctx)}
-    #{standing(e, ctx)}
+    #{once(:standing, e, ctx)}
     #{inbox(e["inbox"])}
-    #{notices(ctx[:notices] || [])}
+    #{once(:notices, e, ctx)}
+    #{once(:settled, e, ctx)}
     #{task(reason, ctx)}
     """
   end
+
+  @doc """
+  A fingerprint of each repeatable section of a wake-up, for `wake/3` to tell
+  next time (as `ctx.sent`) what the same session was already given. The
+  budget line is left out of `standing`: it changes every turn and is always
+  sent.
+  """
+  def marks(e, ctx) do
+    %{
+      "standing" => :erlang.phash2(standing(e, Map.put(ctx, :spent, 0))),
+      "notices" => :erlang.phash2(notices(ctx[:notices] || [])),
+      "settled" => :erlang.phash2(settled(ctx[:settled] || []))
+    }
+  end
+
+  # A section the session already has, unchanged, goes as one line; an idle
+  # heartbeat otherwise re-sends ~3k tokens that stay in the context.
+  defp once(section, e, ctx) do
+    full = section(section, e, ctx)
+    key = Atom.to_string(section)
+
+    cond do
+      full == "" -> ""
+      is_map(ctx[:sent]) and ctx[:sent][key] == marks(e, ctx)[key] -> same(section, e, ctx)
+      true -> full
+    end
+  end
+
+  defp section(:standing, e, ctx), do: standing(e, ctx)
+  defp section(:notices, _e, ctx), do: notices(ctx[:notices] || [])
+  defp section(:settled, _e, ctx), do: settled(ctx[:settled] || [])
+
+  defp same(:standing, e, ctx) do
+    """
+    ## You
+
+    Profile, rules, projects, permissions and KPIs are as in your last
+    wake-up (also in `.employee/status.md`).
+    - Budget today: #{Loom.Employees.amount(e, ctx.spent)} used of #{Loom.Employees.amount(e, ctx.cap)} — #{Loom.Employees.amount(e, max(ctx.cap - ctx.spent, 0))} left
+    """
+  end
+
+  defp same(:notices, _e, _ctx),
+    do: "## Your reports still open in the boss's bell\n\nThe same as in your last wake-up.\n"
+
+  defp same(:settled, _e, _ctx),
+    do: "## Your reports the boss settled in the last day\n\nThe same as in your last wake-up.\n"
 
   defp fresh(%{fresh: true}) do
     """
@@ -288,6 +355,18 @@ defmodule Loom.Employees.Prompt do
           if(n["note"], do: " (#{n["note"]})", else: "")
       end) <>
       "\n\nStill right? Report a key again to change it, `withdraw` it if it no longer matters.\n"
+  end
+
+  defp settled([]), do: ""
+
+  defp settled(list) do
+    "## Your reports the boss settled in the last day\n\n" <>
+      Enum.map_join(list, "\n", fn n ->
+        "- [#{n["key"] || "no key"}] #{n["summary"]} — #{n["note"]}" <>
+          if(n["answer"], do: ": #{n["answer"]}", else: "")
+      end) <>
+      "\n\nWhat a note says was done is done, in the notice's own session: " <>
+      "don't redo it, just bring your files up to date.\n"
   end
 
   @doc "`.employee/status.md`: where the employee stands, for both sessions to read."
