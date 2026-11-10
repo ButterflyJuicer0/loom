@@ -17,6 +17,9 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Search is back**: the magnifier beside the bell, or ⌘K / Ctrl+K, finds
+  chats by title and by what was said in them — archived ones too, marked as
+  such. The full-text search behind it had stayed; only the button had gone.
 - **Engine icon in the sidebar**: each session row shows whether it runs on
   Claude Code, Codex or Kiro, after its status dot; titles stay lined up
   whether or not the dot shows.
@@ -34,6 +37,9 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   of Loom's own leaves the sidebar too, into Loom's trash.
 
 ### Changed
+- **The trash empties itself**: a deleted session stays in
+  `~/.loom/sessions/.trash` for 30 days, so it can still be put back, and then
+  goes for good (checked hourly).
 - **The bell acts on your answer**: a notice's session now carries out what you
   decided itself, then tells the employee or task that asked what it did.
 - **Suggested answers in a notice's session**: the answers the employee or task

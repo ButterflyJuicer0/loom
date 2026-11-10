@@ -60,6 +60,20 @@ Some features are told only in the skill that uses them and in
   online Windows or Android row is lit but does not open, and says so on
   hover. Code: the `devices.map` under "Device sessions" in
   `frontend/src/Sidebar.tsx`.
+- **Searching chats.** The magnifier beside the bell at the top of the
+  sidebar, or ⌘K (Ctrl+K off Apple devices; not from inside the terminal),
+  opens Search: empty it lists the latest chats, typed in it finds chats by
+  title at once and by what was said (the user's messages and the agent's
+  replies, not tools or thinking) from `GET /api/search`. Archived chats are
+  found too and marked "archived"; incognito, employee, Dream and bell
+  sessions are not. A full scan of every `events.jsonl` per query, no index
+  (`Loom.Agent.Search`); UI in `frontend/src/Search.tsx`.
+- **The session trash.** Deleting a session moves its directory to
+  `~/.loom/sessions/.trash/<id>.<unix ms>`; there is no page for it. To put
+  one back, `mv` it to `~/.loom/sessions/<id>` and restart
+  Loom so the sidebar picks it up. After 30 days an entry is removed for good
+  (`Loom.Agent.Trash`, hourly; `Store.purge_trash/2`). Device sessions deleted
+  from Sessions go to that machine's own trash instead and are not purged.
 
 If the docs don't settle it, read the code: `lib/` (Elixir server),
 `frontend/src/` (UI), `node/` (loom-node). Say which you checked.

@@ -255,8 +255,9 @@ defmodule Loom.Agent.Store do
 
   @doc """
   Move a session's directory into `trash_dir/0`, as `<id>.<unix ms>` so the
-  same id can be deleted twice. Nothing is ever removed: getting a session back
-  is a `mv` away, and emptying the trash is left to a human.
+  same id can be deleted twice. Getting a session back is a `mv` away; what is
+  still there 30 days on goes for good (`purge_trash/2`, run by
+  `Loom.Agent.Trash`).
 
   Anything not shaped like a session id raises, as `session_dir/1` does:
   `Path.join(dir, "")` is `dir`, so an empty id once took every session down
@@ -272,6 +273,30 @@ defmodule Loom.Agent.Store do
       :ok -> :ok
       {:error, :enoent} -> :ok
       {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Remove for good what went into the trash at least `max_age_ms` before `now`,
+  going by the deletion time in each entry's name (`<id>.<unix ms>`; a rename
+  keeps a directory's mtime, so that says nothing). An entry whose name is not
+  of that shape is not Loom's and stays. Returns the names removed.
+  """
+  def purge_trash(now, max_age_ms) do
+    trash = trash_dir()
+
+    case File.ls(trash) do
+      {:ok, names} ->
+        for name <- names,
+            [_, id, ms] <- [Regex.run(~r/\A(.+)\.(\d+)\z/, name)],
+            valid_id?(id),
+            now - String.to_integer(ms) >= max_age_ms do
+          File.rm_rf!(Path.join(trash, name))
+          name
+        end
+
+      {:error, _} ->
+        []
     end
   end
 

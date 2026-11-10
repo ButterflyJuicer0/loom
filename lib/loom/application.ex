@@ -49,6 +49,8 @@ defmodule Loom.Application do
       {Loom.Agent.Bootstrap, enabled: Application.get_env(:loom, :restore_agents, true)},
       # Deletes incognito sessions a month after their last message.
       Loom.Agent.Incognito,
+      # Empties the session trash of what has been there 30 days.
+      Loom.Agent.Trash,
       # Scheduled prompts. After the bootstrap, so a job due at boot finds its
       # session already restored.
       Loom.Cron,
