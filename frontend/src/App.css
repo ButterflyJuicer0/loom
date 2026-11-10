@@ -1474,6 +1474,33 @@
   gap: 8px;
 }
 
+/* "New project…" in the move list, once picked: its name typed in place. */
+.session-menu-new-project {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 4px 10px;
+}
+
+.session-menu-new-project > svg {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  color: var(--fg-dim);
+}
+
+.session-menu-new-project input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-size: 16px; /* below 16px iOS zooms the page on focus */
+}
+
 .session-menu {
   position: fixed;
   z-index: 60;

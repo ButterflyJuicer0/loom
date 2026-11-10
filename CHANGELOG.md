@@ -17,6 +17,9 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **New project from Move to project**: a session's … → Move to project ends
+  in **New project…**: type a name, Enter, and the project is made and the
+  session moved into it. Instructions are set later in Projects.
 - **Search is back**: the magnifier beside the bell, or ⌘K / Ctrl+K, finds
   chats by title and by what was said in them — archived ones too, marked as
   such. The full-text search behind it had stayed; only the button had gone.

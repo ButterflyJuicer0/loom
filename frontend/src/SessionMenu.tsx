@@ -1,7 +1,7 @@
-import { Archive, ArchiveRestore, Check, ChevronLeft, ChevronRight, CornerDownRight, Folder, FolderInput, FolderMinus, Pencil, Pin, PinOff, Send, Trash2 } from "lucide-react"
+import { Archive, ArchiveRestore, Check, ChevronLeft, ChevronRight, CornerDownRight, Folder, FolderInput, FolderMinus, FolderPlus, Pencil, Pin, PinOff, Send, Trash2 } from "lucide-react"
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom"
-import { isArchived, relaySession, type AgentBackend, type AgentInfo, type Project } from "./api"
+import { createProject, isArchived, relaySession, type AgentBackend, type AgentInfo, type Project } from "./api"
 import { isComposing } from "./ime"
 import { BackendIcon } from "./BackendIcon"
 import { BACKENDS } from "./NewMenu"
@@ -13,7 +13,9 @@ import { BACKENDS } from "./NewMenu"
  *
  * In a portal, placed by the button it opened from: the session list scrolls
  * and would clip it. "Move to project" swaps the list in place rather than
- * opening a submenu beside it, which a phone has no room for.
+ * opening a submenu beside it, which a phone has no room for. Its last row
+ * names a new project in place and moves the session into it — the full
+ * dialog (instructions too) stays in Projects.
  *
  * A move is refused mid-turn (the backend cannot change directory then), so
  * it is offered only between turns, and a refusal is shown here.
@@ -72,6 +74,24 @@ export function SessionMenu({
     }
   }
   const [error, setError] = useState<string | null>(null)
+  // "New project…" in the move list: null until picked, then the name typed.
+  const [newName, setNewName] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+  const createAndMove = async () => {
+    const name = newName?.trim()
+    if (!name || creating) return
+    setCreating(true)
+    setError(null)
+    try {
+      // The lobby's broadcast adds it to every list; the move needs only its id.
+      const project = await createProject({ name })
+      await run(() => onMove(project.id))
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setCreating(false)
+    }
+  }
   const ref = useRef<HTMLDivElement>(null)
   const [place, setPlace] = useState<{ top: number; left: number } | null>(null)
 
@@ -240,7 +260,6 @@ export function SessionMenu({
             <ChevronLeft /> Move to project
           </button>
           <div className="session-menu-sep" />
-          {projects.length === 0 && <div className="session-menu-note">No projects yet.</div>}
           {projects.map((p) => (
             <button
               key={p.id}
@@ -252,6 +271,33 @@ export function SessionMenu({
               {p.id === current?.id && <Check className="session-menu-more" />}
             </button>
           ))}
+          {newName === null ? (
+            <button role="menuitem" onClick={() => setNewName("")}>
+              <FolderPlus /> <span className="session-menu-label">New project…</span>
+            </button>
+          ) : (
+            <div className="session-menu-new-project">
+              <FolderPlus />
+              <input
+                autoFocus
+                value={newName}
+                placeholder="Project name"
+                enterKeyHint="go"
+                disabled={creating}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (isComposing(e)) return
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    void createAndMove()
+                  }
+                }}
+              />
+              <button className="text-btn" disabled={!newName.trim() || creating} onClick={() => void createAndMove()}>
+                {creating ? "Creating…" : "Create"}
+              </button>
+            </div>
+          )}
           {current && (
             <>
               <div className="session-menu-sep" />
