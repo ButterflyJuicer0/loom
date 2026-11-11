@@ -43,6 +43,9 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 - **The trash empties itself**: a deleted session stays in
   `~/.loom/sessions/.trash` for 30 days, so it can still be put back, and then
   goes for good (checked hourly).
+- **Project files open on the project page**: a Markdown, image, video, PDF,
+  web page, table or text file in the Files tab now opens in place with the
+  canvas's viewers; the download mark on its row still downloads it.
 - **The bell acts on your answer**: a notice's session now carries out what you
   decided itself, then tells the employee or task that asked what it did.
 - **Suggested answers in a notice's session**: the answers the employee or task

@@ -28,6 +28,13 @@ defmodule LoomWeb.CanvasController do
   so a screenshot in a bubble opens in the canvas too. Same token, same
   sandbox: an uploaded HTML file is no more trusted than one the agent wrote.
 
+  ## Project workspaces
+
+  A project's workspace files are served the same way under
+  `/project-files/<id>/<token>/`, so the project page can show them rather than
+  only download them. Its own salt, so a session's token opens nothing of a
+  project's; the same sandbox, since agents wrote these too.
+
   ## Range requests
 
   A single `Range: bytes=…` is answered with a 206 of just that slice. Safari
@@ -40,8 +47,10 @@ defmodule LoomWeb.CanvasController do
   alias Loom.Agent.Files
   alias Loom.Agent.Output
   alias Loom.Agent.Store
+  alias Loom.Projects
 
   @salt "canvas"
+  @project_salt "project-canvas"
   @max_age 24 * 60 * 60
 
   # Whatever the browser should display as text rather than offer as a
@@ -86,6 +95,35 @@ defmodule LoomWeb.CanvasController do
       |> sandboxed(file.path)
       |> put_resp_content_type(type_of(file.path), nil)
       |> serve(file.path)
+    else
+      _ ->
+        conn |> sandboxed() |> put_resp_content_type("text/plain") |> send_resp(404, "not found")
+    end
+  end
+
+  # POST /api/projects/:id/canvas — the prefix this project's workspace is
+  # served under, for the project page's viewer.
+  def project_token(conn, %{"id" => id}) do
+    case Projects.get(id) do
+      {:ok, _} ->
+        token = Phoenix.Token.sign(LoomWeb.Endpoint, @project_salt, id)
+        json(conn, %{base: "/project-files/#{id}/#{token}/"})
+
+      :error ->
+        conn |> put_status(:not_found) |> json(%{error: "no such project"})
+    end
+  end
+
+  # GET /project-files/:id/:token/*path — one workspace file, by the same
+  # rules as the project page's listing and download.
+  def project_file(conn, %{"id" => id, "token" => token} = params) do
+    with {:ok, ^id} <- Phoenix.Token.verify(LoomWeb.Endpoint, @project_salt, token, max_age: @max_age),
+         {:ok, project} <- Projects.get(id),
+         {:ok, path} <- Projects.resolve_file(project, Path.join(Map.get(params, "path", []))) do
+      conn
+      |> sandboxed(path)
+      |> put_resp_content_type(type_of(path), nil)
+      |> serve(path)
     else
       _ ->
         conn |> sandboxed() |> put_resp_content_type("text/plain") |> send_resp(404, "not found")

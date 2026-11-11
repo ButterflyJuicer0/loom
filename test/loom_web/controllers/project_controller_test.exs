@@ -377,4 +377,32 @@ defmodule LoomWeb.ProjectControllerTest do
     assert Agent.exists?(outside)
     refute File.exists?(ws)
   end
+
+  test "the viewer's signed prefix shows workspace files, sandboxed, and nothing else", %{conn: conn} do
+    %{"id" => pid, "workspace" => ws} = create_project(conn, %{name: "Shown"})
+    File.write!(Path.join(ws, "notes.md"), "# hi")
+    File.mkdir_p!(Path.join(ws, ".git"))
+    File.write!(Path.join(ws, ".git/config"), "secret")
+
+    %{"base" => base} = conn |> post(~p"/api/projects/#{pid}/canvas") |> json_response(200)
+    assert String.starts_with?(base, "/project-files/#{pid}/")
+
+    bare = build_conn()
+    shown = get(bare, base <> "notes.md")
+    assert response(shown, 200) == "# hi"
+    assert [csp] = get_resp_header(shown, "content-security-policy")
+    assert csp =~ "sandbox"
+
+    assert bare |> get(base <> ".git/config") |> response(404)
+    assert bare |> get(base <> "../../x") |> response(404)
+    assert bare |> get("/project-files/#{pid}/forged/notes.md") |> response(404)
+
+    # A session's canvas token opens nothing of a project's.
+    %{"id" => sid} = conn |> post(~p"/api/agents", %{backend: "claude_code"}) |> json_response(201)
+    %{"base" => "/canvas/" <> rest} = conn |> post(~p"/api/agents/#{sid}/canvas") |> json_response(200)
+    [_, token | _] = String.split(rest, "/")
+    assert bare |> get("/project-files/#{pid}/#{token}/notes.md") |> response(404)
+
+    assert conn |> post(~p"/api/projects/nope/canvas") |> json_response(404)
+  end
 end

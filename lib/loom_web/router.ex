@@ -96,6 +96,7 @@ defmodule LoomWeb.Router do
     delete "/projects/:id", ProjectController, :delete
     get "/projects/:id/tree", ProjectController, :tree
     get "/projects/:id/files/*path", ProjectController, :file
+    post "/projects/:id/canvas", CanvasController, :project_token
     post "/agents/:id/canvas", CanvasController, :token
 
     get "/layout", LayoutController, :show
@@ -206,6 +207,11 @@ defmodule LoomWeb.Router do
   # `output/`.
   scope "/canvas-files", LoomWeb do
     get "/:id/:token/:name", CanvasController, :attachment
+  end
+
+  # The same, for a project's workspace on the project page.
+  scope "/project-files", LoomWeb do
+    get "/:id/:token/*path", CanvasController, :project_file
   end
 
   scope "/", LoomWeb do
