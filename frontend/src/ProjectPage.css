@@ -180,6 +180,47 @@
   height: 0.95rem;
 }
 
+/* The row's download mark is a button of its own: the row opens the file. */
+.proj-file-dl[title] {
+  cursor: pointer;
+}
+
+.proj-file-dl[title]:hover {
+  color: var(--fg);
+}
+
+/* A workspace file shown in place of the list, under the tabs. */
+.proj-viewer {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+}
+
+.proj-viewer-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+}
+
+.proj-viewer-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  color: var(--fg-dim);
+}
+
+.proj-viewer-body {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 /* Sessions: the sidebar's rows, a size up; age and menu always shown. */
 .proj-session {
   display: flex;

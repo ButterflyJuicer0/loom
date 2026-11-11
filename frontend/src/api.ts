@@ -709,6 +709,26 @@ export function canvasBase(id: string): Promise<CanvasBases> {
   return bases
 }
 
+const projectBases = new Map<string, { at: number; base: Promise<string> }>()
+
+/**
+ * Where a project's workspace is served to the project page's viewer: a signed
+ * `/project-files/<id>/<token>/` prefix, for the same reason as `canvasBase`.
+ */
+export function projectBase(id: string): Promise<string> {
+  const cached = projectBases.get(id)
+  if (cached && Date.now() - cached.at < CANVAS_TTL) return cached.base
+
+  const base = fetch(`/api/projects/${id}/canvas`, { method: "POST", headers: authHeaders() }).then(async (res) => {
+    if (res.status === 401) throw unauthorized()
+    if (!res.ok) throw new Error(`viewer failed: ${res.status}`)
+    return (await res.json()).base as string
+  })
+  base.catch(() => projectBases.delete(id))
+  projectBases.set(id, { at: Date.now(), base })
+  return base
+}
+
 /**
  * Upload attachments for a session.
  *

@@ -1,5 +1,6 @@
 import {
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Download,
   Folder,
@@ -14,12 +15,15 @@ import {
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import {
   downloadProjectFile,
+  projectBase,
   projectTree,
   type AgentBackend,
   type AgentInfo,
   type Project,
   type TreeFile,
 } from "./api"
+import { View } from "./Canvas"
+import { previewable } from "./canvasItems"
 import { RenameInput } from "./Confirm"
 import { build, formatTime, iconFor, type Node as TreeNode } from "./FileBrowser"
 import { formatBytes } from "./format"
@@ -85,6 +89,9 @@ export function ProjectPage({
   onDelete: (id: string) => void
 }) {
   const [newMenu, setNewMenu] = useState<DOMRect | null>(null)
+  // The workspace file open in the viewer, which covers the tabs' list.
+  const [viewing, setViewing] = useState<string | null>(null)
+  useEffect(() => setViewing(null), [project.id, tab])
 
   return (
     <div className="proj-page">
@@ -131,10 +138,13 @@ export function ProjectPage({
         />
       </div>
 
-      <div className="proj-scroll">
+      {viewing && <FileView project={project} path={viewing} onClose={() => setViewing(null)} />}
+
+      {/* Kept mounted under the viewer, so what was unfolded stays unfolded. */}
+      <div className="proj-scroll" style={{ display: viewing ? "none" : undefined }}>
         <div className="proj-column">
           {tab === "files" ? (
-            <Files project={project} />
+            <Files project={project} onView={setViewing} />
           ) : (
             <Sessions
               sessions={sessions}
@@ -196,12 +206,67 @@ function Tab({
 }
 
 /**
+ * One workspace file, shown by the canvas's own viewers from the project's
+ * signed prefix (see `CanvasController.project_file`), with a way back to the
+ * list and a download.
+ */
+function FileView({ project, path, onClose }: { project: Project; path: string; onClose: () => void }) {
+  const [base, setBase] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let live = true
+    projectBase(project.id).then(
+      (b) => live && setBase(b),
+      (e: Error) => live && setError(e.message),
+    )
+    return () => {
+      live = false
+    }
+  }, [project.id])
+
+  const name = path.split("/").pop() ?? path
+  const src = base && base + path.split("/").map(encodeURIComponent).join("/")
+  return (
+    <div className="proj-viewer">
+      <div className="proj-viewer-head">
+        <button className="proj-round" onClick={onClose} title="Back to the files">
+          <ChevronLeft />
+        </button>
+        <span className="proj-viewer-title" title={path}>
+          {path}
+        </span>
+        <button
+          className="proj-round"
+          onClick={() => downloadProjectFile(project.id, path).catch((e: Error) => setError(e.message))}
+          title={`Download ${name}`}
+        >
+          <Download />
+        </button>
+      </div>
+      <div className="proj-viewer-body canvas-body">
+        <div className="canvas-view">
+          {error ? (
+            <div className="canvas-note failed">{error}</div>
+          ) : src ? (
+            <View src={src} item={{ path, title: name }} />
+          ) : (
+            <div className="canvas-note">loading…</div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
  * The workspace as a tree, newest first at every level, like the canvas's
- * file browser. Only to find and download a file: it is the agents' working
+ * file browser. A file Loom can show opens in the viewer; anything else, or a
+ * tap on a row's download mark, downloads. It is the agents' working
  * directory, not this page's to rename or delete in. Listed each time the tab
  * is shown.
  */
-function Files({ project }: { project: Project }) {
+function Files({ project, onView }: { project: Project; onView: (path: string) => void }) {
   const [list, setList] = useState<{ files: TreeFile[]; truncated: boolean } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [unfolded, setUnfolded] = useState<Set<string>>(() => new Set())
@@ -219,8 +284,9 @@ function Files({ project }: { project: Project }) {
 
   const tree = useMemo(() => (list ? build(list.files) : []), [list])
 
+  const download = (path: string) => void downloadProjectFile(project.id, path).catch((e: Error) => setError(e.message))
   const open = (node: TreeNode) => {
-    if (!node.children) return void downloadProjectFile(project.id, node.path).catch((e: Error) => setError(e.message))
+    if (!node.children) return previewable(node.path) ? onView(node.path) : download(node.path)
     setUnfolded((s) => {
       const next = new Set(s)
       if (next.has(node.path)) next.delete(node.path)
@@ -246,7 +312,20 @@ function Files({ project }: { project: Project }) {
           <Icon className="tree-icon" />
           <span className="tree-name">{node.name}</span>
           <span className="proj-file-when">{formatTime(node.mtime)}</span>
-          <span className="proj-file-dl">{!isDir && <Download />}</span>
+          <span
+            className="proj-file-dl"
+            title={isDir ? undefined : `Download ${node.name}`}
+            onClick={
+              isDir
+                ? undefined
+                : (e) => {
+                    e.stopPropagation()
+                    download(node.path)
+                  }
+            }
+          >
+            {!isDir && <Download />}
+          </span>
         </div>
       )
       return here ? [row, ...rows(node.children!, depth + 1)] : [row]

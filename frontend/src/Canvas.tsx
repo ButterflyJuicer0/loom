@@ -204,7 +204,7 @@ export function Canvas({
   )
 }
 
-function View({ src, item }: { src: string; item: CanvasItem }) {
+export function View({ src, item }: { src: string; item: Pick<CanvasItem, "path" | "title"> }) {
   const viewer: Viewer = viewerFor(item.path) ?? "frame"
 
   switch (viewer) {
