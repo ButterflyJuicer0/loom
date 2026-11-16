@@ -72,6 +72,13 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   tries IPv4 first on later reconnects. A network whose IPv6 is broken past the
   connect ("write: socket is not connected") used to keep the device offline
   until IPv6 was turned off on it.
+- **An employee's work card is no longer lost to a queued message.** A
+  message typed in an employee's Updates (or chat) while it worked started the
+  next turn the moment the turn ended, and that turn's end was never
+  announced: its card (KPI progress, the report for the bell, when to wake)
+  was dropped, and only the follow-up turn's card counted. Every turn's end
+  is announced now. A turn with no card also keeps a wake that was already
+  planned instead of pushing it out to the heartbeat.
 
 ## [0.6.0] – 2026-11-04
 

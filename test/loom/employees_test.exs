@@ -185,6 +185,48 @@ defmodule Loom.EmployeesTest do
     assert Loom.Notices.open_of(e["id"]) == []
   end
 
+  test "a card is not lost when a queued message starts the next turn at once",
+       %{server: server} do
+    {:ok, e} = Employees.create(%{"name" => "小排", "heartbeat_min" => 600}, server)
+    {:ok, kpi} = Employees.add_kpi(e["id"], %{"title" => "专题报告"}, server)
+    kpi_id = List.last(kpi["kpis"])["id"]
+    {:ok, _} = Employees.wake(e["id"], nil, server)
+    BackendStub.await_turn()
+    # The boss types in the work session while it works: it waits its turn.
+    {:ok, :queued} = Agent.submit(e["work_session"], "换个模型", mode: :queue)
+
+    end_turn(
+      e["work_session"],
+      card(%{
+        "sleep_minutes" => 120,
+        "summary" => "报告交了",
+        "kpis" => [%{"id" => kpi_id, "progress" => 100, "status" => "done"}],
+        "report" => %{"priority" => 4, "text" => "专题报告出来了", "key" => "topic"}
+      }),
+      server
+    )
+
+    # The queued message is the next turn already, and the first turn's card
+    # has been applied: KPI, bell, log.
+    assert BackendStub.await_turn() == "换个模型"
+    {:ok, e1} = Employees.get(e["id"], server)
+
+    assert %{"status" => "review", "progress" => 100} =
+             Enum.find(e1["kpis"], &(&1["id"] == kpi_id))
+
+    assert [%{"key" => "topic"}] = Loom.Notices.open_of(e["id"])
+    assert hd(e1["log"])["summary"] == "报告交了"
+    # Still at work, so no wake-up and the turn limit still counts.
+    assert is_integer(e1["turn_started_at"])
+
+    # The second turn has no card: what the first planned stands.
+    end_turn(e["work_session"], "改不了。", server)
+    {:ok, e2} = Employees.get(e["id"], server)
+    assert e2["turn_started_at"] == nil
+    assert_in_delta e2["wake_at"] - System.system_time(:millisecond), 120 * 60_000, 5_000
+    assert [%{"key" => "topic"}] = Loom.Notices.open_of(e["id"])
+  end
+
   test "a weekly report's turn rings no bell", %{server: server} do
     {:ok, e} = Employees.create(%{"name" => "小日"}, server)
     {:ok, _} = Employees.wake(e["id"], nil, server)

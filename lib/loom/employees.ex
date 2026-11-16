@@ -14,7 +14,9 @@ defmodule Loom.Employees do
     now", the weekly report. Each wake-up is one turn, which ends with
     a work card (`Loom.Employees.Card`): when to wake next, KPI progress, and
     whether there is something to report. No card is a sleep until the next
-    heartbeat.
+    heartbeat, or until what was planned before the turn. Every turn's card
+    counts, also the turn a queued message follows at once
+    (`more` in the turn's end).
   - **Within its hours** (all day unless set), except for the reports.
   - **A budget per day**, in the user's wall-clock day. Every turn of either
     session counts (`{:turn_cost, id, usd}` from the sessions). Spent, the
@@ -755,10 +757,16 @@ defmodule Loom.Employees do
     blocked(e)
 
     case kind do
-      "employee_work" -> work_ended(e, card, summary, now)
+      "employee_work" -> e |> work_ended(card, summary, now) |> carried_on(summary, now)
       _ -> chat_ended(e, card, now)
     end
   end
+
+  # A message queued behind the turn started the next one at once: the card
+  # is applied as for any turn, and the session is still at work, timed from
+  # now. That turn's own card comes when it ends.
+  defp carried_on(e, %{more: true}, now), do: Map.put(e, "turn_started_at", now)
+  defp carried_on(e, _summary, _now), do: e
 
   # What the guard refused in the turn, a line each in its Updates.
   defp blocked(e) do
@@ -880,7 +888,11 @@ defmodule Loom.Employees do
   end
 
   # When to wake next: as the card says, but no sooner than the minimum gap
-  # (a "continue" is a minute), and no later than the heartbeat.
+  # (a "continue" is a minute), and no later than the heartbeat. A card that
+  # says nothing leaves a plan already made in place: the turn was not a
+  # wake-up's (the boss wrote in the work session, or a queued message
+  # followed a turn whose card had planned), or the boss asked for a wake
+  # while it ran.
   defp next_wake(e, card, now) do
     heartbeat = now + e["heartbeat_min"] * 60_000
 
@@ -894,6 +906,9 @@ defmodule Loom.Employees do
       is_number(card["sleep_minutes"]) ->
         {(now + round(card["sleep_minutes"] * 60_000)) |> max(now + min_gap(e)) |> min(heartbeat),
          "as planned"}
+
+      is_integer(e["wake_at"]) ->
+        {min(e["wake_at"], heartbeat), e["wake_reason"] || "as planned"}
 
       true ->
         {heartbeat, "heartbeat"}
