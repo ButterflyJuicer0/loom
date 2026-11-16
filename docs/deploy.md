@@ -27,6 +27,10 @@ LOOM_PASSWORD=
 PHX_SERVER=true    # without it the release serves no HTTP
 ```
 
+A server run with `mix phx.server` (dev mode) needs `SECRET_KEY_BASE` too as
+soon as anything but localhost can reach it: without it it signs login tokens
+with the key in `config/dev.exs`, which is public, and shows debug error pages.
+
 Optional settings:
 
 - `PORT` (default 4000)

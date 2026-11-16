@@ -15,7 +15,11 @@ config :loom, LoomWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}],
   check_origin: false,
   code_reloader: true,
-  debug_errors: true,
+  # Plug's debug pages show stack traces and source to whoever causes an error.
+  # A dev server given its own SECRET_KEY_BASE is one that others can reach
+  # (config/runtime.exs), so it does without them. Compile-time setting: this
+  # file, not runtime.exs, is where it has to be decided.
+  debug_errors: System.get_env("SECRET_KEY_BASE") in [nil, ""],
   secret_key_base: "8q2gDRHkWQsTUvtXV71GPb8wPMREHXgQUpdc17Or6ZHW1sh5cW7rSbb4GoZcaRKk"
 
 # ## SSL Support
