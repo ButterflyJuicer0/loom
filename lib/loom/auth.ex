@@ -8,8 +8,9 @@ defmodule Loom.Auth do
 
   The token carries a short fingerprint of the password it was minted under,
   so changing `LOOM_PASSWORD` retires every token minted under the old one.
-  Tokens minted before the fingerprint existed (`%{ok: true}`) are still
-  accepted until their max_age runs out, so a deploy logs nobody out.
+  A token without the fingerprint is refused: the fingerprint is the part that
+  takes the password to produce, so without it the signing key alone would be
+  enough to log in.
   """
 
   @salt "loom auth token"
@@ -41,8 +42,8 @@ defmodule Loom.Auth do
       {:ok, %{pw: pw}} ->
         if Plug.Crypto.secure_compare(pw, fingerprint()), do: :ok, else: {:error, :invalid}
 
-      {:ok, _legacy} ->
-        :ok
+      {:ok, _no_fingerprint} ->
+        {:error, :invalid}
 
       {:error, reason} ->
         {:error, reason}

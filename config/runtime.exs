@@ -60,6 +60,21 @@ bind_address = fn
     end
 end
 
+# A dev server (`mix phx.server`) signs with the key in config/dev.exs, which is
+# in the public repository: anyone can mint a login token with it. One that is
+# reachable from outside must therefore be given a key of its own. With
+# SECRET_KEY_BASE set, a dev server signs with it (and config/dev.exs turns off
+# Plug's debug error pages).
+if config_env() == :dev do
+  case System.get_env("SECRET_KEY_BASE") do
+    key when is_binary(key) and byte_size(key) >= 64 ->
+      config :loom, LoomWeb.Endpoint, secret_key_base: key
+
+    _ ->
+      :ok
+  end
+end
+
 if config_env() == :prod do
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you

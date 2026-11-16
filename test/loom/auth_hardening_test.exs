@@ -32,9 +32,9 @@ defmodule Loom.AuthHardeningTest do
     assert {:error, _} = Auth.verify_token(token)
   end
 
-  test "tokens from before the password fingerprint still verify" do
-    legacy = Phoenix.Token.sign(LoomWeb.Endpoint, "loom auth token", %{ok: true})
-    assert :ok = Auth.verify_token(legacy)
+  test "a signed token without the password fingerprint is refused" do
+    bare = Phoenix.Token.sign(LoomWeb.Endpoint, "loom auth token", %{ok: true})
+    assert {:error, :invalid} = Auth.verify_token(bare)
   end
 
   test "five wrong passwords lock the client out; the right one then waits too", %{conn: conn} do
