@@ -79,6 +79,24 @@ Some features are told only in the skill that uses them and in
   Loom so the sidebar picks it up. After 30 days an entry is removed for good
   (`Loom.Agent.Trash`, hourly; `Store.purge_trash/2`). Device sessions deleted
   from Sessions go to that machine's own trash instead and are not purged.
+- **Giving a virtual employee work from another session.** There is no CLI
+  for it; a session uses the HTTP API on the host
+  (`http://127.0.0.1:4000/api`, header
+  `authorization: Bearer $(cat ~/.loom/cli-token)`; routes in
+  `lib/loom_web/router.ex`, `EmployeeController`). `GET /employees` and
+  `/employees/<id>` show `status`, `hours`, `wake_at`, `kpis`, `model`,
+  `max_turn_min`. A task is a KPI plus a wake-up: `POST /employees/<id>/kpis`
+  (`title`, optional `detail`, `criteria`, `due`, `priority`), then
+  `POST /employees/<id>/wake {"note": "…"}`. Outside its `hours` the wake
+  waits for them; to start now, `PATCH /employees/<id> {"hours": null}`, wake
+  it, and put the hours back once `turn_started_at` is set. `PATCH` also sets
+  `model` (an employee cannot change its own), `heartbeat_min`,
+  `max_turn_min`, `budget_usd` and the other settings of its page. Do this
+  only when the user asked for it. An employee's reports reach the user
+  through the bell: every turn's work card is read, including the turn a
+  queued message follows (docs/architecture.md §2.9). To check that a report
+  arrived, look for the notice itself (`GET /notices`, or
+  `~/.loom/notices.json`), not the employee's word.
 
 If the docs don't settle it, read the code: `lib/` (Elixir server),
 `frontend/src/` (UI), `node/` (loom-node). Say which you checked.

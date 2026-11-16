@@ -862,7 +862,7 @@ defmodule Loom.Agent.SessionTest do
   end
 
   describe "announcing turn ends" do
-    # What `Loom.Push` notifies with: once a turn is over and nothing follows it.
+    # What `Loom.Employees` and `Loom.Dream` go by: every turn that ends.
     test "carries the title and the turn's last reply" do
       id = new_session()
       Phoenix.PubSub.subscribe(Loom.PubSub, Agent.turns_topic())
@@ -892,7 +892,24 @@ defmodule Loom.Agent.SessionTest do
       assert_receive {:turn_ended, ^id, %{outcome: {:error, "boom"}}}, 500
     end
 
-    test "not while a queued message is about to start the next turn" do
+    test "a turn a queued message follows is announced too, with its own reply" do
+      id = new_session()
+      Phoenix.PubSub.subscribe(Loom.PubSub, Agent.turns_topic())
+      Agent.submit(id, "go")
+      BackendStub.await_turn()
+      {:ok, :queued} = Agent.submit(id, "parked", mode: :queue)
+      backend_sends(id, [{:event, :assistant_text, %{block_id: "b1", text: "First done."}}])
+
+      finish_turn(id)
+      assert BackendStub.await_turn() == "parked"
+      assert_receive {:turn_ended, ^id, %{outcome: {:ok, "First done."}, more: true}}, 500
+
+      # The second turn says nothing: its reply is not the first turn's.
+      finish_turn(id)
+      assert_receive {:turn_ended, ^id, %{outcome: {:ok, nil}, more: false}}, 500
+    end
+
+    test "a message a refused steer parked starts the next turn, announced after the first" do
       id = new_session()
       Phoenix.PubSub.subscribe(Loom.PubSub, Agent.turns_topic())
       Agent.submit(id, "go")
@@ -902,10 +919,10 @@ defmodule Loom.Agent.SessionTest do
 
       finish_turn(id)
       assert BackendStub.await_turn() == "parked"
-      refute_receive {:turn_ended, ^id, _}, 100
+      assert_receive {:turn_ended, ^id, %{more: true}}, 500
 
       finish_turn(id)
-      assert_receive {:turn_ended, ^id, %{outcome: {:ok, nil}}}, 500
+      assert_receive {:turn_ended, ^id, %{outcome: {:ok, nil}, more: false}}, 500
     end
 
     test "not on an interrupt" do

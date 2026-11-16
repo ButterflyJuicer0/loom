@@ -256,7 +256,11 @@ says when it needs the user.
   fenced `employee-card` JSON block: when to wake (kept between the minimum
   gap and the heartbeat; `continue` is a minute), KPI progress (never `done`,
   which becomes `review` for the user to accept), a report. No card: sleep
-  until the heartbeat. The chat ends with a card only to add KPIs, hand a note
+  until the heartbeat, or until a wake already planned (by an earlier card,
+  or the boss's "wake now" during the turn). Every turn's card is read:
+  `{:turn_ended, …}` is announced for a turn a queued message follows at
+  once too (`more: true`; the employee stays at work and that turn's own card
+  comes after). The chat ends with a card only to add KPIs, hand a note
   to the next wake-up, or wake it now. The transcript renders the card
   (`WorkCard.tsx`).
 - **The system prompt is fixed at the first turn** (§2.7's gotcha), so it

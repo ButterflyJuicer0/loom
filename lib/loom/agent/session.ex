@@ -1480,7 +1480,9 @@ defmodule Loom.Agent.Session do
     if state.queue == [] do
       state |> set_status(:idle) |> announce_turn_end() |> schedule_release() |> schedule_recap()
     else
-      drain(state)
+      # Announced all the same: what the turn said last (an employee's work
+      # card) must not be lost because a message was waiting behind it.
+      state |> announce_turn_end() |> drain()
     end
   end
 
@@ -1535,14 +1537,21 @@ defmodule Loom.Agent.Session do
   end
 
   # For whoever waits on a turn (`Loom.Dream`, `Loom.Employees`). The reply is the turn's last text, found by
-  # reading back to the message that started it; an error after it wins, since
-  # that is how the turn actually ended.
+  # reading back to where the turn began: the message that started it, or
+  # the end of the turn before when a queued message started it (its bubble
+  # sits inside that turn, where it was typed). An error after the text wins,
+  # since that is how the turn actually ended. `more` says a queued message
+  # starts the next turn at once: the session is not idle.
   defp announce_turn_end(state) do
     outcome =
-      Enum.find_value(state.transcript, {:ok, nil}, fn
+      state.transcript
+      |> before_closing()
+      |> Enum.find_value({:ok, nil}, fn
         %{kind: :error, payload: %{message: message}} -> {:error, message}
         %{kind: :assistant_text, payload: %{text: text}} -> {:ok, text}
+        %{kind: :user, payload: %{queued_as: _}} -> nil
         %{kind: :user} -> {:ok, nil}
+        %{kind: :turn_done} -> {:ok, nil}
         _ -> nil
       end)
 
@@ -1550,11 +1559,24 @@ defmodule Loom.Agent.Session do
       Loom.PubSub,
       Loom.Agent.turns_topic(),
       {:turn_ended, state.id,
-       %{title: state.title, outcome: outcome, kind: state.kind, flagged: state.flagged_at != nil}}
+       %{
+         title: state.title,
+         outcome: outcome,
+         kind: state.kind,
+         flagged: state.flagged_at != nil,
+         more: state.queue != []
+       }}
     )
 
     state
   end
+
+  # The transcript, newest first, without this turn's own `:turn_done` (and
+  # the status after it), so that a `:turn_done` met further back is the
+  # turn before.
+  defp before_closing([%{kind: :status} | rest]), do: before_closing(rest)
+  defp before_closing([%{kind: :turn_done} | rest]), do: rest
+  defp before_closing(events), do: events
 
   # Announce what the turn left in the output directory. Before the turn's own
   # closing event, so the card sits with the reply that made the files.

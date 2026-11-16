@@ -208,8 +208,9 @@ defmodule Loom.Agent do
 
   @doc """
   The topic turn ends are announced on, for `Loom.Dream` and `Loom.Employees`: `{:turn_ended, id,
-  %{title:, outcome:}}` once a turn is over and nothing queued follows it.
-  `outcome` is `{:ok, last_reply_or_nil}` or `{:error, message}`.
+  %{title:, outcome:, more:}}` once a turn is over. `outcome` is
+  `{:ok, last_reply_or_nil}` or `{:error, message}`; `more` is true when a
+  queued message starts the next turn at once, so the session is not idle.
   """
   def turns_topic, do: "turns"
 
