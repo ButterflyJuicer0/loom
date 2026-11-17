@@ -19,6 +19,17 @@ import type { LocalFile } from "./useAttachments"
  * place rather than spread through components.
  */
 
+/**
+ * How a line written here (a notice, a retry) is put into the interface's
+ * language: `t` from `i18n.ts`, handed in by whoever renders the timeline.
+ * Handed in rather than imported, so this file still loads as it is outside
+ * the browser (`tools/transcript.mjs`), where the lines stay as written.
+ */
+export type Say = (text: string, vars?: Record<string, string | number>) => string
+
+const asWritten: Say = (text, vars) =>
+  vars ? text.replace(/\{(\w+)\}/g, (whole, name: string) => (name in vars ? String(vars[name]) : whole)) : text
+
 export type AgentEvent = {
   seq: number
   at: number
@@ -426,7 +437,7 @@ export type TimelineItem =
  * a response's events only after the whole response is assembled — so every
  * delta currently in flight belongs after everything already evented.
  */
-export function buildTimeline(t: Transcript): TimelineItem[] {
+export function buildTimeline(t: Transcript, say: Say = asWritten): TimelineItem[] {
   const items: TimelineItem[] = []
   // tool_use id → index in `items`, so its result can be attached to the card
   // rather than floating as a separate bubble.
@@ -544,17 +555,17 @@ export function buildTimeline(t: Transcript): TimelineItem[] {
         break
 
       case "error":
-        items.push({ key, kind: "error", text: String(p.message ?? "error") })
+        items.push({ key, kind: "error", text: String(p.message ?? say("error")) })
         break
 
       // Where the session went, and who put it there.
       case "project_moved": {
         const name = p.name ? String(p.name) : null
         const text = !name
-          ? "Removed from its project"
+          ? say("Removed from its project")
           : p.auto
-            ? `Loom filed this session under ${name}`
-            : `Moved to ${name}`
+            ? say("Loom filed this session under {name}", { name })
+            : say("Moved to {name}", { name })
         items.push({ key, kind: "notice", text })
         break
       }
@@ -563,13 +574,14 @@ export function buildTimeline(t: Transcript): TimelineItem[] {
         // The API refused a request and the backend is about to try again.
         // One line for the whole run of them, showing the latest: ten
         // attempts would otherwise be ten lines saying the same thing.
-        const status = p.status ? `${p.status}${p.error ? ` ${p.error}` : ""}` : String(p.error ?? "error")
+        const status = p.status ? `${p.status}${p.error ? ` ${p.error}` : ""}` : String(p.error ?? say("error"))
         const delay = Number(p.delay_ms ?? 0)
         // Codex gives neither a delay nor an error kind, and might not count.
         const count = p.attempt ? ` ${p.attempt}${p.max_retries ? `/${p.max_retries}` : ""}` : ""
         const text =
-          `API ${status}, retrying${count}` +
-          (delay >= 1000 ? ` in ${Math.round(delay / 1000)}s` : "")
+          delay >= 1000
+            ? say("API {status}, retrying{count} in {s}s", { status, count, s: Math.round(delay / 1000) })
+            : say("API {status}, retrying{count}", { status, count })
         const last = items[items.length - 1]
         if (last?.kind === "retry") items[items.length - 1] = { ...last, text }
         else items.push({ key, kind: "retry", text })
@@ -587,8 +599,8 @@ export function buildTimeline(t: Transcript): TimelineItem[] {
         // Codex does not, and its count catches up on the next turn.
         const pre = Number(p.pre_tokens)
         const post = Number(p.post_tokens)
-        let text = p.trigger === "auto" ? "context compacted automatically" : "context compacted"
-        if (pre > 0 && post > 0) text += `: ${kTokens(pre)} → ${kTokens(post)}`
+        let text = p.trigger === "auto" ? say("context compacted automatically") : say("context compacted")
+        if (pre > 0 && post > 0) text += say(": {pre} → {post}", { pre: kTokens(pre), post: kTokens(post) })
         items.push({ key, kind: "notice", text })
         break
       }
@@ -598,7 +610,7 @@ export function buildTimeline(t: Transcript): TimelineItem[] {
         items.push({
           key,
           kind: "notice",
-          text: "reload: Claude Code restarts on its next turn, Codex once no Codex turn is running",
+          text: say("reload: Claude Code restarts on its next turn, Codex once no Codex turn is running"),
         })
         break
 
@@ -658,7 +670,7 @@ export function buildTimeline(t: Transcript): TimelineItem[] {
           items.push({
             key,
             kind: "notice",
-            text: String(p.message ?? "interrupted"),
+            text: String(p.message ?? say("interrupted")),
           })
         }
         break

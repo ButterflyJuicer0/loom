@@ -1,0 +1,31 @@
+{
+  "id": "stardew",
+  "order": 40,
+  "name": {
+    "en": "Stardew Valley",
+    "zh": "星露谷物语"
+  },
+  "blurb": {
+    "en": "Wood frames, parchment and a farm: the menu, the dialogue box, the energy bar, and Junimos at work",
+    "zh": "木框、羊皮纸和农场：菜单木框、对话框、体力条，还有干活的祝尼魔"
+  },
+  "radius": "0px",
+  "light": {
+    "background": "#fdeecb",
+    "foreground": "#2c1310",
+    "sidebar": "#d88239",
+    "card": "#ffd590",
+    "bubble": "#fcc572",
+    "primary": "#b14e05",
+    "border": "#d68f54"
+  },
+  "dark": {
+    "background": "#1c1b3c",
+    "foreground": "#ffe9bf",
+    "sidebar": "#3b2742",
+    "card": "#2b2652",
+    "bubble": "#dba56a",
+    "primary": "#f0900a",
+    "border": "#4d4180"
+  }
+}

@@ -1,6 +1,7 @@
 import { Check, Copy, Square as SquareIcon, SquareCheck } from "lucide-react"
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import { marked, type Token, type Tokens } from "marked"
+import { t } from "./i18n"
 import { WorkCard } from "./WorkCard"
 
 /**
@@ -300,8 +301,8 @@ function CopyButton({ text }: { text: string }) {
       type="button"
       className="code-copy"
       onClick={copy}
-      title={copied ? "Copied" : "Copy"}
-      aria-label={copied ? "Copied" : "Copy code"}
+      title={copied ? t("Copied") : t("Copy")}
+      aria-label={copied ? t("Copied") : t("Copy code")}
     >
       {copied ? <Check /> : <Copy />}
     </button>
@@ -318,7 +319,7 @@ function CodeSpan({ text }: { text: string }) {
   return (
     <code
       className={"md-code" + (copied ? " copied" : "")}
-      title={copied ? "Copied" : "Tap to copy"}
+      title={copied ? t("Copied") : t("Tap to copy")}
       onClick={(e) => {
         if (window.getSelection()?.toString()) return
         // Inside a link the tap is for the copy, not the navigation.
@@ -342,8 +343,8 @@ export function MessageCopy({ text }: { text: string }) {
       type="button"
       className="msg-copy"
       onClick={copy}
-      title={copied ? "Copied" : "Copy"}
-      aria-label={copied ? "Copied" : "Copy message"}
+      title={copied ? t("Copied") : t("Copy")}
+      aria-label={copied ? t("Copied") : t("Copy message")}
     >
       {copied ? <Check /> : <Copy />}
     </button>

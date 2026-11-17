@@ -1,0 +1,1966 @@
+/* ── 死亡细胞 (Dead Cells) ────────────────────────────────────────────────
+   A tribute to the game, after its own screens.
+
+   By night, the Prisoners' Quarters, where every run starts: teal stone
+   behind the sidebar, a barred window and its beam, the Beheaded standing
+   under it, the floor's blocks for the sidebar's foot. By day, the title
+   screen: the island against a sunset, a boat, crows, the sea.
+
+   The page and whatever floats are the game's menus: navy panels in a
+   copper frame with a rivet in each corner, titles in serif capitals over a
+   thin rule, the chosen row under a cyan bar that fades to the right, the
+   chosen card in a cyan glow, rows as dark plates, values in dark wells.
+   The conversation borrows the HUD and the item card: a weapon slot for a
+   step's mark (an hourglass turning while it runs), the card's title in a
+   scroll's colour — survival green when done, tactics purple while running,
+   brutality red when failed — keywords in orange, cells for a list's dots
+   and for what is unread, the flask and the stats' band for a turn's line,
+   white key caps for send and the buttons that act.
+
+   Colours and corners are tokens (tools/themes/deadcells.json); the pictures
+   are Loom's own, drawn by tools/art/deadcells.mjs.
+
+   Each selector starts `html[data-style="deadcells"][data-theme]`: as
+   specific as themes.css's shapes, and after them, so these win. */
+
+html[data-style="deadcells"] {
+  --dc-serif: var(--font-serif);
+  --dc-copper: #9a3b28;
+  --dc-copper-hi: #c0703f;
+  --dc-frame: url("./art/deadcells-frame-day.svg");
+  --dc-scene: url("./art/deadcells-dusk.svg");
+  --dc-scene-top: url("./art/deadcells-dusk-sky.svg");
+  --dc-empty: url("./art/deadcells-promenade.svg");
+  --dc-login: url("./art/deadcells-dusk-wide.svg");
+  /* the three scrolls */
+  --dc-brutality: #a81e18;
+  --dc-tactics: #5f31c2;
+  --dc-survival: #06673a;
+  --dc-orange: #a44806;
+  --dc-gold: #8a570a;
+  --dc-cyan: #0b5c88;
+  --dc-cyan-hi: #088bbd;
+  --dc-lilac: #6b4750;
+  --dc-rule: #b89a6c;
+  --dc-plate: #efe1bf;
+  --dc-plate-hi: #e9d6ac;
+  --dc-well: #e5d2a6;
+  --dc-panel: #fbf3df;
+  --dc-band: #3a2230;
+  --dc-band-fg: #f4e8d2;
+  --dc-track: #233266;
+  --dc-mote: #c9793f;
+  /* the bar on a chosen row */
+  --dc-bar: linear-gradient(90deg, #8fd0e6, #8fd0e6) top / 100% 1px no-repeat, linear-gradient(90deg, #8fd0e6, #8fd0e6) bottom / 100% 1px no-repeat,
+    linear-gradient(90deg, #0b6494 0%, #0e6da0 60%, #1a79aa 100%);
+  --dc-bar-fg: #ffffff;
+  /* the glow round a chosen card */
+  --dc-select: 0 0 0 2px var(--dc-cyan-hi), 0 0 8px 1px color-mix(in srgb, var(--dc-cyan-hi) 55%, transparent);
+  --dc-drop: rgb(58 20 32 / 28%);
+}
+
+html[data-style="deadcells"][data-theme="dark"] {
+  --dc-frame: url("./art/deadcells-frame.svg");
+  --dc-scene: url("./art/deadcells-quarters.svg");
+  --dc-scene-top: url("./art/deadcells-quarters-wall.svg");
+  --dc-empty: url("./art/deadcells-bridge.svg");
+  --dc-login: url("./art/deadcells-quarters-wide.svg");
+  --dc-brutality: #fb5c4e;
+  --dc-tactics: #ab7ef9;
+  --dc-survival: #2cd27a;
+  --dc-orange: #f69020;
+  --dc-gold: #fcdd2a;
+  --dc-cyan: #35bdea;
+  --dc-cyan-hi: #35bdea;
+  --dc-lilac: #8db6f7;
+  --dc-rule: #5b6376;
+  --dc-plate: #101c2f;
+  --dc-plate-hi: #16263d;
+  --dc-well: #0a0d14;
+  --dc-panel: #142745;
+  --dc-band: #36202e;
+  --dc-band-fg: #ebe5d8;
+  --dc-mote: #9fe8e0;
+  --dc-bar: linear-gradient(90deg, #69c4dc, transparent 88%) top / 100% 1px no-repeat, linear-gradient(90deg, #69c4dc, transparent 88%) bottom / 100% 1px no-repeat,
+    linear-gradient(90deg, #0e6da0 0%, rgb(20 85 127 / 80%) 45%, transparent 96%);
+  --dc-bar-fg: #ffffff;
+  --dc-select: 0 0 0 2px var(--dc-cyan-hi), 0 0 9px 1px color-mix(in srgb, #088bbd 75%, transparent), inset 0 0 7px color-mix(in srgb, #088bbd 35%, transparent);
+  --dc-drop: rgb(0 0 0 / 55%);
+}
+
+/* Quiet text a shade darker by day than the tokens work out, so it reads on
+   a plate as well as on the page (`:root` to outrank the generated value). */
+html:root[data-style="deadcells"][data-theme="light"] {
+  --dim: #675856;
+}
+
+html[data-style="deadcells"][data-theme] ::selection {
+  background: color-mix(in srgb, var(--dc-cyan-hi) 42%, transparent);
+}
+
+/* ── The ground: the Quarters' wall by night, the dusk sky by day ───── */
+
+html[data-style="deadcells"][data-theme] .sidebar {
+  /* Positioned already: beside the page on a desktop, a drawer on a phone. */
+  isolation: isolate;
+  border-right: 0;
+  background: linear-gradient(180deg, #561a32 0%, #6d2138 45%, #8a3040 100%);
+}
+
+html[data-style="deadcells"][data-theme="dark"] .sidebar {
+  background:
+    linear-gradient(180deg, rgb(9 26 36 / 55%) 0%, transparent 70%),
+    url("./art/deadcells-wall.svg") 0 0 / 128px 96px repeat;
+}
+
+@media (min-width: 641px) {
+  html[data-style="deadcells"][data-theme] .app {
+    background: linear-gradient(180deg, #561a32 0%, #6d2138 45%, #8a3040 100%);
+  }
+
+  html[data-style="deadcells"][data-theme="dark"] .app {
+    background:
+      linear-gradient(180deg, rgb(9 26 36 / 55%) 0%, transparent 70%),
+      url("./art/deadcells-wall.svg") 0 0 / 128px 96px repeat;
+  }
+
+  /* The page: a panel in its copper frame, a rivet in each corner. */
+  html[data-style="deadcells"][data-theme] .main {
+    border: 6px solid transparent;
+    border-image: var(--dc-frame) 3 / 6px / 0 round;
+    border-radius: 3px;
+    background:
+      url("./art/deadcells-rivet.svg") left 2px top 2px / 4px 4px no-repeat,
+      url("./art/deadcells-rivet.svg") right 2px top 2px / 4px 4px no-repeat,
+      url("./art/deadcells-rivet.svg") left 2px bottom 2px / 4px 4px no-repeat,
+      url("./art/deadcells-rivet.svg") right 2px bottom 2px / 4px 4px no-repeat,
+      var(--background);
+    box-shadow: 0 3px 14px var(--dc-drop);
+  }
+}
+
+/* The scene stands on the sidebar's foot: the foot is the floor (the sea, by
+   day), the picture rises behind the list from there and fades. */
+html[data-style="deadcells"][data-theme] .sidebar-foot:not(.dial) {
+  position: relative;
+  border-top: 0;
+  background: linear-gradient(180deg, #ffb04e 0%, #f08a44 35%, #e0703e 100%);
+  --fg: #2a1422;
+  --fg-dim: #4a2430;
+  color: #2a1422;
+}
+
+html[data-style="deadcells"][data-theme="dark"] .sidebar-foot:not(.dial) {
+  background:
+    url("./art/deadcells-floor.svg") 0 0 / 54px 6px repeat-x,
+    #061426;
+  --fg: #c9d3e6;
+  --fg-dim: #8ea0bf;
+  color: #c9d3e6;
+}
+
+html[data-style="deadcells"][data-theme] .sidebar-foot:not(.dial)::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  z-index: -1;
+  aspect-ratio: 130 / 83;
+  background: var(--dc-scene-top) center bottom / 100% auto no-repeat;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 42%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 42%);
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+html[data-style="deadcells"][data-theme="dark"] .sidebar-foot:not(.dial)::before {
+  aspect-ratio: 130 / 86;
+}
+
+html[data-style="deadcells"][data-theme] .sidebar-foot:not(.dial) .devices-btn:hover {
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
+}
+
+/* On a phone the foot is a dial that floats; the whole scene, floor and all,
+   lies along the drawer's own foot. */
+html[data-style="deadcells"][data-theme] .sidebar:not(:has(.sidebar-foot:not(.dial)))::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  aspect-ratio: 130 / 96;
+  background: var(--dc-scene) center bottom / 100% auto no-repeat;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 40%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 40%);
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+/* The list stops above the window, so no title is written on the light. */
+html[data-style="deadcells"][data-theme] .sidebar .session-list {
+  margin-bottom: 8.4rem;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
+}
+
+@media (max-width: 640px) {
+  html[data-style="deadcells"][data-theme] .sidebar .session-list {
+    margin-bottom: 12.5rem;
+  }
+}
+
+html[data-style="deadcells"][data-theme] :is(.placeholder, .loading) {
+  background: transparent;
+}
+
+/* ── Dust in the air, rising ────────────────────────────────────────────
+   One sheet, a tile taller than the page and slid up by exactly that, so the
+   loop has no seam. A mask, so the page colours it. It takes no clicks. */
+
+html[data-style="deadcells"][data-theme] .main {
+  position: relative;
+  isolation: isolate;
+}
+
+html[data-style="deadcells"][data-theme="dark"] .main::after {
+  opacity: 0.4;
+}
+
+html[data-style="deadcells"][data-theme] .main::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 -320px 0;
+  z-index: 2;
+  background-color: var(--dc-mote);
+  -webkit-mask: url("./art/deadcells-motes.svg") 0 0 / 320px 320px repeat;
+  mask: url("./art/deadcells-motes.svg") 0 0 / 320px 320px repeat;
+  opacity: 0.22;
+  animation: deadcells-rise 46s linear infinite;
+  pointer-events: none;
+  will-change: transform;
+}
+
+@keyframes deadcells-rise {
+  to {
+    transform: translate3d(0, -320px, 0);
+  }
+}
+
+/* ── The name: serif capitals, the head of flame beside them ────────── */
+
+html[data-style="deadcells"][data-theme] .sidebar .brand {
+  font-family: var(--dc-serif);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-shadow: 0 2px 0 rgb(0 0 0 / 45%);
+}
+
+html[data-style="deadcells"][data-theme] .brand-mark {
+  display: none;
+}
+
+html[data-style="deadcells"][data-theme] .brand::before {
+  content: "";
+  flex: none;
+  width: 1.3em;
+  height: 1.2em;
+  margin-right: 0.05em;
+  background: url("./art/deadcells-head.svg") 0 0 / 3.9em 1.2em no-repeat;
+  filter: drop-shadow(0 0 3px rgb(255 170 60 / 65%));
+  image-rendering: pixelated;
+  animation: deadcells-flicker 0.6s steps(3) infinite;
+}
+
+/* Three frames, side by side. */
+@keyframes deadcells-flicker {
+  to {
+    background-position-x: -3.9em;
+  }
+}
+
+/* The menu of the title screen: serif, and the bar on the row you are on. */
+html[data-style="deadcells"][data-theme] .sidebar .nav-item {
+  font-family: var(--dc-serif);
+  font-size: 0.98rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 0 rgb(0 0 0 / 40%);
+  border-radius: 2px;
+}
+
+html[data-style="deadcells"][data-theme] :is(.nav-item, .project-row):is(:hover, .current) {
+  background: var(--dc-bar);
+  color: var(--dc-bar-fg);
+}
+
+html[data-style="deadcells"][data-theme] .sidebar :is(.nav-item, .project-row):is(:hover, .current) {
+  background:
+    linear-gradient(90deg, #8fd0e6, transparent 88%) top / 100% 1px no-repeat,
+    linear-gradient(90deg, #8fd0e6, transparent 88%) bottom / 100% 1px no-repeat,
+    linear-gradient(90deg, #0e6da0 0%, rgb(20 85 127 / 80%) 45%, transparent 96%);
+}
+
+/* A heading in a menu: small capitals over a thin rule. */
+html[data-style="deadcells"][data-theme] .list-heading {
+  margin-top: 14px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--sidebar-foreground) 30%, transparent);
+  border-radius: 0;
+  font-family: var(--dc-serif);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--sidebar-foreground) 82%, transparent);
+}
+
+/* ── Session rows: the Collector's list ─────────────────────────────────
+   Each a dark plate; the one that is open wears the cyan glow. */
+
+html[data-style="deadcells"][data-theme] .sidebar .session {
+  margin: 3px 2px;
+  border-radius: 3px;
+  background: rgb(8 14 26 / 34%);
+  transition: none;
+}
+
+html[data-style="deadcells"][data-theme] .sidebar .session:hover {
+  background: rgb(8 14 26 / 55%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, #6fd3f2 55%, transparent);
+}
+
+html[data-style="deadcells"][data-theme] .sidebar .session.active {
+  background: rgb(8 14 26 / 62%);
+  box-shadow:
+    0 0 0 2px #35bdea,
+    0 0 9px 1px rgb(8 139 189 / 75%),
+    inset 0 0 7px rgb(8 139 189 / 35%);
+}
+
+html[data-style="deadcells"][data-theme] .sidebar .session.working + .session.working {
+  margin-top: 4px;
+}
+
+html[data-style="deadcells"][data-theme] .sidebar .session .session-gist {
+  color: color-mix(in srgb, var(--sidebar-foreground) 72%, transparent);
+}
+
+/* Its state: the head of flame while it runs, an hourglass while it starts,
+   a red padlock when it was stopped. */
+html[data-style="deadcells"][data-theme] .dot:is(.running, .online, .starting, .interrupted) {
+  width: 13px;
+  height: 12px;
+  border-radius: 0;
+  background: url("./art/deadcells-head.svg") 0 0 / 39px 12px no-repeat;
+  image-rendering: pixelated;
+  animation: deadcells-flicker-dot 0.6s steps(3) infinite;
+}
+
+@keyframes deadcells-flicker-dot {
+  to {
+    background-position-x: -39px;
+  }
+}
+
+html[data-style="deadcells"][data-theme] .dot.starting {
+  width: 9px;
+  height: 11px;
+  background: url("./art/deadcells-hourglass.svg") center / contain no-repeat;
+  animation: deadcells-turn 1.6s steps(2, jump-none) infinite;
+}
+
+html[data-style="deadcells"][data-theme] .dot.interrupted {
+  width: 11px;
+  height: 11px;
+  background: url("./art/deadcells-lock.svg") center / contain no-repeat;
+  animation: none;
+}
+
+html[data-style="deadcells"][data-theme] .dot.online {
+  animation: none;
+}
+
+@keyframes deadcells-turn {
+  50% {
+    rotate: 180deg;
+  }
+}
+
+html[data-style="deadcells"][data-theme] .dsess-dot.busy {
+  width: 13px;
+  height: 12px;
+  border-radius: 0;
+  background: url("./art/deadcells-head.svg") 0 0 / 39px 12px no-repeat;
+  box-shadow: none;
+  image-rendering: pixelated;
+  animation: deadcells-flicker-dot 0.6s steps(3) infinite;
+}
+
+/* Messages waiting their turn: a count in its well. Pinned: in gold. */
+html[data-style="deadcells"][data-theme] .session-queued {
+  border-radius: 3px;
+  background: #1d4fb4;
+  color: #ffffff;
+}
+
+html[data-style="deadcells"][data-theme] .session-pin {
+  color: #fcdd2a;
+}
+
+/* What you have not read yet: a cell, waiting to be picked up. */
+html[data-style="deadcells"][data-theme] .session-unread {
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+  background: url("./art/deadcells-cell.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+  animation: deadcells-bob 1.2s steps(2, jump-none) infinite;
+}
+
+@keyframes deadcells-bob {
+  50% {
+    translate: 0 -2px;
+  }
+}
+
+html[data-style="deadcells"][data-theme] .sidebar .session.unread .session-when {
+  color: #6fd3f2;
+}
+
+/* ── The chat's head ────────────────────────────────────────────────── */
+
+/* No frosted glass in the Quarters: the head stands on the page's own
+   ground, and what scrolls goes under it. */
+html[data-style="deadcells"][data-theme] .chat-top::before {
+  inset: 0 0 -10px;
+  background: var(--background);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 12px), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 12px), transparent);
+}
+
+html[data-style="deadcells"][data-theme] .chat-header {
+  border-bottom: 1px solid var(--dc-rule);
+}
+
+html[data-style="deadcells"][data-theme] .chat-name {
+  font-family: var(--dc-serif);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* Its buttons: small plates, the glow when one is on. */
+html[data-style="deadcells"][data-theme] :is(.chip.button.head-btn, .chat-header .icon-btn, .sidebar-head .icon-btn) {
+  border-radius: 3px;
+  transition: none;
+}
+
+html[data-style="deadcells"][data-theme] .chip.button.head-btn {
+  background: var(--dc-plate);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dc-rule) 55%, transparent);
+  margin-left: 4px;
+}
+
+html[data-style="deadcells"][data-theme] .chip.button.head-btn:hover {
+  background: var(--dc-plate-hi);
+  box-shadow: inset 0 0 0 1px var(--dc-cyan-hi);
+}
+
+html[data-style="deadcells"][data-theme] .chip.button.head-btn.on {
+  background: var(--dc-plate-hi);
+  color: var(--dc-cyan);
+  box-shadow: var(--dc-select);
+}
+
+html[data-style="deadcells"][data-theme] .sidebar-head .icon-btn:hover {
+  background: rgb(8 14 26 / 45%);
+  box-shadow: inset 0 0 0 1px #6fd3f2;
+}
+
+/* A turn's line: the band the HUD keeps its numbers on, the flask before. */
+html[data-style="deadcells"][data-theme] .turn-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 3px 12px 3px 8px;
+  margin: 2px 0 8px;
+  border-radius: 3px;
+  background: var(--dc-band);
+  color: var(--dc-band-fg);
+  letter-spacing: 0.03em;
+  white-space: pre;
+}
+
+html[data-style="deadcells"][data-theme] .turn-line::before {
+  content: "";
+  flex: none;
+  width: 13px;
+  height: 14px;
+  margin-right: 0.45em;
+  background: url("./art/deadcells-flask.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+html[data-style="deadcells"][data-theme] .turn-line .turn-model {
+  color: #07fd7a;
+}
+
+/* When the window is known, the line is the HUD's health bar: the flask on
+   its band, then a bar filled to how full the context is (`--usage`), the
+   count written across it as the HUD writes "784 / 2462". Green, a lit edge
+   along the top; the orange of health about to go once it passes nine
+   tenths. The green is the bar's darker tone, so the white count reads on
+   it as on the empty part. */
+html[data-style="deadcells"][data-theme] .turn-line[data-usage] {
+  --dc-hp: #038148;
+  --dc-hp-lit: #06c766;
+  position: relative;
+  isolation: isolate;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: min(21rem, 100%);
+  padding: 4px 14px 4px 44px;
+  background:
+    linear-gradient(var(--dc-band), var(--dc-band)) left / 30px 100% no-repeat,
+    linear-gradient(#0d6941, #0d6941) 30px 0 / 100% 1px no-repeat,
+    linear-gradient(#0d6941, #0d6941) 30px 100% / 100% 1px no-repeat,
+    #272c3b;
+  color: #ffffff;
+  text-shadow:
+    0 1px 0 rgb(0 0 0 / 75%),
+    0 0 2px rgb(0 0 0 / 60%);
+}
+
+html[data-style="deadcells"][data-theme] .turn-line[data-usage]::before {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  margin: 0;
+  translate: 0 -50%;
+}
+
+html[data-style="deadcells"][data-theme] .turn-line[data-usage]::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 32px;
+  top: 3px;
+  bottom: 3px;
+  width: calc((100% - 34px) * var(--usage, 0));
+  background: linear-gradient(180deg, var(--dc-hp-lit) 0 2px, var(--dc-hp) 2px calc(100% - 2px), #02663a calc(100% - 2px));
+}
+
+html[data-style="deadcells"][data-theme] .turn-line:is([data-usage="100"], [data-usage^="9"]:not([data-usage="9"])) {
+  --dc-hp: #b05208;
+  --dc-hp-lit: #f69020;
+}
+
+html[data-style="deadcells"][data-theme] .turn-line[data-usage] .turn-model {
+  color: #e8fff2;
+}
+
+html[data-style="deadcells"][data-theme] .turn-line[data-usage] .turn-model.off {
+  color: #fff2b8;
+  text-decoration: underline;
+}
+
+html[data-style="deadcells"][data-theme] .turn-line .turn-model.off {
+  color: #fc5f5d;
+}
+
+/* ── What you said: the card you chose, in its glow ─────────────────── */
+
+html[data-style="deadcells"][data-theme] .bubble.user {
+  border: 0;
+  border-radius: 3px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--dc-cyan-hi) 16%, var(--dc-plate)) 0, var(--dc-plate) 2.4rem);
+  color: var(--foreground);
+  box-shadow: var(--dc-select);
+}
+
+/* ── The reply ──────────────────────────────────────────────────────── */
+
+/* While the reply is still coming: a cell at the end of the line. */
+html[data-style="deadcells"][data-theme] .bubble.assistant.live::after {
+  content: "";
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
+  margin-left: 0.25em;
+  vertical-align: -0.05em;
+  background: url("./art/deadcells-cell.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+  animation: deadcells-bob 0.8s steps(2, jump-none) infinite;
+}
+
+/* A title as a menu's: serif capitals over a thin rule. */
+html[data-style="deadcells"][data-theme] :is(h1, h2).md-h {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--dc-rule);
+  font-family: var(--dc-serif);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* A path or a name in a title stays as it was written. */
+html[data-style="deadcells"][data-theme] .md-h code {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html[data-style="deadcells"][data-theme] :is(h3, h4, h5, h6).md-h {
+  color: var(--dc-lilac);
+  font-family: var(--dc-serif);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+/* A word that matters, as an item's card writes it: in orange. */
+html[data-style="deadcells"][data-theme] .bubble.assistant strong {
+  color: var(--dc-orange);
+}
+
+html[data-style="deadcells"][data-theme] .bubble.assistant a {
+  color: var(--dc-cyan);
+  text-decoration-color: color-mix(in srgb, var(--dc-cyan) 50%, transparent);
+}
+
+/* A list's dots are cells. */
+html[data-style="deadcells"][data-theme] ul.md-list > li:not(.md-task) {
+  position: relative;
+  list-style: none;
+}
+
+html[data-style="deadcells"][data-theme] ul.md-list > li:not(.md-task)::before {
+  content: "";
+  position: absolute;
+  top: 0.48em;
+  left: -1.3em;
+  width: 0.75em;
+  height: 0.75em;
+  background: url("./art/deadcells-cell.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+html[data-style="deadcells"][data-theme] ol.md-list > li::marker {
+  color: var(--dc-gold);
+  font-weight: 700;
+}
+
+/* A rule: the thin line of a menu, a cell lying on it. */
+html[data-style="deadcells"][data-theme] .md-hr {
+  height: 13px;
+  border: 0;
+  background:
+    url("./art/deadcells-cell.svg") center / 12px 12px no-repeat,
+    linear-gradient(to right, transparent 0, var(--dc-rule) 12%, var(--dc-rule) calc(50% - 14px), transparent calc(50% - 14px), transparent calc(50% + 14px), var(--dc-rule) calc(50% + 14px), var(--dc-rule) 88%, transparent 100%) center / 100% 1px no-repeat;
+  image-rendering: pixelated;
+}
+
+/* A quotation: the lilac of a setting's description. */
+html[data-style="deadcells"][data-theme] .md-quote {
+  padding: 6px 12px;
+  border-left: 2px solid var(--dc-rule);
+  border-radius: 0 3px 3px 0;
+  background: color-mix(in srgb, var(--dc-plate) 70%, transparent);
+  color: var(--dc-lilac);
+}
+
+/* A table: the Collector's rows. */
+html[data-style="deadcells"][data-theme] .md-table {
+  border-collapse: separate;
+  border-spacing: 0 3px;
+}
+
+html[data-style="deadcells"][data-theme] .md-table :is(th, td) {
+  border: 0;
+  background: var(--dc-plate);
+}
+
+html[data-style="deadcells"][data-theme] .md-table th {
+  background: transparent;
+  border-bottom: 1px solid var(--dc-rule);
+  color: var(--foreground);
+  font-family: var(--dc-serif);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+html[data-style="deadcells"][data-theme] .md-table td:first-child {
+  border-radius: 3px 0 0 3px;
+}
+
+html[data-style="deadcells"][data-theme] .md-table td:last-child {
+  border-radius: 0 3px 3px 0;
+}
+
+html[data-style="deadcells"][data-theme] .md-table tbody tr:hover td {
+  background: var(--dc-plate-hi);
+  box-shadow:
+    inset 0 1px 0 var(--dc-cyan-hi),
+    inset 0 -1px 0 var(--dc-cyan-hi);
+}
+
+/* Code in a line: a value in its well. */
+html[data-style="deadcells"][data-theme] :not(pre) > code {
+  border-radius: 3px;
+  background: var(--dc-well);
+  color: var(--dc-cyan);
+}
+
+/* ── Code and files ─────────────────────────────────────────────────── */
+
+html[data-style="deadcells"][data-theme] pre.code {
+  border: 1px solid color-mix(in srgb, var(--dc-rule) 70%, transparent);
+  border-top: 2px solid var(--dc-copper);
+  border-radius: 3px;
+  background: var(--dc-well);
+}
+
+html[data-style="deadcells"][data-theme] .code-tools {
+  border-radius: 0 2px 0 3px;
+  background: var(--dc-plate);
+}
+
+/* A file: the box an item's picture sits in, a scroll in its corner. */
+html[data-style="deadcells"][data-theme] .file-card {
+  border: 2px solid #354461;
+  border-radius: 2px;
+  background: var(--dc-well);
+}
+
+html[data-style="deadcells"][data-theme] .file-card:not(:has(img))::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  width: 16px;
+  height: 15px;
+  background: url("./art/deadcells-scroll.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* ── Steps: an item's card, its mark a weapon slot ──────────────────── */
+
+html[data-style="deadcells"][data-theme] .tool.group {
+  --dc-tone: var(--dc-survival);
+  border: 1px solid color-mix(in srgb, var(--dc-tone) 70%, transparent);
+  border-radius: 3px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--dc-tone) 13%, var(--dc-plate)) 0, color-mix(in srgb, var(--dc-tone) 13%, var(--dc-plate)) 2.75rem, var(--dc-plate) 2.75rem);
+  transition: none;
+}
+
+html[data-style="deadcells"][data-theme] .tool.group.running {
+  --dc-tone: var(--dc-tactics);
+}
+
+html[data-style="deadcells"][data-theme] .tool.group:has(> .tool-head .tool-state.bad) {
+  --dc-tone: var(--dc-brutality);
+}
+
+html[data-style="deadcells"][data-theme] .tool.group:is(:hover, .open) {
+  border-color: var(--dc-tone);
+}
+
+html[data-style="deadcells"][data-theme] .tool.group .tool-name {
+  color: var(--dc-tone);
+  font-weight: 600;
+}
+
+/* What each tool is in the game, by its name (`data-tool`): `--dc-pic` is the
+   picture, `--dc-slot` the slot's edge, `--dc-pit` the dark behind it. Twin
+   daggers unless said otherwise; the edges are the HUD's own where it shows
+   that weapon (red for the daggers and the skewer, purple for the bow, a
+   skill's pale frame for the grenade) and the flask slot's blue-grey for the
+   rest. Later rules win, so an `mcp__…` tool is a rune whatever its name
+   goes on to say. */
+html[data-style="deadcells"][data-theme] .tool {
+  --dc-pic: url("./art/deadcells-blades.svg");
+  --dc-slot: #fe1706;
+  --dc-pit: #4a0d12;
+}
+
+html[data-style="deadcells"][data-theme] .tool:is([data-tool="Bash" i], [data-tool*="shell" i], [data-tool*="exec" i], [data-tool*="command" i]) {
+  --dc-pic: url("./art/deadcells-tool-skewer.svg");
+}
+
+html[data-style="deadcells"][data-theme] .tool:is([data-tool*="read" i], [data-tool*="view" i]) {
+  --dc-pic: url("./art/deadcells-tool-scroll.svg");
+  --dc-slot: #54678f;
+  --dc-pit: #16263d;
+}
+
+html[data-style="deadcells"][data-theme] .tool:is([data-tool*="write" i], [data-tool*="create" i]) {
+  --dc-pic: url("./art/deadcells-tool-spear.svg");
+  --dc-slot: #54678f;
+  --dc-pit: #16263d;
+}
+
+html[data-style="deadcells"][data-theme] .tool:is([data-tool*="edit" i], [data-tool*="patch" i]) {
+  --dc-pic: url("./art/deadcells-blades.svg");
+  --dc-slot: #fe1706;
+  --dc-pit: #4a0d12;
+}
+
+html[data-style="deadcells"][data-theme] .tool:is([data-tool*="grep" i], [data-tool*="search" i], [data-tool*="find" i]) {
+  --dc-pic: url("./art/deadcells-tool-glass.svg");
+  --dc-slot: #54678f;
+  --dc-pit: #16263d;
+}
+
+html[data-style="deadcells"][data-theme] .tool:is([data-tool*="glob" i], [data-tool="LS" i], [data-tool*="list" i]) {
+  --dc-pic: url("./art/deadcells-tool-key.svg");
+  --dc-slot: #54678f;
+  --dc-pit: #16263d;
+}
+
+html[data-style="deadcells"][data-theme] .tool:is([data-tool*="websearch" i], [data-tool*="web_search" i]) {
+  --dc-pic: url("./art/deadcells-tool-bow.svg");
+  --dc-slot: #a14bfa;
+  --dc-pit: #2e1a4a;
+}
+
+html[data-style="deadcells"][data-theme] .tool[data-tool*="fetch" i] {
+  --dc-pic: url("./art/deadcells-tool-grenade.svg");
+  --dc-slot: #dfe6ee;
+  --dc-pit: #0c2a1c;
+}
+
+/* An agent sent off on its own: the head, which can leave the body. */
+html[data-style="deadcells"][data-theme] .tool:is([data-tool="Agent" i], [data-tool="Task" i], [data-tool*="agent" i]) {
+  --dc-pic: url("./art/deadcells-tool-head.svg");
+  --dc-slot: #54678f;
+  --dc-pit: #16263d;
+}
+
+html[data-style="deadcells"][data-theme] .tool[data-tool^="mcp__" i] {
+  --dc-pic: url("./art/deadcells-tool-rune.svg");
+  --dc-slot: #2cb450;
+  --dc-pit: #0c2a1c;
+}
+
+/* The slot of a folded card: its first tool's picture, twice its size. */
+html[data-style="deadcells"][data-theme] .tool-icon {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--dc-slot);
+  border-radius: 1px;
+  background:
+    var(--dc-pic) center / 28px 28px no-repeat,
+    radial-gradient(circle, var(--dc-pit) 0%, #0a0508 100%);
+  box-shadow: 0 0 0 1px #120404;
+  image-rendering: pixelated;
+  box-sizing: border-box;
+}
+
+/* A single call inside an opened card: the picture before its name. */
+html[data-style="deadcells"][data-theme] .tool:not(.group) > .tool-head::before {
+  content: "";
+  flex: none;
+  width: 14px;
+  height: 14px;
+  background: var(--dc-pic) center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+html[data-style="deadcells"][data-theme] .tool-icon > svg {
+  display: none;
+}
+
+/* While it runs: a skill's slot, the hourglass of its cooldown turning. */
+html[data-style="deadcells"][data-theme] .tool.group.running .tool-icon {
+  border-color: #a14bfa;
+  background: radial-gradient(circle, #2e1a4a 0%, #120a22 100%);
+  position: relative;
+}
+
+html[data-style="deadcells"][data-theme] .tool.group.running .tool-icon::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  background: url("./art/deadcells-hourglass.svg") center / auto 100% no-repeat;
+  animation: deadcells-turn 1.6s steps(2, jump-none) infinite;
+}
+
+/* What a step used: values in their wells. */
+html[data-style="deadcells"][data-theme] .tool-chip {
+  border-radius: 3px;
+  background: var(--dc-well);
+  color: color-mix(in srgb, var(--foreground) 80%, transparent);
+}
+
+/* Done: the box ticked in gold. Failed: the padlock. */
+html[data-style="deadcells"][data-theme] .tool-state > svg.tool-done {
+  width: 15px;
+  height: 15px;
+  background: url("./art/deadcells-check-on.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+html[data-style="deadcells"][data-theme] .tool-state > svg.tool-done > * {
+  visibility: hidden;
+}
+
+html[data-style="deadcells"][data-theme] .tool.failed > .tool-head .tool-state > svg,
+html[data-style="deadcells"][data-theme] .tool-state.bad > svg:not(.tool-chevron) {
+  width: 13px;
+  height: 13px;
+  background: url("./art/deadcells-lock.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+html[data-style="deadcells"][data-theme] .tool.failed > .tool-head .tool-state > svg > *,
+html[data-style="deadcells"][data-theme] .tool-state.bad > svg:not(.tool-chevron) > * {
+  visibility: hidden;
+}
+
+/* A call still running inside an opened card: the hourglass. */
+html[data-style="deadcells"][data-theme] .tool-state > svg.spin {
+  width: 11px;
+  height: 13px;
+  background: url("./art/deadcells-hourglass.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+  animation: deadcells-turn 1.6s steps(2, jump-none) infinite;
+}
+
+html[data-style="deadcells"][data-theme] .tool-state > svg.spin > * {
+  visibility: hidden;
+}
+
+html[data-style="deadcells"][data-theme] .group-steps {
+  border-top: 1px solid color-mix(in srgb, var(--dc-rule) 60%, transparent);
+}
+
+html[data-style="deadcells"][data-theme] .group-steps .tool {
+  border-radius: 2px;
+}
+
+html[data-style="deadcells"][data-theme] .tool:not(.group) .tool-name {
+  color: var(--dc-survival);
+}
+
+html[data-style="deadcells"][data-theme] .tool.failed:not(.group) .tool-name {
+  color: var(--dc-brutality);
+}
+
+html[data-style="deadcells"][data-theme] :is(.tool-output, .tool-input) {
+  border-radius: 2px;
+  background: var(--dc-well);
+}
+
+/* ── At work ────────────────────────────────────────────────────────── */
+
+/* Thinking: the head of flame, flickering. */
+html[data-style="deadcells"][data-theme] .thinking {
+  color: var(--dc-lilac);
+}
+
+html[data-style="deadcells"][data-theme] .thinking > svg {
+  width: 13px;
+  height: 12px;
+  margin-top: 0.3em;
+  background: url("./art/deadcells-head.svg") 0 0 / 39px 12px no-repeat;
+  image-rendering: pixelated;
+  opacity: 1;
+}
+
+html[data-style="deadcells"][data-theme] .thinking > svg > * {
+  visibility: hidden;
+}
+
+html[data-style="deadcells"][data-theme] .thinking.live > svg {
+  animation: deadcells-flicker-dot 0.6s steps(3) infinite;
+}
+
+/* Working: the three stats of the HUD — brutality, tactics, survival. */
+html[data-style="deadcells"][data-theme] .working[role="status"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  padding: 3px 12px 3px 9px;
+  border-radius: 3px;
+  background: var(--dc-band);
+  color: var(--dc-band-fg);
+  --fg: #ffffff;
+  --fg-dim: #c4b3bd;
+}
+
+html[data-style="deadcells"][data-theme] .working-dots {
+  gap: 5px;
+  padding-top: 0;
+}
+
+html[data-style="deadcells"][data-theme] .working-dots i {
+  width: 4px;
+  height: 11px;
+  border-radius: 0;
+  background: #fc5f5d;
+  animation-timing-function: steps(2, jump-none);
+}
+
+html[data-style="deadcells"][data-theme] .working-dots i:nth-child(2) {
+  background: #ab7ef9;
+}
+
+html[data-style="deadcells"][data-theme] .working-dots i:nth-child(3) {
+  background: #07fd7a;
+}
+
+html[data-style="deadcells"][data-theme] .spin {
+  animation-timing-function: steps(8);
+}
+
+/* ── The composer: a plate; the glow when you are in it ─────────────── */
+
+html[data-style="deadcells"][data-theme] :is(.composer-box, .tasks-composer-box) {
+  border: 1px solid var(--dc-rule);
+  border-radius: 4px;
+  background: var(--dc-plate);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: 0 2px 0 var(--dc-drop);
+}
+
+html[data-style="deadcells"][data-theme] :is(.composer-box, .tasks-composer-box):focus-within {
+  border-color: var(--dc-cyan-hi);
+  box-shadow: var(--dc-select);
+}
+
+html[data-style="deadcells"][data-theme] :is(.composer-btn, .composer-btn.effort-btn) {
+  border-radius: 3px;
+}
+
+html[data-style="deadcells"][data-theme] :is(.tasks-head, .proj-head, .emp-title-text) {
+  font-family: var(--dc-serif);
+  letter-spacing: 0.04em;
+}
+
+/* Send: a key cap, as the hints at a menu's foot. Stop: the same in red. */
+html[data-style="deadcells"][data-theme] :is(.composer-btn.send, .composer-btn.stop, .to-bottom, .replies-send, .login-btn, .new-chat, .new-chat-more, .tasks-composer-btn.send, .bell-send, .share-go, .emp-new, .emp-pill.strong, .dial-btn) {
+  border-style: solid;
+  border-color: transparent;
+  border-width: 6px 6px 8px;
+  border-image: url("./art/deadcells-key.svg") 3 3 4 3 fill / 6px 6px 8px 6px;
+  border-radius: 0;
+  background: none;
+  color: #10131c;
+  box-shadow: none;
+  box-sizing: border-box;
+  filter: drop-shadow(0 1px 0 rgb(0 0 0 / 35%));
+  transition: none;
+}
+
+html[data-style="deadcells"][data-theme] :is(.composer-btn.send, .composer-btn.stop, .to-bottom, .replies-send, .login-btn, .new-chat, .new-chat-more, .tasks-composer-btn.send, .bell-send, .share-go, .emp-new, .emp-pill.strong, .dial-btn):hover:not(:disabled) {
+  background: none;
+  color: #0e6da0;
+}
+
+html[data-style="deadcells"][data-theme] :is(.composer-btn.send, .composer-btn.stop, .to-bottom, .replies-send, .login-btn, .new-chat, .new-chat-more, .tasks-composer-btn.send, .bell-send, .share-go, .emp-new, .emp-pill.strong, .dial-btn):active:not(:disabled) {
+  translate: 0 2px;
+}
+
+html[data-style="deadcells"][data-theme] .composer-btn.stop,
+html[data-style="deadcells"][data-theme] .composer-btn.stop:hover {
+  border-image-source: url("./art/deadcells-key-red.svg");
+  color: #ffffff;
+}
+
+html[data-style="deadcells"][data-theme] :is(.composer-btn.send, .replies-send, .login-btn, .tasks-composer-btn.send, .bell-send, .share-go):disabled {
+  border-image-source: url("./art/deadcells-key-off.svg");
+  background: none;
+  color: #2a2f3e;
+  opacity: 1;
+}
+
+/* ── Panels: whatever floats wears the copper frame ─────────────────── */
+
+html[data-style="deadcells"][data-theme] :is(.modal, .session-menu, .backend-menu, .command-menu, .effort-pop, .plus-pop, .pane-menu, .search-panel, .unsent-menu, .which-key, .login-box) {
+  border: 6px solid transparent;
+  border-image: var(--dc-frame) 3 / 6px / 0 round;
+  border-radius: 3px;
+  background-color: var(--dc-panel);
+  box-shadow: 0 6px 22px var(--dc-drop);
+}
+
+html[data-style="deadcells"][data-theme] .modal {
+  background:
+    url("./art/deadcells-rivet.svg") left 2px top 2px / 4px 4px no-repeat,
+    url("./art/deadcells-rivet.svg") right 2px top 2px / 4px 4px no-repeat,
+    url("./art/deadcells-rivet.svg") left 2px bottom 2px / 4px 4px no-repeat,
+    url("./art/deadcells-rivet.svg") right 2px bottom 2px / 4px 4px no-repeat,
+    var(--dc-panel);
+}
+
+/* Behind a panel the game goes dark and out of focus. */
+html[data-style="deadcells"][data-theme] :is(.modal-scrim, .search-sheet) {
+  background: rgb(6 14 18 / 62%);
+  -webkit-backdrop-filter: blur(5px) saturate(0.8);
+  backdrop-filter: blur(5px) saturate(0.8);
+}
+
+/* A panel's title: serif capitals, a rule under it. */
+html[data-style="deadcells"][data-theme] .modal-head {
+  border-bottom: 1px solid var(--dc-rule);
+  font-family: var(--dc-serif);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* A row in a menu: the bar, when you are on it. */
+html[data-style="deadcells"][data-theme] :is(.session-menu button, .backend-menu button, .pane-menu button, .plus-pop button, .command-menu li, .search-row, .unsent-menu button) {
+  border-radius: 2px;
+  transition: none;
+}
+
+html[data-style="deadcells"][data-theme] :is(.session-menu button, .backend-menu button, .pane-menu button, .plus-pop button, .unsent-menu button):hover:not(:disabled),
+html[data-style="deadcells"][data-theme] .command-menu li:is(.on, :hover),
+html[data-style="deadcells"][data-theme] .search-row:is(:hover, .on, .active) {
+  background: var(--dc-bar);
+  color: var(--dc-bar-fg);
+}
+
+html[data-style="deadcells"][data-theme] :is(.session-menu button, .backend-menu button, .pane-menu button, .plus-pop button):hover:not(:disabled) svg,
+html[data-style="deadcells"][data-theme] .command-menu li:is(.on, :hover) :is(.name, .hint),
+html[data-style="deadcells"][data-theme] .search-row:is(:hover, .on, .active) :is(b, span, small) {
+  color: var(--dc-bar-fg);
+}
+
+html[data-style="deadcells"][data-theme] .command-menu .name {
+  color: var(--dc-cyan);
+}
+
+html[data-style="deadcells"][data-theme] :is(.session-menu-sep, .session-menu .menu-sep) {
+  background: var(--dc-rule);
+  opacity: 0.6;
+}
+
+html[data-style="deadcells"][data-theme] .session-menu .menu-heading {
+  font-family: var(--dc-serif);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dc-lilac);
+}
+
+/* Settings: rows parted by the thin rule. */
+html[data-style="deadcells"][data-theme] .settings-row {
+  border-bottom-color: color-mix(in srgb, var(--dc-rule) 55%, transparent);
+}
+
+/* ── Buttons and controls ───────────────────────────────────────────── */
+
+/* A button: a plate, the glow under the pointer. */
+html[data-style="deadcells"][data-theme] .text-btn,
+html[data-style="deadcells"][data-theme] .chip.button:not(.head-btn) {
+  border-radius: 3px;
+  background: var(--dc-plate);
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dc-rule) 70%, transparent);
+  transition: none;
+}
+
+html[data-style="deadcells"][data-theme] .text-btn:hover:not(:disabled),
+html[data-style="deadcells"][data-theme] .chip.button:not(.head-btn):hover:not(:disabled) {
+  background: var(--dc-plate-hi);
+  color: var(--foreground);
+  box-shadow: var(--dc-select);
+}
+
+html[data-style="deadcells"][data-theme] .text-btn.primary:not(:disabled),
+html[data-style="deadcells"][data-theme] .chip.button.on:not(.head-btn) {
+  background: linear-gradient(90deg, #0b6494, #1a79aa);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 #8fd0e6,
+    inset 0 -1px 0 #8fd0e6;
+}
+
+html[data-style="deadcells"][data-theme] .text-btn.primary:hover:not(:disabled):not(.danger) {
+  background: linear-gradient(90deg, #1279b0, #2a8dbd);
+  color: #ffffff;
+  box-shadow: var(--dc-select);
+}
+
+html[data-style="deadcells"][data-theme] .text-btn.danger:not(:disabled) {
+  color: var(--dc-brutality);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dc-brutality) 70%, transparent);
+}
+
+html[data-style="deadcells"][data-theme] .text-btn.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--dc-brutality) 16%, var(--dc-plate));
+  color: var(--dc-brutality);
+  box-shadow:
+    0 0 0 2px var(--dc-brutality),
+    0 0 8px 1px color-mix(in srgb, var(--dc-brutality) 55%, transparent);
+}
+
+html[data-style="deadcells"][data-theme] .text-btn kbd {
+  border: 0;
+  border-radius: 3px;
+  background: #fbfcff;
+  color: #10131c;
+  box-shadow: 0 2px 0 #b9bfcc;
+}
+
+/* One of several: a well, the bar on the one that is chosen. */
+html[data-style="deadcells"][data-theme] .segmented {
+  border-radius: 3px;
+  background: var(--dc-well);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dc-rule) 55%, transparent);
+}
+
+html[data-style="deadcells"][data-theme] .segmented button {
+  border-radius: 2px;
+}
+
+html[data-style="deadcells"][data-theme] .segmented button.on {
+  background: linear-gradient(90deg, #0b6494, #1a79aa);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 #8fd0e6,
+    inset 0 -1px 0 #8fd0e6;
+}
+
+/* Fields: wells. */
+html[data-style="deadcells"][data-theme] :is(input, textarea, select):not(.composer-input):not([type="range"]):not([type="checkbox"]):not([type="radio"]) {
+  border-radius: 3px;
+  border-color: color-mix(in srgb, var(--dc-rule) 80%, transparent);
+  background-color: var(--dc-well);
+}
+
+html[data-style="deadcells"][data-theme] :is(.tasks-composer-box, .composer-box) :is(input, textarea):not(.composer-input):not([type="range"]):not([type="checkbox"]):not([type="radio"]) {
+  background-color: transparent;
+}
+
+html[data-style="deadcells"][data-theme] :is(input, textarea, select):focus-visible {
+  outline: 2px solid var(--dc-cyan-hi);
+  outline-offset: 0;
+  box-shadow: 0 0 8px 1px color-mix(in srgb, var(--dc-cyan-hi) 55%, transparent);
+}
+
+html[data-style="deadcells"][data-theme] .composer-input:focus-visible,
+html[data-style="deadcells"][data-theme] input[type="range"]:focus-visible {
+  outline: 0;
+  box-shadow: none;
+}
+
+html[data-style="deadcells"][data-theme] :is(button, [role="button"], a):focus-visible {
+  outline: 2px solid var(--dc-cyan-hi);
+  outline-offset: 1px;
+}
+
+/* A box to tick: dark red, and a gold cross when it is. */
+html[data-style="deadcells"][data-theme] input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  margin: 0 6px 0 0;
+  flex: none;
+  vertical-align: -7px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/deadcells-check-off.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+  cursor: pointer;
+}
+
+html[data-style="deadcells"][data-theme] input[type="checkbox"]:checked {
+  background-image: url("./art/deadcells-check-on.svg");
+}
+
+/* A slider: a blue track, a grey knob ringed in cream. */
+html[data-style="deadcells"][data-theme] .slider::before,
+html[data-style="deadcells"][data-theme] .slider::after {
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 4px;
+}
+
+html[data-style="deadcells"][data-theme] .slider::before {
+  background: var(--dc-track);
+}
+
+html[data-style="deadcells"][data-theme] .slider::after {
+  background: #2f4590;
+}
+
+html[data-style="deadcells"][data-theme] .slider-ticks span {
+  width: 2px;
+  height: 8px;
+  border-radius: 0;
+  background: #4a5ea8;
+}
+
+html[data-style="deadcells"][data-theme] .slider-ticks span.on {
+  background: #6f86d6;
+}
+
+html[data-style="deadcells"][data-theme] .slider {
+  --thumb: 26px;
+  --slider-h: 28px;
+}
+
+html[data-style="deadcells"][data-theme] .slider input::-webkit-slider-thumb {
+  border-radius: 0;
+  background: url("./art/deadcells-knob.svg") center / contain no-repeat;
+  box-shadow: none;
+  image-rendering: pixelated;
+}
+
+html[data-style="deadcells"][data-theme] .slider input::-moz-range-thumb {
+  border-radius: 0;
+  background: url("./art/deadcells-knob.svg") center / contain no-repeat;
+  box-shadow: none;
+  image-rendering: pixelated;
+}
+
+html[data-style="deadcells"][data-theme] .slider-thumb {
+  border-radius: 0;
+  background: url("./art/deadcells-knob.svg") center / contain no-repeat;
+  box-shadow: none;
+  image-rendering: pixelated;
+}
+
+html[data-style="deadcells"][data-theme] input[type="range"]:not(.slider input) {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--dc-track);
+}
+
+html[data-style="deadcells"][data-theme] input[type="range"]:not(.slider input)::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  background: url("./art/deadcells-knob.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+html[data-style="deadcells"][data-theme] input[type="range"]:not(.slider input)::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/deadcells-knob.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+/* ── Questions: choose one upgrade ──────────────────────────────────── */
+
+html[data-style="deadcells"][data-theme] :is(.question, .replies) {
+  border: 6px solid transparent;
+  border-image: var(--dc-frame) 3 / 6px / 0 round;
+  border-radius: 3px;
+  background-color: var(--dc-panel);
+  box-shadow: 0 3px 12px var(--dc-drop);
+}
+
+/* A choice comes with a Scroll of Power: gold, its blue arrow on it. */
+html[data-style="deadcells"][data-theme] .question::before {
+  content: "";
+  float: left;
+  width: 32px;
+  height: 30px;
+  margin: 2px 12px 2px 0;
+  background: url("./art/deadcells-scroll-power.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+html[data-style="deadcells"][data-theme] .question .options {
+  clear: both;
+}
+
+/* Each answer a card edged in a scroll's colour; the glow on the one under
+   the pointer. */
+html[data-style="deadcells"][data-theme] .option {
+  --dc-tone: var(--dc-brutality);
+  border: 1px solid var(--dc-tone);
+  border-radius: 3px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--dc-tone) 14%, var(--dc-plate)), var(--dc-plate));
+  color: var(--dc-tone);
+  transition: none;
+}
+
+html[data-style="deadcells"][data-theme] .option:nth-child(3n + 2) {
+  --dc-tone: var(--dc-tactics);
+}
+
+html[data-style="deadcells"][data-theme] .option:nth-child(3n) {
+  --dc-tone: var(--dc-survival);
+}
+
+html[data-style="deadcells"][data-theme] .option:is(:hover, .on, .chosen, [aria-pressed="true"], [aria-checked="true"]) {
+  border-color: var(--dc-cyan-hi);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--dc-tone) 22%, var(--dc-plate)), var(--dc-plate));
+  color: var(--dc-tone);
+  box-shadow: var(--dc-select);
+}
+
+html[data-style="deadcells"][data-theme] .reply {
+  border: 1px solid color-mix(in srgb, var(--dc-rule) 80%, transparent);
+  border-radius: 3px;
+  background: var(--dc-plate);
+  transition: none;
+}
+
+html[data-style="deadcells"][data-theme] .reply:hover {
+  border-color: var(--dc-cyan-hi);
+  background: var(--dc-plate-hi);
+}
+
+html[data-style="deadcells"][data-theme] .reply.on {
+  border-color: transparent;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--dc-cyan-hi) 16%, var(--dc-plate)) 0, var(--dc-plate) 100%);
+  box-shadow: var(--dc-select);
+}
+
+html[data-style="deadcells"][data-theme] .reply.on svg {
+  color: var(--dc-cyan);
+}
+
+/* A task's box in a list: the settings' box, empty or ticked. */
+html[data-style="deadcells"][data-theme] .md-check > svg {
+  width: 1.05em;
+  height: 1.05em;
+  background: url("./art/deadcells-check-off.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+html[data-style="deadcells"][data-theme] .md-check > svg.lucide-square-check,
+html[data-style="deadcells"][data-theme] .md-check > svg.lucide-check-square {
+  background-image: url("./art/deadcells-check-on.svg");
+}
+
+html[data-style="deadcells"][data-theme] .md-check > svg > * {
+  visibility: hidden;
+}
+
+/* What went wrong: the red of a curse. */
+html[data-style="deadcells"][data-theme] .error {
+  border: 1px solid color-mix(in srgb, var(--dc-brutality) 70%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dc-brutality) 12%, var(--dc-plate));
+  color: var(--dc-brutality);
+}
+
+html[data-style="deadcells"][data-theme] .queue-steer {
+  border: 0;
+  border-radius: 3px;
+  background: var(--dc-plate-hi);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dc-rule) 70%, transparent);
+}
+
+html[data-style="deadcells"][data-theme] .queue-steer:hover {
+  box-shadow: inset 0 0 0 1px var(--dc-cyan-hi);
+}
+
+/* ── Cards: plates, as the Collector's rows ─────────────────────────── */
+
+html[data-style="deadcells"][data-theme] :is(.task-card, .task-template, .bell-card, .work-card, .kpi-card, .emp-stat, .emp-approval, .emp-attention, .emp-report-row, .dsess-card, .switcher-card, .sleep-bar, .queue-panel) {
+  border: 1px solid color-mix(in srgb, var(--dc-rule) 55%, transparent);
+  border-radius: 3px;
+  background-color: var(--dc-plate);
+  box-shadow: none;
+  transition: none;
+}
+
+html[data-style="deadcells"][data-theme] :is(.task-card, .task-template, .bell-card, .work-card, .dsess-card, .emp-row):hover {
+  border-color: var(--dc-cyan-hi);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--dc-cyan-hi) 45%, transparent);
+}
+
+html[data-style="deadcells"][data-theme] .switcher-card.active {
+  border-color: transparent;
+  box-shadow: var(--dc-select);
+}
+
+html[data-style="deadcells"][data-theme] .queue-panel.parked {
+  border-color: var(--dc-brutality);
+}
+
+html[data-style="deadcells"][data-theme] .emp-row {
+  border-radius: 3px;
+}
+
+html[data-style="deadcells"][data-theme] .tasks-page {
+  --task-card: var(--dc-plate);
+  --task-card-hover: var(--dc-plate-hi);
+  --task-kind: var(--dc-cyan);
+  --task-rule: var(--dc-rule);
+  --task-dash: var(--dc-rule);
+  --task-round: var(--dc-well);
+}
+
+html[data-style="deadcells"][data-theme] .tag {
+  border-radius: 3px;
+  background: var(--dc-well);
+}
+
+/* ── No session open: a loading screen ──────────────────────────────────
+   The biome's picture, then its name between two thin rules. */
+
+html[data-style="deadcells"][data-theme] .placeholder {
+  flex: 1 1 auto;
+  gap: 14px;
+}
+
+html[data-style="deadcells"][data-theme] .placeholder::before {
+  content: "";
+  width: min(390px, 82%);
+  aspect-ratio: 130 / 96;
+  border: 6px solid transparent;
+  border-image: var(--dc-frame) 3 / 6px / 0 round;
+  background: var(--dc-empty) center / 100% 100% no-repeat;
+  background-clip: padding-box;
+  image-rendering: pixelated;
+  box-shadow: 0 6px 22px var(--dc-drop);
+}
+
+html[data-style="deadcells"][data-theme] .placeholder > p {
+  margin: 4px 0 0;
+  padding: 0.55rem 3rem;
+  border-block: 1px solid var(--dc-rule);
+  color: var(--foreground);
+  font-family: var(--dc-serif);
+  font-size: 1.05rem;
+  letter-spacing: 0.18em;
+}
+
+/* Loading: the head of flame, as the game's own "Loading…". */
+html[data-style="deadcells"][data-theme] .loading {
+  flex: 1 1 auto;
+  font-family: var(--dc-serif);
+  letter-spacing: 0.12em;
+}
+
+html[data-style="deadcells"][data-theme] .loading::before {
+  content: "";
+  width: 52px;
+  height: 48px;
+  background: url("./art/deadcells-head.svg") 0 0 / 156px 48px no-repeat;
+  filter: drop-shadow(0 0 6px rgb(255 170 60 / 55%));
+  image-rendering: pixelated;
+  animation: deadcells-flicker-big 0.6s steps(3) infinite;
+}
+
+@keyframes deadcells-flicker-big {
+  to {
+    background-position-x: -156px;
+  }
+}
+
+/* ── Signing in: the cell you wake up in ────────────────────────────── */
+
+html[data-style="deadcells"][data-theme] .login {
+  /* A wide cut of the scene, so the box stands on bare wall between the
+     window and the Beheaded (by day: on open sky beside the island). */
+  background:
+    linear-gradient(rgb(58 20 32 / 22%), rgb(58 20 32 / 22%)),
+    var(--dc-login) left bottom / cover no-repeat,
+    #8a3040;
+  image-rendering: pixelated;
+  font-family: var(--ui);
+}
+
+html[data-style="deadcells"][data-theme="dark"] .login {
+  background:
+    linear-gradient(rgb(6 14 22 / 34%), rgb(6 14 22 / 34%)),
+    var(--dc-login) center bottom / cover no-repeat,
+    #0b2340;
+}
+
+/* By day the box stands in open sky, clear of the keep: to the right of the
+   island on a wide screen; up in the sky's corner on a narrower one; and on
+   a phone at the top, over the island's far end. */
+html[data-style="deadcells"][data-theme="light"] .login {
+  box-sizing: border-box;
+}
+
+@media (min-width: 1100px) {
+  html[data-style="deadcells"][data-theme="light"] .login {
+    justify-content: flex-end;
+    padding-right: 8vw;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1099px) {
+  html[data-style="deadcells"][data-theme="light"] .login {
+    justify-content: flex-end;
+    align-items: flex-start;
+    padding: 7vh 5vw 0 0;
+    background-position:
+      0 0,
+      25% bottom,
+      0 0;
+  }
+}
+
+@media (max-width: 640px) {
+  html[data-style="deadcells"][data-theme="light"] .login {
+    align-items: flex-start;
+    padding-top: 7vh;
+    background-position:
+      0 0,
+      50% bottom,
+      0 0;
+  }
+}
+
+html[data-style="deadcells"][data-theme] .login-box {
+  border-radius: 3px;
+  background-color: var(--dc-panel);
+  image-rendering: auto;
+}
+
+html[data-style="deadcells"][data-theme] .login-title {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--dc-rule);
+  color: var(--foreground);
+  font-family: var(--dc-serif);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+html[data-style="deadcells"][data-theme] .login-input {
+  border: 1px solid var(--dc-rule);
+  border-radius: 3px;
+  background: var(--dc-well);
+  color: var(--foreground);
+}
+
+html[data-style="deadcells"][data-theme] .login-input:focus {
+  border-color: var(--dc-cyan-hi);
+}
+
+html[data-style="deadcells"][data-theme] .login-btn {
+  padding: 2px;
+  font-family: var(--dc-serif);
+  letter-spacing: 0.1em;
+}
+
+html[data-style="deadcells"][data-theme] .login-error {
+  color: var(--dc-brutality);
+}
+
+/* ── Tabs and pills: plates; the bar on the one you are on ──────────── */
+
+html[data-style="deadcells"][data-theme] :is(.emp-tab, .proj-tab, .bell-tabs button, .emp-chip, .emp-pill:not(.strong), .sleep-tabs button, .bell-btn, .emp-inline-btn, .dsess-filter) {
+  border: 0;
+  border-radius: 3px;
+  background: var(--dc-plate);
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dc-rule) 70%, transparent);
+  transition: none;
+}
+
+html[data-style="deadcells"][data-theme] :is(.emp-tab, .proj-tab, .bell-tabs button, .emp-chip, .emp-pill:not(.strong), .sleep-tabs button, .bell-btn, .emp-inline-btn, .dsess-filter):hover {
+  background: var(--dc-plate-hi);
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 1px var(--dc-cyan-hi);
+}
+
+html[data-style="deadcells"][data-theme] :is(.emp-tab, .proj-tab, .bell-tabs button, .emp-chip, .sleep-tabs button, .dsess-filter).on {
+  background: linear-gradient(90deg, #0b6494, #1a79aa);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 #8fd0e6,
+    inset 0 -1px 0 #8fd0e6;
+}
+
+html[data-style="deadcells"][data-theme] .sleep-tabs {
+  border-radius: 3px;
+  background: var(--dc-well);
+}
+
+html[data-style="deadcells"][data-theme] :is(.emp-tab-count, .proj-tab-count) {
+  border-radius: 3px;
+}
+
+html[data-style="deadcells"][data-theme] .emp-tab-count {
+  background: #1d4fb4;
+  color: #ffffff;
+}
+
+/* Progress: the cyan bar in its dark well, as the Collector counts cells. */
+html[data-style="deadcells"][data-theme] .kpi-track {
+  height: 10px;
+  border-radius: 3px;
+  background: #0a0d14;
+  box-shadow: inset 0 0 0 1px #1a2334;
+}
+
+html[data-style="deadcells"][data-theme] .kpi-fill {
+  border-radius: 2px;
+  background: linear-gradient(180deg, #4fd8e6 0 30%, #15b7c9 30% 70%, #0f8fa0 70%);
+}
+
+html[data-style="deadcells"][data-theme] .kpi-fill.over {
+  background: linear-gradient(180deg, #ffc46a 0 30%, #f69020 30% 70%, #c0661a 70%);
+}
+
+html[data-style="deadcells"][data-theme] .emp-ring-fill {
+  stroke: #15b7c9;
+}
+
+html[data-style="deadcells"][data-theme] .emp-ring.full .emp-ring-fill {
+  stroke: #f69020;
+}
+
+html[data-style="deadcells"][data-theme] :is(.kpi-status, .bell-p) {
+  border-radius: 3px;
+}
+
+html[data-style="deadcells"][data-theme] .kpi-status.doing {
+  background: color-mix(in srgb, var(--dc-tactics) 18%, transparent);
+  color: var(--dc-tactics);
+}
+
+html[data-style="deadcells"][data-theme] .kpi-status.done {
+  background: color-mix(in srgb, var(--dc-survival) 18%, transparent);
+  color: var(--dc-survival);
+}
+
+html[data-style="deadcells"][data-theme] .bell-p.urgent {
+  background: color-mix(in srgb, var(--dc-brutality) 18%, transparent);
+  color: var(--dc-brutality);
+}
+
+html[data-style="deadcells"][data-theme] .bell-p.important {
+  background: color-mix(in srgb, var(--dc-orange) 18%, transparent);
+  color: var(--dc-orange);
+}
+
+/* What an employee has spent: gold, as the HUD counts it. */
+html[data-style="deadcells"][data-theme] .emp-spend {
+  color: var(--dc-gold);
+  font-weight: 600;
+}
+
+html[data-style="deadcells"][data-theme] .emp-spend > svg {
+  width: 13px;
+  height: 13px;
+  background: url("./art/deadcells-gold.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+html[data-style="deadcells"][data-theme] .emp-spend > svg > * {
+  visibility: hidden;
+}
+
+/* Something new under a tab: the arrow that bobs over a slot. */
+html[data-style="deadcells"][data-theme] :is(.emp-tab-dot, .proj-tab-dot) {
+  width: 9px;
+  height: 9px;
+  border-radius: 0;
+  background: url("./art/deadcells-arrow.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+  animation: deadcells-bob 1s steps(2, jump-none) infinite;
+}
+
+/* A thing to do: an empty socket, and a cell in it once it is done. */
+html[data-style="deadcells"][data-theme] .todo-check > svg {
+  width: 18px;
+  height: 18px;
+  background: url("./art/deadcells-cell-empty.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+html[data-style="deadcells"][data-theme] .todo-row.done .todo-check > svg {
+  background-image: url("./art/deadcells-cell.svg");
+}
+
+html[data-style="deadcells"][data-theme] .todo-check > svg > * {
+  visibility: hidden;
+}
+
+/* Nothing here: the Beheaded, waiting. */
+html[data-style="deadcells"][data-theme] .bell-empty > svg {
+  width: 52px;
+  height: 92px;
+  background: url("./art/deadcells-beheaded.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+  animation: deadcells-bob 1.6s steps(2, jump-none) infinite;
+}
+
+html[data-style="deadcells"][data-theme] .bell-empty > svg > * {
+  visibility: hidden;
+}
+
+html[data-style="deadcells"][data-theme] .dsess-placeholder {
+  text-align: center;
+}
+
+html[data-style="deadcells"][data-theme] .dsess-placeholder::before {
+  content: "";
+  display: block;
+  width: 78px;
+  height: 138px;
+  margin: 0 auto 14px;
+  background: url("./art/deadcells-beheaded.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+  animation: deadcells-bob 1.6s steps(2, jump-none) infinite;
+}
+
+/* A band's heading in the notices: small capitals over the rule. */
+html[data-style="deadcells"][data-theme] :is(.bell-band, .tasks-section, .emp-section, .sleep-section, .dsess-group) {
+  font-family: var(--dc-serif);
+  letter-spacing: 0.12em;
+}
+
+html[data-style="deadcells"][data-theme] .bell-band::before {
+  border-radius: 0;
+  rotate: 45deg;
+}
+
+html[data-style="deadcells"][data-theme] :is(.proj-session, .proj-file, .tree-row, .todo-row, .memory-row) {
+  border-radius: 3px;
+  transition: none;
+}
+
+html[data-style="deadcells"][data-theme] :is(.proj-session, .proj-file, .tree-row):is(:hover, .active, .menu-open, .on) {
+  background: var(--dc-bar);
+  color: var(--dc-bar-fg);
+}
+
+html[data-style="deadcells"][data-theme] :is(.proj-session, .proj-file, .tree-row):is(:hover, .active, .menu-open, .on) :is(.proj-session-when, .proj-file-when, .session-when, svg) {
+  color: var(--dc-bar-fg);
+}
+
+html[data-style="deadcells"][data-theme] :is(.tasks-round, .proj-round, .proj-session-more, .tasks-composer-btn:not(.send)) {
+  border-radius: 3px;
+}
+
+html[data-style="deadcells"][data-theme] .task-kind {
+  color: var(--dc-cyan);
+}
+
+html[data-style="deadcells"][data-theme] .dsess-card.on {
+  border-color: transparent;
+  background: var(--dc-plate-hi);
+  box-shadow: var(--dc-select);
+}
+
+/* Choosing what to share: a cell in the socket of each part that goes. */
+html[data-style="deadcells"][data-theme] .share-check > svg {
+  width: 20px;
+  height: 20px;
+  background: url("./art/deadcells-cell-empty.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+html[data-style="deadcells"][data-theme] .share-check[aria-pressed="true"] > svg {
+  background-image: url("./art/deadcells-cell.svg");
+}
+
+html[data-style="deadcells"][data-theme] .share-check > svg > * {
+  visibility: hidden;
+}
+
+html[data-style="deadcells"][data-theme] .share-cancel {
+  border-radius: 3px;
+}
+
+html[data-style="deadcells"][data-theme] .share-bar {
+  border: 1px solid var(--dc-rule);
+  border-radius: 4px;
+  background: var(--dc-plate);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* ── On a phone: the head's buttons are plates too ──────────────────── */
+
+html[data-style="deadcells"][data-theme] .chat-header :is(.icon-btn.glass, .chip.button.pane-more),
+html[data-style="deadcells"][data-theme] .sidebar :is(.search-btn, .sidebar-head .bell-btn) {
+  border-radius: 3px;
+}
+
+html[data-style="deadcells"][data-theme] .chat-header :is(.icon-btn.glass, .chip.button.pane-more) {
+  border: 1px solid var(--dc-rule);
+  background: var(--dc-plate);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+@media (max-width: 640px) {
+  html[data-style="deadcells"][data-theme] .chat-header .chat-title {
+    border: 1px solid var(--dc-rule);
+    border-radius: 3px;
+    background: var(--dc-plate);
+    box-shadow: none;
+  }
+
+  html[data-style="deadcells"][data-theme] .chat-header {
+    border-bottom-color: transparent;
+  }
+}
+
+html[data-style="deadcells"][data-theme] .sidebar-foot.dial .devices-btn svg {
+  border-radius: 3px;
+  background: #101c2f;
+  color: #ebe5d8;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* What you write stands on the page, not on what scrolls under it. */
+html[data-style="deadcells"][data-theme] .composer {
+  background: linear-gradient(to top, var(--background) 0, var(--background) calc(100% - 26px), transparent 100%);
+}
+
+/* ── Small things ───────────────────────────────────────────────────── */
+
+/* A word from the game: red serif on the dark, as when a run ends. */
+html[data-style="deadcells"][data-theme] .app-oops {
+  border: 1px solid #a33728;
+  border-radius: 3px;
+  background: #170a10;
+  color: #fb5c4e;
+  font-family: var(--dc-serif);
+  letter-spacing: 0.04em;
+  box-shadow: 0 6px 22px rgb(0 0 0 / 55%);
+}
+
+html[data-style="deadcells"][data-theme] :is(.bell-count, .nav-count, .count) {
+  border-radius: 3px;
+}
+
+html[data-style="deadcells"][data-theme] .bell-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 0;
+  background: url("./art/deadcells-cell.svg") center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-style="deadcells"][data-theme] .main::after,
+  html[data-style="deadcells"][data-theme] .brand::before,
+  html[data-style="deadcells"][data-theme] .dot,
+  html[data-style="deadcells"][data-theme] .session-unread,
+  html[data-style="deadcells"][data-theme] :is(.emp-tab-dot, .proj-tab-dot),
+  html[data-style="deadcells"][data-theme] .bell-empty > svg,
+  html[data-style="deadcells"][data-theme] .dsess-placeholder::before,
+  html[data-style="deadcells"][data-theme] .dsess-dot.busy,
+  html[data-style="deadcells"][data-theme] .bubble.assistant.live::after,
+  html[data-style="deadcells"][data-theme] .tool.group.running .tool-icon::after,
+  html[data-style="deadcells"][data-theme] .tool-state > svg.spin,
+  html[data-style="deadcells"][data-theme] .thinking.live > svg,
+  html[data-style="deadcells"][data-theme] .working-dots i,
+  html[data-style="deadcells"][data-theme] .loading::before {
+    animation: none;
+  }
+}

@@ -48,9 +48,14 @@ import {
 } from "./api"
 import { NoticesSheet } from "./Notices"
 import { dropSocket } from "./socket"
+import { t } from "./i18n"
 import "./App.css"
 // Last, so it decides the look over every other stylesheet.
 import "./theme.css"
+// And over that, the theme chosen in Settings; see themes.css.
+import "./themes.css"
+// A designed theme's own stylesheets are fetched when it is chosen
+// (settings.ts, themes/index.ts).
 
 const SIDEBAR_KEY = "loom_sidebar_open"
 const CANVAS_KEY = "loom_canvas"
@@ -488,7 +493,7 @@ function App() {
     if (before) upsert({ ...before, title })
     renameAgent(id, title).then(upsert, (e: Error) => {
       if (before) upsert(before)
-      setOops(`Couldn't rename it — ${e.message}`)
+      setOops(t("Couldn't rename it — {reason}", { reason: e.message }))
     })
   }
   // One line at the foot of the window for a change the server refused after
@@ -497,8 +502,8 @@ function App() {
   useEffect(() => showChangesWith({ upsert, oops: setOops }), [upsert])
   useEffect(() => {
     if (!oops) return
-    const t = setTimeout(() => setOops(null), 5000)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setOops(null), 5000)
+    return () => clearTimeout(timer)
   }, [oops])
 
   // ── Terminals ────────────────────────────────────────────────────────────
@@ -630,7 +635,7 @@ function App() {
 
   const leader: Keymap = {
     "Space e": {
-      desc: "file tree (j/k, h/l, Enter)",
+      desc: t("file tree (j/k, h/l, Enter)"),
       run: () => {
         if (!treeWalk) return toTree()
         setTreeWalk(false)
@@ -638,69 +643,69 @@ function App() {
       },
     },
     "Space b": {
-      desc: "session list (j/k, Enter)",
+      desc: t("session list (j/k, Enter)"),
       run: () => {
         if (listCursor === null) return toList()
         setListCursor(null)
         setSidebarOpen(false)
       },
     },
-    "Space t": { desc: "terminal", run: () => void toggleTerminal() },
-    "Space c": { desc: "canvas", run: toggleCanvas },
-    "Space f": { desc: "full window", run: () => side !== null && toggleFull() },
-    "Space n c": { desc: "new Claude Code session", run: () => void create("claude_code") },
-    "Space n x": { desc: "new Codex session", run: () => void create("codex") },
-    "Space n k": { desc: "new Kiro session", run: () => void create("kiro") },
+    "Space t": { desc: t("terminal"), run: () => void toggleTerminal() },
+    "Space c": { desc: t("canvas"), run: toggleCanvas },
+    "Space f": { desc: t("full window"), run: () => side !== null && toggleFull() },
+    "Space n c": { desc: t("new Claude Code session"), run: () => void create("claude_code") },
+    "Space n x": { desc: t("new Codex session"), run: () => void create("codex") },
+    "Space n k": { desc: t("new Kiro session"), run: () => void create("kiro") },
   }
   const keymap: Keymap = treeWalk
     ? {
-        j: { desc: "next file", run: () => treeNav.current?.move(1) },
-        k: { desc: "previous file", run: () => treeNav.current?.move(-1) },
+        j: { desc: t("next file"), run: () => treeNav.current?.move(1) },
+        k: { desc: t("previous file"), run: () => treeNav.current?.move(-1) },
         h: {
-          desc: "fold, up to the folder, or back to the chat",
+          desc: t("fold, up to the folder, or back to the chat"),
           run: () => treeNav.current?.left() || setTreeWalk(false),
         },
-        l: { desc: "unfold, or open", run: () => treeNav.current?.right() },
-        Enter: { desc: "open the file, or fold the folder", run: () => treeNav.current?.enter() },
-        Esc: { desc: "leave the tree", run: () => setTreeWalk(false) },
-        d: { desc: "delete it (asks)", run: () => treeNav.current?.remove() },
-        r: { desc: "rename it", run: () => treeNav.current?.rename() },
+        l: { desc: t("unfold, or open"), run: () => treeNav.current?.right() },
+        Enter: { desc: t("open the file, or fold the folder"), run: () => treeNav.current?.enter() },
+        Esc: { desc: t("leave the tree"), run: () => setTreeWalk(false) },
+        d: { desc: t("delete it (asks)"), run: () => treeNav.current?.remove() },
+        r: { desc: t("rename it"), run: () => treeNav.current?.rename() },
         ...leader,
       }
     : listCursor !== null
       ? {
-          j: { desc: "next session", run: () => setListCursor((c) => step(ids, c, 1)) },
-          k: { desc: "previous session", run: () => setListCursor((c) => step(ids, c, -1)) },
+          j: { desc: t("next session"), run: () => setListCursor((c) => step(ids, c, 1)) },
+          k: { desc: t("previous session"), run: () => setListCursor((c) => step(ids, c, -1)) },
           Enter: {
-            desc: "open it",
+            desc: t("open it"),
             run: () => {
               select(listCursor)
               setListCursor(null)
             },
           },
-          Esc: { desc: "leave the list", run: () => setListCursor(null) },
-          d: { desc: "delete the session (asks)", run: () => setDeleting(listCursor) },
-          r: { desc: "rename the session", run: () => setRenaming(listCursor) },
-          l: { desc: "back to the chat", run: () => setListCursor(null) },
+          Esc: { desc: t("leave the list"), run: () => setListCursor(null) },
+          d: { desc: t("delete the session (asks)"), run: () => setDeleting(listCursor) },
+          r: { desc: t("rename the session"), run: () => setRenaming(listCursor) },
+          l: { desc: t("back to the chat"), run: () => setListCursor(null) },
           ...leader,
         }
       : {
           i: {
-            desc: "type a message",
+            desc: t("type a message"),
             run: () => document.querySelector<HTMLElement>(".composer-input")?.focus(),
           },
-          j: { desc: "scroll down", run: () => scroll(() => 60) },
-          k: { desc: "scroll up", run: () => scroll(() => -60) },
-          "C-d": { desc: "half a page down", run: () => scroll((el) => el.clientHeight / 2, true) },
-          "C-u": { desc: "half a page up", run: () => scroll((el) => -el.clientHeight / 2, true) },
-          "g g": { desc: "top", run: () => timeline()?.scrollTo({ top: 0 }) },
-          G: { desc: "bottom", run: () => scroll((el) => el.scrollHeight) },
-          h: { desc: "to the session list", run: toList },
-          l: { desc: "to the file tree", run: toTree },
-          J: { desc: "next session", run: () => activeId && select(step(ids, activeId, 1)!) },
-          K: { desc: "previous session", run: () => activeId && select(step(ids, activeId, -1)!) },
+          j: { desc: t("scroll down"), run: () => scroll(() => 60) },
+          k: { desc: t("scroll up"), run: () => scroll(() => -60) },
+          "C-d": { desc: t("half a page down"), run: () => scroll((el) => el.clientHeight / 2, true) },
+          "C-u": { desc: t("half a page up"), run: () => scroll((el) => -el.clientHeight / 2, true) },
+          "g g": { desc: t("top"), run: () => timeline()?.scrollTo({ top: 0 }) },
+          G: { desc: t("bottom"), run: () => scroll((el) => el.scrollHeight) },
+          h: { desc: t("to the session list"), run: toList },
+          l: { desc: t("to the file tree"), run: toTree },
+          J: { desc: t("next session"), run: () => activeId && select(step(ids, activeId, 1)!) },
+          K: { desc: t("previous session"), run: () => activeId && select(step(ids, activeId, -1)!) },
           ...leader,
-          "?": { desc: "all keys", run: () => setHelp(true) },
+          "?": { desc: t("all keys"), run: () => setHelp(true) },
         }
   const keysOn = vim && authed && loaded && !narrow
   const pending = useKeys(keysOn, keymap)
@@ -710,7 +715,7 @@ function App() {
   const [switching, setSwitching] = useState(false)
 
   if (!authed) return <Login onSuccess={() => setAuthed(true)} />
-  if (!loaded) return <div className="loading">connecting…</div>
+  if (!loaded) return <div className="loading">{t("connecting…")}</div>
 
   const active = everything.find((s) => s.id === activeId) ?? null
   const shownProject = projects.find((p) => p.id === projectPage) ?? null
@@ -933,22 +938,22 @@ function App() {
             />
           ) : (
             <div className="placeholder">
-              <p>No session selected.</p>
+              <p>{t("No session selected.")}</p>
               <div className="backend-choice">
                 <button
                   className="text-btn"
                   onClick={() => create("claude_code")}
                 >
-                  new Claude Code session
+                  {t("new Claude Code session")}
                 </button>
                 <button
                   className="text-btn"
                   onClick={() => create("codex")}
                 >
-                  new Codex session
+                  {t("new Codex session")}
                 </button>
                 <button className="text-btn" onClick={() => create("kiro")}>
-                  new Kiro session
+                  {t("new Kiro session")}
                 </button>
               </div>
             </div>
@@ -1006,7 +1011,7 @@ function App() {
                       <button
                         className="pane-btn"
                         onClick={() => setTerminalOpen(false)}
-                        title="Back to the chat"
+                        title={t("Back to the chat")}
                       >
                         <ChevronLeft />
                       </button>
@@ -1020,7 +1025,7 @@ function App() {
                       <button
                         className="pane-btn"
                         onClick={toggleFull}
-                        title={maximized ? "Back beside the chat (Esc outside a shell)" : "Full window"}
+                        title={maximized ? t("Back beside the chat (Esc outside a shell)") : t("Full window")}
                       >
                         {maximized ? <Minimize /> : <Maximize />}
                       </button>
@@ -1028,14 +1033,14 @@ function App() {
                     <button
                       className="pane-btn"
                       onClick={addTerminal}
-                      title="New terminal"
+                      title={t("New terminal")}
                     >
                       <Plus />
                     </button>
                     <button
                       className="pane-btn"
                       onClick={() => closeTerminal(id)}
-                      title="Close this terminal"
+                      title={t("Close this terminal")}
                     >
                       <X />
                     </button>
@@ -1052,8 +1057,8 @@ function App() {
 
       {deleting && (
         <Confirm
-          title={`Delete ${everything.find((s) => s.id === deleting)?.title ?? deleting}?`}
-          detail="The session and its whole history, with what it made. This cannot be undone."
+          title={t("Delete {name}?", { name: everything.find((s) => s.id === deleting)?.title ?? deleting })}
+          detail={t("The session and its whole history, with what it made. This cannot be undone.")}
           onYes={async () => {
             const id = deleting
             // The cursor moves on to a neighbour rather than off the list.
@@ -1063,7 +1068,7 @@ function App() {
             drop(id)
             deleteAgent(id).catch((e: Error) => {
               if (before) upsert(before)
-              setOops(`Couldn't delete it — ${e.message}`)
+              setOops(t("Couldn't delete it — {reason}", { reason: e.message }))
             })
           }}
           onClose={() => setDeleting(null)}
@@ -1071,9 +1076,9 @@ function App() {
       )}
       {keeping && (
         <Confirm
-          title={`Keep ${everything.find((s) => s.id === keeping)?.title ?? "this chat"}?`}
-          detail="It joins Recents as an ordinary chat and leaves its sandbox: from the next message it can write files and memory like any other. It cannot be made incognito again."
-          action="Keep"
+          title={t("Keep {name}?", { name: everything.find((s) => s.id === keeping)?.title ?? t("this chat") })}
+          detail={t("It joins Recents as an ordinary chat and leaves its sandbox: from the next message it can write files and memory like any other. It cannot be made incognito again.")}
+          action={t("Keep")}
           danger={false}
           onYes={async () => upsert(await updateAgent(keeping, { incognito: false }))}
           onClose={() => setKeeping(null)}
@@ -1134,7 +1139,7 @@ function App() {
           {oops}
         </div>
       )}
-      <WhichKey pending={pending} keymap={keymap} groups={{ "Space n": "new session" }} />
+      <WhichKey pending={pending} keymap={keymap} groups={{ "Space n": t("new session") }} />
       {help && (
         <KeyHelp
           keymap={keymap}

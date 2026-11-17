@@ -1,0 +1,2292 @@
+/* ── 泰拉瑞亚 (Terraria) ──────────────────────────────────────────────────
+   A tribute to the game, redrawn after looking at it: its Steam screenshots
+   and the official wiki's pictures of the interface (the open inventory, an
+   NPC's dialogue box, a sign, the Select Player and Create World menus, the
+   life and mana displays). What was seen there, and where it went:
+
+   - The world: a blue-violet sky, paler towards the horizon, a pale sun in
+     its glow, heaps of white cloud, the forest's painted backdrop far off
+     (pale blue mountains, a green ridge, firs in three ranks); trees whose
+     leaves hang in clumps; grass over dirt; houses of wooden planks with a stepped
+     roof, a banner, a torch; the Guide, a bunny, a sunflower by a fence, a
+     slime hopping about. At night the same, dark, under stars and a moon.
+     → behind the sidebar and round the page; the page with no session; the
+     page you sign in on; the strip of ground the composer stands on.
+   - The hotbar: rounded blue slots with battlements pressed into them, the
+     one in hand gold; the item's name above in outlined white. → the chat's
+     head and its buttons, the sidebar's foot, the composer's buttons, a
+     step's mark. A session's row is a slot as wide as the list; the open
+     one is the gold one.
+   - Life hearts and mana stars. → a turn's line (ten hearts, as many full
+     as the context is), a measure that fills, thinking; a fallen star is
+     what you have not read.
+   - The minimap's gold frame with a block at each corner and round gold
+     buttons. → the frame of the page; jump-to-bottom; a slider's handle.
+   - An NPC's dialogue box: blue, a dark rounded outline, white words, the
+     choices in yellow along its foot. → what you say; the composer; a
+     question and its options; suggested replies.
+   - The menus: a dark blue panel in a black outline, rows in a lighter
+     line, buttons that take a gold edge and yellow words under the pointer,
+     Create World's choices (dark, the chosen one lighter), its paler box of
+     description, a title on a tab. → dialogs, menus, Settings, cards,
+     buttons, tabs, a quotation, a heading.
+   - Words are white in a dark outline everywhere on the world; a tooltip's
+     name is coloured by rarity. → labels on the sky; a tool's name.
+   - A copper pickaxe, a copper shortsword, a chest, coins. → working, send,
+     a file, a list's dots. And an item for each tool, in its slot: pickaxe,
+     book, hammer, sign, torch, chest, magic mirror, fishing pole, the Guide,
+     a wrench.
+   - A tooltip has no box: its words in their outline. → tooltips.
+
+   The interface of the game is the same by day and by night; so are the
+   panels here. What changes is the world and the page: pale as the haze on
+   the horizon by day, the menu's dark blue at night.
+
+   Tokens are tools/themes/terraria.json; the pictures are drawn by
+   tools/art/terraria.mjs. Each selector starts
+   `html[data-style="terraria"][data-theme]`: as specific as themes.css's
+   shapes, and after them, so these win. */
+
+html[data-style="terraria"] {
+  --tr-sky: linear-gradient(180deg, #474ef6 0%, #5264f6 45%, #6b91f7 100%);
+  --tr-sky-top: #474ef6;
+  --tr-sky-head: linear-gradient(180deg, #474ef6, #5469f7);
+  --tr-surface: url("./art/terraria-surface.svg");
+  --tr-home: url("./art/terraria-home.svg");
+  --tr-ground: url("./art/terraria-ground.svg");
+  --tr-turf: url("./art/terraria-turf.svg");
+  --tr-hills: url("./art/terraria-hills.svg");
+  --tr-clouds: url("./art/terraria-clouds.svg");
+  --tr-orb: url("./art/terraria-sun.svg");
+  --tr-stars: none;
+  --tr-dirt: #6b4b36;
+  --tr-sky-foot: #5469f7;
+  --tr-cloudline: url("./art/terraria-cloudline-day.svg");
+  /* The game's own interface: the same by day and by night. */
+  --tr-ink: #ffffff;
+  --tr-ink-dim: #c9d0f7;
+  --tr-yellow: #ffe86b;
+  --tr-edge: #0a0d1e;
+  --tr-dialog: #4852ac;
+  --tr-menu: #2f3b6e;
+  --tr-row: #394a8b;
+  --tr-row-line: #5665b4;
+  --tr-slot: #4246a2;
+  --tr-slot-line: #1d2b6b;
+  --tr-option: #323975;
+  --tr-option-on: #66709e;
+  --tr-field: #232c58;
+  --tr-gold: #fde521;
+  --tr-gold-ink: #2a1a12;
+  /* Words in an outline, as the game writes everything. */
+  --tr-stroke: 1px 0 0 var(--tr-edge), -1px 0 0 var(--tr-edge), 0 1px 0 var(--tr-edge), 0 -1px 0 var(--tr-edge), 1px 1px 0 var(--tr-edge), -1px -1px 0 var(--tr-edge), 1px -1px 0 var(--tr-edge), -1px 1px 0 var(--tr-edge);
+  --tr-stroke-2: 2px 0 0 var(--tr-edge), -2px 0 0 var(--tr-edge), 0 2px 0 var(--tr-edge), 0 -2px 0 var(--tr-edge), 2px 2px 0 var(--tr-edge), -2px -2px 0 var(--tr-edge), 2px -2px 0 var(--tr-edge), -2px 2px 0 var(--tr-edge), 1px 2px 0 var(--tr-edge), -1px 2px 0 var(--tr-edge), 2px 1px 0 var(--tr-edge), -2px 1px 0 var(--tr-edge), 1px -2px 0 var(--tr-edge), -1px -2px 0 var(--tr-edge), 2px -1px 0 var(--tr-edge), -2px -1px 0 var(--tr-edge);
+  /* The game's hand (Andy), as near as a device's own fonts come. */
+  --tr-hand: "Andy", "Chalkboard SE", "Comic Sans MS", "Marker Felt", "Yuanti SC", var(--ui);
+}
+
+html[data-style="terraria"][data-theme="dark"] {
+  --tr-sky: linear-gradient(180deg, #04061a 0%, #0c1030 50%, #1a2360 100%);
+  --tr-sky-top: #04061a;
+  --tr-sky-head: linear-gradient(180deg, #04061a, #0e1338);
+  --tr-surface: url("./art/terraria-surface-night.svg");
+  --tr-home: url("./art/terraria-home-night.svg");
+  --tr-ground: url("./art/terraria-ground-night.svg");
+  --tr-turf: url("./art/terraria-turf-night.svg");
+  --tr-hills: url("./art/terraria-hills-night.svg");
+  --tr-clouds: url("./art/terraria-clouds-night.svg");
+  --tr-orb: url("./art/terraria-moon.svg");
+  --tr-stars: url("./art/terraria-stars.svg");
+  --tr-dirt: #302427;
+  --tr-sky-foot: #0e1338;
+  --tr-cloudline: url("./art/terraria-cloudline-night.svg");
+}
+
+/* Loom's colours that carry meaning, on the day's pale page. */
+html[data-style="terraria"][data-theme="light"]:root:root {
+  --blue: #2438c9;
+  --red: #b3182e;
+  --green: #0a6a35;
+}
+
+html[data-style="terraria"][data-theme="dark"]:root:root {
+  --blue: #a9c6ff;
+  --red: #ff8a94;
+  --green: #6dea8a;
+}
+
+html[data-style="terraria"][data-theme] ::selection {
+  background: rgb(253 229 33 / 60%);
+  color: #1a1030;
+}
+
+/* ── A panel of the game's interface ──────────────────────────────────────
+   Whatever is drawn as one of the game's blue panels is read in the game's
+   colours, by day as at night: white words, yellow for what can be chosen. */
+
+html[data-style="terraria"][data-theme] :is(.modal, .session-menu, .backend-menu, .command-menu, .effort-pop, .plus-pop, .pane-menu, .search-panel, .unsent-menu, .which-key, .bubble.user, .tool, .composer-box, .tasks-composer-box, .queue-panel, .question, .replies, .md-quote, .md-table, pre.code, .file-card, .task-card, .task-template, .bell-card, .work-card, .kpi-card, .emp-stat, .emp-approval, .emp-attention, .emp-report-row, .dsess-card, .switcher-card, .sleep-bar, .memory-row, .install-box, .app-oops, .share-bar, .login-box, :is(h1, h2).md-h) {
+  --background: var(--tr-menu);
+  --foreground: #ffffff;
+  --card: var(--tr-menu);
+  --card-foreground: #ffffff;
+  --popover: var(--tr-menu);
+  --popover-foreground: #ffffff;
+  --muted: #2b3668;
+  --muted-foreground: var(--tr-ink-dim);
+  --accent: #5665b4;
+  --accent-foreground: #ffffff;
+  --border: var(--tr-row-line);
+  --input: var(--tr-row-line);
+  --dim: var(--tr-ink-dim);
+  --bg: var(--tr-menu);
+  --bg-raised: var(--tr-menu);
+  --bg-card: rgb(255 255 255 / 11%);
+  --line: var(--tr-row-line);
+  --fg: #ffffff;
+  --fg-dim: var(--tr-ink-dim);
+  --loom-accent: var(--tr-yellow);
+  --surface-code: #1b2247;
+  --surface-menu: var(--tr-menu);
+  --surface-modal: var(--tr-menu);
+  --surface-field: var(--tr-field);
+  --composer: var(--tr-dialog);
+  --send-off-bg: #55778f;
+  --send-off-fg: #dfe5ff;
+  --blue: #b5ceff;
+  --red: #ff8a94;
+  --green: #7df09a;
+  --shadow: rgb(0 0 0 / 45%);
+  color: #ffffff;
+}
+
+/* ── The world: sky, far land, the ground ─────────────────────────────── */
+
+html[data-style="terraria"][data-theme] .sidebar {
+  /* Positioned already: beside the page on a desktop, a drawer on a phone. */
+  isolation: isolate;
+  border-right: 0;
+  /* How far the ground is lifted: on a phone "New chat" floats over it. */
+  --tr-lift: 0px;
+  background:
+    var(--tr-surface) left bottom calc(54px + var(--tr-lift)) / 260px 116px no-repeat,
+    linear-gradient(var(--tr-dirt), var(--tr-dirt)) left bottom / 100% var(--tr-lift) no-repeat,
+    var(--tr-ground) left bottom var(--tr-lift) / 192px 60px repeat-x,
+    var(--tr-hills) left bottom calc(54px + var(--tr-lift)) / 320px 128px repeat-x,
+    var(--tr-orb) right 14px top 58px / 80px 80px no-repeat,
+    var(--tr-stars) 0 0 / 192px 192px repeat,
+    var(--tr-sky);
+}
+
+@media (max-width: 640px) {
+  html[data-style="terraria"][data-theme] .sidebar {
+    --tr-lift: 22px;
+  }
+
+  /* A phone's header: the name in a slot between two more. */
+  html[data-style="terraria"][data-theme] .chat-header .chat-title {
+    border: 2px solid var(--tr-slot-line);
+    border-radius: 8px;
+    background: var(--tr-slot);
+    box-shadow: none;
+  }
+}
+
+@media (min-width: 641px) {
+  html[data-style="terraria"][data-theme] .app {
+    background:
+      var(--tr-ground) left bottom / 192px 60px repeat-x,
+      var(--tr-hills) left bottom 54px / 320px 128px repeat-x,
+      var(--tr-stars) 0 0 / 192px 192px repeat,
+      var(--tr-sky);
+  }
+
+  /* The page itself: seen through the minimap's gold frame. */
+  html[data-style="terraria"][data-theme] .main {
+    border: 10px solid transparent;
+    border-image: url("./art/terraria-map.svg") 8 / 16px stretch;
+    border-radius: 0;
+    background-color: var(--background);
+    background-clip: padding-box;
+  }
+}
+
+/* Clouds going by, a little at a time. */
+html[data-style="terraria"][data-theme] .sidebar::before {
+  content: "";
+  position: absolute;
+  top: 5.4rem;
+  left: 0;
+  right: 0;
+  z-index: -1;
+  height: 88px;
+  background: var(--tr-clouds) 0 0 / 320px 88px repeat-x;
+  animation: tr-drift 160s steps(160) infinite;
+  pointer-events: none;
+}
+
+@keyframes tr-drift {
+  to {
+    background-position-x: -320px;
+  }
+}
+
+/* A slime, hopping along the grass and back. */
+html[data-style="terraria"][data-theme] .sidebar::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  bottom: calc(54px + var(--tr-lift));
+  z-index: -1;
+  width: 32px;
+  height: 22px;
+  background: url("./art/terraria-slime.svg") center / 32px 22px no-repeat;
+  transform-origin: 50% 100%;
+  animation: tr-hop 14s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes tr-hop {
+  0%, 8% { translate: 0 0; scale: 1 1; }
+  9% { translate: 0 0; scale: 1.15 0.8; }
+  12% { translate: 14px -16px; scale: 0.92 1.1; }
+  15% { translate: 28px 0; scale: 1.15 0.8; }
+  16%, 24% { translate: 28px 0; scale: 1 1; }
+  25% { translate: 28px 0; scale: 1.15 0.8; }
+  28% { translate: 44px -16px; scale: 0.92 1.1; }
+  31% { translate: 60px 0; scale: 1.15 0.8; }
+  32%, 40% { translate: 60px 0; scale: 1 1; }
+  41% { translate: 60px 0; scale: 1.15 0.8; }
+  44% { translate: 76px -16px; scale: 0.92 1.1; }
+  47% { translate: 92px 0; scale: 1.15 0.8; }
+  48%, 58% { translate: 92px 0; scale: 1 1; }
+  59% { translate: 92px 0; scale: 1.15 0.8; }
+  62% { translate: 76px -16px; scale: 0.92 1.1; }
+  65% { translate: 60px 0; scale: 1.15 0.8; }
+  66%, 74% { translate: 60px 0; scale: 1 1; }
+  75% { translate: 60px 0; scale: 1.15 0.8; }
+  78% { translate: 44px -16px; scale: 0.92 1.1; }
+  81% { translate: 28px 0; scale: 1.15 0.8; }
+  82%, 90% { translate: 28px 0; scale: 1 1; }
+  91% { translate: 28px 0; scale: 1.15 0.8; }
+  94% { translate: 14px -16px; scale: 0.92 1.1; }
+  97% { translate: 0 0; scale: 1.15 0.8; }
+  98%, 100% { translate: 0 0; scale: 1 1; }
+}
+
+/* The list stops above the roof, so no title is written on the house. */
+html[data-style="terraria"][data-theme] .sidebar .session-list {
+  margin-bottom: 104px;
+  padding-top: 2px;
+  font-family: var(--ui);
+}
+
+html[data-style="terraria"][data-theme] .sidebar-head {
+  border-bottom: 0;
+}
+
+/* The name: earth with grass grown round it, a tree beside it. */
+html[data-style="terraria"][data-theme] .brand {
+  color: #b9794a;
+  font-family: var(--tr-hand);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-shadow:
+    2px 0 0 #2fb558, -2px 0 0 #2fb558, 0 2px 0 #2fb558, 0 -2px 0 #2fb558,
+    2px 2px 0 #2fb558, -2px -2px 0 #2fb558, 2px -2px 0 #2fb558, -2px 2px 0 #2fb558,
+    3px 0 0 #0a5a1e, -3px 0 0 #0a5a1e, 0 3px 0 #0a5a1e, 0 -3px 0 #0a5a1e,
+    3px 3px 0 #0a5a1e, -3px -3px 0 #0a5a1e, 3px -3px 0 #0a5a1e, -3px 3px 0 #0a5a1e,
+    3px 2px 0 #0a5a1e, -3px 2px 0 #0a5a1e, 2px 3px 0 #0a5a1e, -2px 3px 0 #0a5a1e,
+    3px -2px 0 #0a5a1e, -3px -2px 0 #0a5a1e, 2px -3px 0 #0a5a1e, -2px -3px 0 #0a5a1e;
+}
+
+html[data-style="terraria"][data-theme] .brand > svg {
+  display: none;
+}
+
+html[data-style="terraria"][data-theme] .brand::before {
+  content: "";
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  margin-right: 10px;
+  vertical-align: -8px;
+  background: url("./art/terraria-mark.svg") center / 32px 32px no-repeat;
+}
+
+/* ── Slots: the hotbar's, wherever there is a small square button ─────── */
+
+html[data-style="terraria"][data-theme] :is(.sidebar-head .icon-btn, .chat-header .chip.button, .chat-header .icon-btn, .modal-head .icon-btn, .bell-head .icon-btn) {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/terraria-slot-16.svg") center / 32px 32px no-repeat;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] :is(.sidebar-head .icon-btn, .chat-header .chip.button, .chat-header .icon-btn, .modal-head .icon-btn, .bell-head .icon-btn):hover {
+  background: url("./art/terraria-slot-16.svg") center / 32px 32px no-repeat;
+  color: var(--tr-yellow);
+  filter: brightness(1.22);
+}
+
+html[data-style="terraria"][data-theme] :is(.sidebar-head .icon-btn, .chat-header .chip.button, .chat-header .icon-btn, .modal-head .icon-btn, .bell-head .icon-btn) svg {
+  filter: drop-shadow(1px 1px 0 var(--tr-slot-line));
+}
+
+/* The one in hand. */
+html[data-style="terraria"][data-theme] :is(.chat-header .chip.button.on, .bell-head .icon-btn.on, .chat-header .chip.button.terminal-toggle.on, .chat-header .chip.button.canvas-toggle.on) {
+  background: url("./art/terraria-gold-16.svg") center / 32px 32px no-repeat;
+  color: var(--tr-gold-ink);
+  filter: none;
+}
+
+html[data-style="terraria"][data-theme] :is(.chat-header .chip.button.on, .bell-head .icon-btn.on) svg {
+  filter: none;
+}
+
+html[data-style="terraria"][data-theme] .chat-header .chip.button .count {
+  color: inherit;
+}
+
+/* ── Navigation: the menu's words, yellow and larger under the pointer ── */
+
+html[data-style="terraria"][data-theme] .nav-item {
+  gap: 10px;
+  min-height: 2.35rem;
+  padding: 0 8px;
+  border-radius: 0;
+  background: transparent;
+  color: #ffffff;
+  font-family: var(--tr-hand);
+  font-weight: 700;
+  text-shadow: var(--tr-stroke);
+  transform-origin: 12px 50%;
+  transition: scale 0.12s ease-out;
+}
+
+html[data-style="terraria"][data-theme] .nav-item:hover {
+  background: transparent;
+  color: var(--tr-yellow);
+  scale: 1.07;
+}
+
+html[data-style="terraria"][data-theme] .nav-item.current {
+  color: var(--tr-yellow);
+}
+
+html[data-style="terraria"][data-theme] .nav-item > .nav-icon {
+  display: none;
+}
+
+html[data-style="terraria"][data-theme] .nav-item::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  background: url("./art/terraria-sign.svg") center / 22px 22px no-repeat;
+}
+
+html[data-style="terraria"][data-theme] .nav-item.nav-new::before {
+  background-image: url("./art/terraria-pick.svg");
+}
+
+html[data-style="terraria"][data-theme] .nav-item:nth-last-child(4 of .nav-item):not(.nav-new)::before {
+  height: 20px;
+  background-image: url("./art/terraria-chest-s.svg");
+  background-size: 22px 20px;
+}
+
+html[data-style="terraria"][data-theme] .nav-item:nth-last-child(3 of .nav-item):not(.nav-new)::before {
+  background-image: url("./art/terraria-guide-head.svg");
+}
+
+html[data-style="terraria"][data-theme] .nav-item:nth-last-child(2 of .nav-item):not(.nav-new)::before {
+  background-image: url("./art/terraria-clock.svg");
+}
+
+html[data-style="terraria"][data-theme] .nav-item :is(.nav-new-more, .session-del) {
+  color: #ffffff;
+  text-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] .nav-item :is(.nav-new-more, .session-del):hover {
+  background: rgb(10 13 30 / 35%);
+  color: var(--tr-yellow);
+}
+
+html[data-style="terraria"][data-theme] .sidebar .nav-count {
+  color: #dfe4ff;
+}
+
+/* A heading in the list: as "Inventory" is written over the slots. */
+html[data-style="terraria"][data-theme] .list-heading {
+  color: #e6eaff;
+  font-family: var(--tr-hand);
+  font-weight: 700;
+  text-shadow: var(--tr-stroke);
+}
+
+html[data-style="terraria"][data-theme] .list-heading:hover {
+  color: var(--tr-yellow);
+}
+
+/* ── Rows: slots as wide as the list; the open one is the one in hand ── */
+
+html[data-style="terraria"][data-theme] :is(.sidebar .session, .project-row, .emp-row) {
+  margin-bottom: 3px;
+  gap: 6px;
+  padding: 3px 0 3px 4px;
+  border: 6px solid transparent;
+  border-image: url("./art/terraria-slot.svg") 3 / 6px stretch;
+  border-radius: 0;
+  background-color: var(--tr-slot);
+  background-clip: padding-box;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] :is(.sidebar .session, .project-row, .emp-row):hover {
+  border-image-source: url("./art/terraria-slot-light.svg");
+  background-color: #5b63c8;
+}
+
+html[data-style="terraria"][data-theme] :is(.sidebar .session.active, .project-row.current, .emp-row.active),
+html[data-style="terraria"][data-theme] :is(.sidebar .session.active, .project-row.current, .emp-row.active):hover {
+  border-image: url("./art/terraria-gold.svg") 4 / 8px stretch;
+  background-color: var(--tr-gold);
+  color: var(--tr-gold-ink);
+  --fg: var(--tr-gold-ink);
+  --fg-dim: #6b4a08;
+  --red: #a3142a;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] .sidebar .session.cursor {
+  outline: 2px solid #ffffff;
+  outline-offset: 0;
+}
+
+html[data-style="terraria"][data-theme] .sidebar :is(.session-label, .emp-row-name) {
+  color: inherit;
+  font-weight: 600;
+}
+
+html[data-style="terraria"][data-theme] .sidebar .session:not(.active) :is(.session-gist, .session-when, .emp-row-station) {
+  color: #ccd3fa;
+}
+
+html[data-style="terraria"][data-theme] .sidebar .session-del {
+  color: inherit;
+}
+
+html[data-style="terraria"][data-theme] .sidebar .session-del:hover {
+  background: rgb(10 13 30 / 40%);
+  color: var(--tr-yellow);
+}
+
+html[data-style="terraria"][data-theme] .sidebar .session.active .session-del:hover {
+  background: rgb(120 70 0 / 30%);
+  color: var(--tr-gold-ink);
+}
+
+/* A session's state: the pickaxe swinging while it runs, the watch while
+   it starts, an empty heart where it was stopped; a fallen star for what
+   you have not read, a mana star for a device that is there. */
+html[data-style="terraria"][data-theme] .dot:is(.running, .starting, .interrupted) {
+  width: 22px;
+  height: 22px;
+  margin: -3px 0;
+  border-radius: 0;
+  background: url("./art/terraria-pick.svg") center / 22px 22px no-repeat;
+  animation: none;
+}
+
+html[data-style="terraria"][data-theme] .dot.running {
+  transform-origin: 20% 85%;
+  animation: tr-swing 0.6s steps(3, jump-none) infinite alternate;
+}
+
+html[data-style="terraria"][data-theme] .dot.starting {
+  background-image: url("./art/terraria-clock.svg");
+  animation: tr-blink 1s steps(2, jump-none) infinite;
+}
+
+html[data-style="terraria"][data-theme] .dot.interrupted {
+  background-image: url("./art/terraria-heart-empty.svg");
+}
+
+html[data-style="terraria"][data-theme] .dot.online {
+  width: 11px;
+  height: 12px;
+  border-radius: 0;
+  background: url("./art/terraria-star.svg") center / 11px 12px no-repeat;
+}
+
+html[data-style="terraria"][data-theme] :is(.session-unread, .bell-dot, .moon-btn.news::after) {
+  width: 11px;
+  height: 12px;
+  border-radius: 0;
+  background: url("./art/terraria-fallen.svg") center / 11px 12px no-repeat;
+  box-shadow: none;
+  animation: tr-twinkle 1.2s steps(2, jump-none) infinite;
+}
+
+html[data-style="terraria"][data-theme] .session-unread {
+  width: 22px;
+  height: 24px;
+  margin: -4px 0;
+  background-size: 22px 24px;
+}
+
+@keyframes tr-swing {
+  from {
+    rotate: -24deg;
+  }
+
+  to {
+    rotate: 32deg;
+  }
+}
+
+@keyframes tr-blink {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes tr-twinkle {
+  50% {
+    scale: 0.82;
+    rotate: 14deg;
+  }
+}
+
+/* How many: a stack's count, as on an item in its slot. */
+html[data-style="terraria"][data-theme] :is(.bell-count, .emp-tab-count, .proj-tab-count, .bell-tab-n, .session-queued) {
+  border-radius: 0;
+  background: transparent;
+  color: #ffffff;
+  font-weight: 800;
+  text-shadow: var(--tr-stroke);
+}
+
+/* ── The foot: a hotbar standing on the dirt ──────────────────────────── */
+
+html[data-style="terraria"][data-theme] .sidebar-foot {
+  border-top: 0;
+}
+
+html[data-style="terraria"][data-theme] .sidebar-foot .devices-btn {
+  border-radius: 0;
+  color: #ffffff;
+}
+
+html[data-style="terraria"][data-theme] .sidebar-foot:not(.folded) .devices-btn {
+  text-shadow: var(--tr-stroke);
+}
+
+html[data-style="terraria"][data-theme] .sidebar-foot:not(.folded) .devices-btn:hover {
+  background: rgb(10 13 30 / 35%);
+  color: var(--tr-yellow);
+}
+
+html[data-style="terraria"][data-theme] .sidebar-foot.folded .devices-btn {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  padding: 0;
+  border: 0;
+  background: url("./art/terraria-slot-18.svg") center / 36px 36px no-repeat;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] .sidebar-foot.folded .devices-btn svg {
+  filter: drop-shadow(1px 1px 0 var(--tr-slot-line));
+}
+
+html[data-style="terraria"][data-theme] .sidebar-foot.folded .devices-btn:is(:hover, :focus-visible):not(:disabled) {
+  background: url("./art/terraria-gold-18.svg") center / 36px 36px no-repeat;
+  color: var(--tr-gold-ink);
+  outline: 0;
+}
+
+html[data-style="terraria"][data-theme] .sidebar-foot.folded .devices-btn:is(:hover, :focus-visible):not(:disabled) svg {
+  filter: none;
+}
+
+html[data-style="terraria"][data-theme] .sidebar-foot.folded .devices-btn:disabled {
+  background-image: url("./art/terraria-bin-18.svg");
+  opacity: 1;
+}
+
+html[data-style="terraria"][data-theme] .sidebar-foot .push-btn.on:not(:hover) svg {
+  color: var(--tr-yellow);
+}
+
+/* What a slot holds, named over the bar. */
+html[data-style="terraria"][data-theme] .sidebar-foot.folded .devices-btn > span:first-of-type {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #ffffff;
+  font-family: var(--tr-hand);
+  font-weight: 700;
+  text-shadow: var(--tr-stroke);
+  box-shadow: none;
+}
+
+/* ── The chat's head: the top of the screen, the sky behind it ────────── */
+
+html[data-style="terraria"][data-theme] .chat-top::before {
+  inset: 0;
+  background: var(--tr-stars) 0 0 / 192px 192px repeat, var(--tr-sky-head);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+/* The page's own edge: a bank of cloud. */
+html[data-style="terraria"][data-theme] .chat-top::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 16px;
+  background: var(--background);
+  -webkit-mask: url("./art/terraria-cloudline.svg") left bottom / 192px 16px repeat-x;
+  mask: url("./art/terraria-cloudline.svg") left bottom / 192px 16px repeat-x;
+  pointer-events: none;
+}
+
+html[data-style="terraria"][data-theme] .chat-header {
+  padding-bottom: 14px;
+  border-bottom: 0;
+  background: transparent;
+  color: #ffffff;
+  --fg: #ffffff;
+  --fg-dim: #dfe4ff;
+  --bg-card: rgb(10 13 30 / 30%);
+  --line: var(--tr-slot-line);
+}
+
+/* The name of what is in hand. */
+html[data-style="terraria"][data-theme] .chat-name {
+  color: #ffffff;
+  font-family: var(--tr-hand);
+  font-weight: 700;
+  text-shadow: var(--tr-stroke);
+}
+
+html[data-style="terraria"][data-theme] .chat-header :is(.chat-project, .chat-sub, .chat-where) {
+  color: #e6eaff;
+  text-shadow: var(--tr-stroke);
+}
+
+html[data-style="terraria"][data-theme] .chat-header .chip:not(.button) {
+  border: 2px solid var(--tr-slot-line);
+  border-radius: 6px;
+  background: var(--tr-slot);
+  color: #ffffff;
+}
+
+/* ── What you say: an NPC's dialogue box ──────────────────────────────── */
+
+html[data-style="terraria"][data-theme] .bubble.user {
+  padding: 2px 8px 3px;
+  border: 8px solid transparent;
+  border-image: url("./art/terraria-dialog.svg") 4 / 8px stretch;
+  border-radius: 0;
+  background-color: var(--tr-dialog);
+  background-clip: padding-box;
+  color: #ffffff;
+  text-shadow: 1px 1px 0 #24294b;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] .bubble.user .clock {
+  color: var(--tr-yellow);
+  opacity: 0.9;
+}
+
+html[data-style="terraria"][data-theme] .bubble.user :not(pre) > code {
+  background: rgb(10 13 30 / 32%);
+  color: inherit;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] .bubble.user.failed {
+  border-image-source: url("./art/terraria-dialog-bad.svg");
+}
+
+/* ── What comes back ──────────────────────────────────────────────────── */
+
+/* A heading: a title on its tab, as "Select Player" sits on its panel. */
+html[data-style="terraria"][data-theme] :is(h1, h2).md-h {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0 10px 1px;
+  border: 8px solid transparent;
+  border-image: url("./art/terraria-button.svg") 4 / 8px stretch;
+  background-color: #4a5b99;
+  background-clip: padding-box;
+  color: #ffffff;
+  font-family: var(--tr-hand);
+  text-shadow: var(--tr-stroke);
+}
+
+/* A smaller one: a mana star before it. */
+html[data-style="terraria"][data-theme] h3.md-h::before {
+  content: "";
+  display: inline-block;
+  width: 22px;
+  height: 24px;
+  margin-right: 6px;
+  vertical-align: -5px;
+  background: url("./art/terraria-star.svg") center / 22px 24px no-repeat;
+}
+
+html[data-style="terraria"][data-theme] h3.md-h {
+  font-family: var(--tr-hand);
+}
+
+/* A list's dots are coins: gold, then silver, then copper. */
+html[data-style="terraria"][data-theme] ul.md-list > li:not(.md-task) {
+  position: relative;
+  list-style: none;
+}
+
+html[data-style="terraria"][data-theme] ul.md-list > li:not(.md-task)::before {
+  content: "";
+  position: absolute;
+  top: 0.32em;
+  left: -1.3em;
+  width: 12px;
+  height: 16px;
+  background: url("./art/terraria-coin-gold.svg") center / 12px 16px no-repeat;
+}
+
+html[data-style="terraria"][data-theme] ul.md-list ul.md-list > li:not(.md-task)::before {
+  background-image: url("./art/terraria-coin-silver.svg");
+}
+
+html[data-style="terraria"][data-theme] ul.md-list ul.md-list ul.md-list > li:not(.md-task)::before {
+  background-image: url("./art/terraria-coin-copper.svg");
+}
+
+/* Something to tick: a small slot, a check in it when done. */
+html[data-style="terraria"][data-theme] .md-task .md-check svg {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--tr-slot-line);
+  border-radius: 5px;
+  box-sizing: border-box;
+  background: var(--tr-slot);
+}
+
+html[data-style="terraria"][data-theme] .md-task .md-check svg > * {
+  visibility: hidden;
+}
+
+html[data-style="terraria"][data-theme] .md-task .md-check svg.lucide-square-check {
+  background: url("./art/terraria-check.svg") center / 11px 9px no-repeat var(--tr-slot);
+}
+
+/* Numbers: as a slot's number is written. */
+html[data-style="terraria"][data-theme] ol.md-list > li::marker {
+  color: var(--blue);
+  font-family: var(--tr-hand);
+  font-weight: 800;
+}
+
+html[data-style="terraria"][data-theme="dark"] ol.md-list > li::marker {
+  color: var(--tr-yellow);
+}
+
+/* A rule: a strip of turf. */
+html[data-style="terraria"][data-theme] .md-hr {
+  height: 16px;
+  margin: 1.2em 0;
+  border: 0;
+  background: var(--tr-turf) left top / 192px 16px repeat-x;
+}
+
+/* A quotation: the paler box a menu explains itself in. */
+html[data-style="terraria"][data-theme] .md-quote {
+  margin: 0.3em 0 0.9em;
+  padding: 2px 8px;
+  border: 8px solid transparent;
+  border-image: url("./art/terraria-note.svg") 4 / 8px stretch;
+  border-radius: 0;
+  background-color: #5b6699;
+  background-clip: padding-box;
+  color: #ffffff;
+  text-shadow: 1px 1px 0 #2b3260;
+}
+
+html[data-style="terraria"][data-theme] .md-quote :not(pre) > code {
+  background: rgb(10 13 30 / 32%);
+  color: inherit;
+  box-shadow: none;
+}
+
+/* A table: slots in a grid under a row of darker ones. */
+html[data-style="terraria"][data-theme] .md-table {
+  border-collapse: separate;
+  border-spacing: 2px;
+  border: 0;
+  background: transparent;
+}
+
+html[data-style="terraria"][data-theme] .md-table :is(th, td) {
+  padding: 1px 6px;
+  border: 6px solid transparent;
+  border-image: url("./art/terraria-slot.svg") 3 / 6px stretch;
+  background-color: var(--tr-slot);
+  background-clip: padding-box;
+  color: #ffffff;
+}
+
+html[data-style="terraria"][data-theme] .md-table th {
+  border-image-source: url("./art/terraria-option.svg");
+  background-color: var(--tr-option);
+  color: var(--tr-yellow);
+  font-family: var(--tr-hand);
+  text-shadow: var(--tr-stroke);
+}
+
+html[data-style="terraria"][data-theme] .md-table tbody tr:hover {
+  background: none;
+}
+
+html[data-style="terraria"][data-theme] .md-table tbody tr:hover td {
+  border-image-source: url("./art/terraria-slot-light.svg");
+  background-color: #5b63c8;
+}
+
+html[data-style="terraria"][data-theme] .md-table td :not(pre) > code {
+  background: rgb(10 13 30 / 35%);
+  color: inherit;
+  box-shadow: none;
+}
+
+/* Code in a line: let into the page. */
+html[data-style="terraria"][data-theme] :not(pre) > code {
+  border-radius: 4px;
+  background: #d3dbff;
+  color: #1a2050;
+  box-shadow: inset 0 0 0 1px #9eabea;
+}
+
+html[data-style="terraria"][data-theme="dark"] :not(pre) > code {
+  background: #121836;
+  color: #e3e8ff;
+  box-shadow: inset 0 0 0 1px #4a5493;
+}
+
+/* ── Code: a field let into a menu ────────────────────────────────────── */
+
+html[data-style="terraria"][data-theme] pre.code {
+  border: 6px solid transparent;
+  border-image: url("./art/terraria-field.svg") 3 / 6px stretch;
+  border-radius: 0;
+  background-color: var(--tr-field);
+  background-clip: padding-box;
+  color: #e8ecff;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] .code-tools {
+  border-radius: 4px;
+  background: var(--tr-field);
+  color: var(--tr-ink-dim);
+  --fg: #ffffff;
+  --fg-dim: var(--tr-ink-dim);
+}
+
+html[data-style="terraria"][data-theme] .code-lang {
+  color: var(--tr-yellow);
+  font-family: var(--tr-hand);
+}
+
+html[data-style="terraria"][data-theme] :is(.code-copy, .msg-copy) {
+  border-radius: 4px;
+}
+
+html[data-style="terraria"][data-theme] .code-copy {
+  color: #ffffff;
+}
+
+html[data-style="terraria"][data-theme] .code-copy:hover {
+  background: var(--tr-option-on);
+  color: var(--tr-yellow);
+}
+
+/* A file: a chest, and what is in it. */
+html[data-style="terraria"][data-theme] .file-card {
+  border: 6px solid transparent;
+  border-image: url("./art/terraria-slot.svg") 3 / 6px stretch;
+  border-radius: 0;
+  background-color: var(--tr-slot);
+  background-clip: padding-box;
+  color: #ffffff;
+  text-shadow: none;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] .file-card:not(.image, .more) {
+  width: auto;
+  min-width: 104px;
+  max-width: 190px;
+  height: 52px;
+  justify-content: center;
+  gap: 3px;
+  padding: 2px 6px 2px 42px;
+  background-image: url("./art/terraria-chest.svg");
+  background-position: 4px center;
+  background-size: 32px 28px;
+  background-repeat: no-repeat;
+}
+
+html[data-style="terraria"][data-theme] .file-card:is(.image, .more) {
+  height: 52px;
+  width: 52px;
+}
+
+html[data-style="terraria"][data-theme] .file-card.clickable:hover {
+  border-image-source: url("./art/terraria-slot-light.svg");
+  background-color: #5b63c8;
+}
+
+/* Under the pointer the chest is a gold one. */
+html[data-style="terraria"][data-theme] .file-card.clickable:not(.image, .more):hover {
+  background-image: url("./art/terraria-chest-gold.svg");
+}
+
+html[data-style="terraria"][data-theme] .file-card .file-ext {
+  color: var(--tr-yellow);
+  font-family: var(--tr-hand);
+  font-weight: 700;
+}
+
+html[data-style="terraria"][data-theme] .file-card .file-name {
+  color: #ffffff;
+}
+
+html[data-style="terraria"][data-theme] .file-card.failed {
+  background-color: #7a3050;
+}
+
+/* ── Steps: the hotbar, the tool in hand ──────────────────────────────── */
+
+html[data-style="terraria"][data-theme] .tool.group,
+html[data-style="terraria"][data-theme] .tool.group:is(:hover, .open) {
+  border: 6px solid transparent;
+  border-image: url("./art/terraria-slot.svg") 3 / 6px stretch;
+  border-radius: 0;
+  background-color: var(--tr-slot);
+  background-clip: padding-box;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] .tool.group > .tool-head {
+  gap: 10px;
+  padding: 0 6px 0 0;
+}
+
+html[data-style="terraria"][data-theme] .tool.group > .tool-head > .tool-name {
+  color: #ffffff;
+  font-family: var(--tr-hand);
+  font-weight: 700;
+  text-shadow: var(--tr-stroke);
+}
+
+/* What a tool is: an item of the game's, one each, as a hotbar holds them
+   (`data-tool` is the tool's name). The pickaxe digs (Bash); a book is read;
+   the hammer changes what is there (Edit); a sign is written; a torch looks
+   for something (Grep); a chest is what is found (Glob); the magic mirror
+   looks out into the world (WebSearch) and a fishing pole fetches from it
+   (WebFetch); the Guide is sent for (Agent); a wrench is what is wired in
+   (MCP). Anything else: the shortsword everyone starts with. Each twice:
+   whole in the slot, small on a chip and on a line. */
+html[data-style="terraria"][data-theme] :is(.tool, .tool-chip) {
+  --tr-item: url("./art/terraria-sword.svg");
+  --tr-item-size: 32px 32px;
+  --tr-mini: url("./art/terraria-sword-s.svg");
+  --tr-mini-size: 22px 22px;
+}
+
+html[data-style="terraria"][data-theme] :is(.tool, .tool-chip)[data-tool="Bash"] {
+  --tr-item: url("./art/terraria-pickaxe.svg");
+  --tr-mini: url("./art/terraria-pick.svg");
+}
+
+html[data-style="terraria"][data-theme] :is(.tool, .tool-chip):is([data-tool="Read"], [data-tool="NotebookRead"]) {
+  --tr-item: url("./art/terraria-book.svg");
+  --tr-mini: url("./art/terraria-book-s.svg");
+}
+
+html[data-style="terraria"][data-theme] :is(.tool, .tool-chip):is([data-tool="Edit"], [data-tool="MultiEdit"], [data-tool="NotebookEdit"]) {
+  --tr-item: url("./art/terraria-hammer.svg");
+  --tr-mini: url("./art/terraria-hammer-s.svg");
+}
+
+html[data-style="terraria"][data-theme] :is(.tool, .tool-chip)[data-tool="Write"] {
+  --tr-item: url("./art/terraria-sign.svg");
+  --tr-item-size: 22px 22px;
+  --tr-mini: url("./art/terraria-sign.svg");
+}
+
+html[data-style="terraria"][data-theme] :is(.tool, .tool-chip)[data-tool="Grep"] {
+  --tr-item: url("./art/terraria-torch.svg");
+  --tr-mini: url("./art/terraria-torch-s.svg");
+}
+
+html[data-style="terraria"][data-theme] :is(.tool, .tool-chip)[data-tool="Glob"] {
+  --tr-item: url("./art/terraria-chest.svg");
+  --tr-item-size: 32px 28px;
+  --tr-mini: url("./art/terraria-chest-s.svg");
+  --tr-mini-size: 22px 20px;
+}
+
+html[data-style="terraria"][data-theme] :is(.tool, .tool-chip)[data-tool="WebSearch"] {
+  --tr-item: url("./art/terraria-mirror.svg");
+  --tr-mini: url("./art/terraria-mirror-s.svg");
+}
+
+html[data-style="terraria"][data-theme] :is(.tool, .tool-chip)[data-tool="WebFetch"] {
+  --tr-item: url("./art/terraria-pole.svg");
+  --tr-mini: url("./art/terraria-pole-s.svg");
+}
+
+html[data-style="terraria"][data-theme] :is(.tool, .tool-chip):is([data-tool="Agent"], [data-tool="Task"]) {
+  --tr-item: url("./art/terraria-guide-head.svg");
+  --tr-item-size: 22px 22px;
+  --tr-mini: url("./art/terraria-guide-head.svg");
+}
+
+html[data-style="terraria"][data-theme] :is(.tool, .tool-chip)[data-tool^="mcp__"] {
+  --tr-item: url("./art/terraria-wrench.svg");
+  --tr-mini: url("./art/terraria-wrench-s.svg");
+}
+
+/* The slot, and the item in it. */
+html[data-style="terraria"][data-theme] .tool-icon,
+html[data-style="terraria"][data-theme] .tool.group:is(:hover, .open) .tool-icon {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 0;
+  background:
+    var(--tr-item) center / var(--tr-item-size) no-repeat,
+    url("./art/terraria-slot-20.svg") center / 40px 40px no-repeat;
+}
+
+html[data-style="terraria"][data-theme] .tool-icon > svg {
+  display: none;
+}
+
+/* Running: it is the one in hand, and it swings. */
+html[data-style="terraria"][data-theme] .tool.group.running .tool-icon,
+html[data-style="terraria"][data-theme] .tool.group.running:is(:hover, .open) .tool-icon {
+  background: url("./art/terraria-gold-20.svg") center / 40px 40px no-repeat;
+  animation: none;
+}
+
+html[data-style="terraria"][data-theme] .tool.group.running .tool-icon::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  background: var(--tr-item) center / var(--tr-item-size) no-repeat;
+  transform-origin: 20% 85%;
+  animation: tr-swing 0.6s steps(3, jump-none) infinite alternate;
+}
+
+/* Which tools: a small slot each, the item and its name. */
+html[data-style="terraria"][data-theme] .tool-chip {
+  min-height: 26px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px 0 27px;
+  border: 2px solid var(--tr-slot-line);
+  border-radius: 5px;
+  background: var(--tr-mini) 2px center / var(--tr-mini-size) no-repeat var(--tr-option);
+  color: #ffffff;
+}
+
+/* A single call: its item before its name. */
+html[data-style="terraria"][data-theme] .tool:not(.group) > .tool-head::before {
+  content: "";
+  flex: 0 0 22px;
+  height: 22px;
+  background: var(--tr-mini) center / var(--tr-mini-size) no-repeat;
+}
+
+/* Done, and failed. */
+html[data-style="terraria"][data-theme] .tool-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+html[data-style="terraria"][data-theme] svg.tool-done {
+  width: 22px;
+  height: 18px;
+  background: url("./art/terraria-check.svg") center / 22px 18px no-repeat;
+}
+
+html[data-style="terraria"][data-theme] :is(.tool.failed .tool-state, .tool.group .tool-state.bad) > svg:not(.tool-chevron) {
+  width: 18px;
+  height: 18px;
+  background: url("./art/terraria-cross.svg") center / 18px 18px no-repeat;
+}
+
+html[data-style="terraria"][data-theme] svg.tool-done > *,
+html[data-style="terraria"][data-theme] :is(.tool.failed .tool-state, .tool.group .tool-state.bad) > svg:not(.tool-chevron) > *,
+html[data-style="terraria"][data-theme] .tool-state > svg.spin > * {
+  visibility: hidden;
+}
+
+html[data-style="terraria"][data-theme] .tool-state > svg.spin {
+  width: 22px;
+  height: 22px;
+  background: url("./art/terraria-pick.svg") center / 22px 22px no-repeat;
+  transform-origin: 20% 85%;
+  animation: tr-swing 0.6s steps(3, jump-none) infinite alternate;
+}
+
+/* Opened: each call a line; what it printed, in a field. */
+html[data-style="terraria"][data-theme] .group-steps {
+  border-top: 2px solid var(--tr-slot-line);
+}
+
+html[data-style="terraria"][data-theme] .tool:not(.group) {
+  border: 2px solid var(--tr-slot-line);
+  border-radius: 6px;
+  background: var(--tr-slot);
+}
+
+html[data-style="terraria"][data-theme] .group-steps .tool:not(.group) {
+  border-width: 0 0 2px;
+  border-radius: 0;
+  border-color: rgb(29 43 107 / 60%);
+  background: transparent;
+}
+
+/* A tool's name, in a rarity's colour. */
+html[data-style="terraria"][data-theme] .tool:not(.group) .tool-name {
+  color: #96ff96;
+  font-weight: 700;
+}
+
+html[data-style="terraria"][data-theme] .tool.failed:not(.group) .tool-name {
+  color: #ff9696;
+}
+
+html[data-style="terraria"][data-theme] .tool:not(.group) .tool-head:hover {
+  background: rgb(255 255 255 / 9%);
+}
+
+html[data-style="terraria"][data-theme] :is(.tool-output, .tool-input) {
+  border-radius: 4px;
+  background: #1b2247;
+  color: #dfe5ff;
+}
+
+html[data-style="terraria"][data-theme] .tool.failed {
+  border-color: #ff4a5c;
+}
+
+/* ── Thinking, working, a turn's end ──────────────────────────────────── */
+
+/* Thinking costs mana: a star, that pulses while it lasts. */
+html[data-style="terraria"][data-theme] .thinking > svg {
+  width: 22px;
+  height: 24px;
+  flex: 0 0 22px;
+  margin-top: -1px;
+  background: url("./art/terraria-star.svg") center / 22px 24px no-repeat;
+  opacity: 1;
+}
+
+html[data-style="terraria"][data-theme] .thinking > svg > * {
+  visibility: hidden;
+}
+
+html[data-style="terraria"][data-theme] .thinking.live > svg {
+  animation: tr-twinkle 1s steps(2, jump-none) infinite;
+}
+
+/* Working: the pickaxe swinging, dirt and grass flying off it. */
+html[data-style="terraria"][data-theme] .working-dots {
+  gap: 4px;
+  height: auto;
+  padding-top: 0;
+}
+
+html[data-style="terraria"][data-theme] .working-dots::before {
+  content: "";
+  width: 32px;
+  height: 32px;
+  margin: -6px 2px -6px 0;
+  background: url("./art/terraria-pickaxe.svg") center / 32px 32px no-repeat;
+  transform-origin: 20% 85%;
+  animation: tr-swing 0.5s steps(3, jump-none) infinite alternate;
+}
+
+html[data-style="terraria"][data-theme] .working-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 0;
+  background: #7e583e;
+  box-shadow: 0 0 0 1px #2b1317;
+  opacity: 1;
+}
+
+html[data-style="terraria"][data-theme] .working-dots i:nth-child(2) {
+  background: #986d53;
+}
+
+html[data-style="terraria"][data-theme] .working-dots i:nth-child(3) {
+  background: #18a04b;
+  box-shadow: 0 0 0 1px #0a4a1c;
+}
+
+/* A turn's end: life, as the top of the screen has it — the numbers, and
+   under them ten hearts, as many full as the context is (`--usage`, 0 to 1:
+   "788K / 1.0M" is eight hearts of ten). */
+html[data-style="terraria"][data-theme] .turn-line {
+  padding: 4px 0 8px;
+  font-weight: 600;
+}
+
+html[data-style="terraria"][data-theme] .turn-line[data-usage] {
+  position: relative;
+  padding-bottom: 34px;
+}
+
+html[data-style="terraria"][data-theme] .turn-line[data-usage]::before,
+html[data-style="terraria"][data-theme] .turn-line[data-usage]::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 119px);
+  bottom: 7px;
+  width: 240px;
+  height: 22px;
+  background: url("./art/terraria-hearts-empty.svg") left center / 24px 22px repeat-x;
+  pointer-events: none;
+}
+
+html[data-style="terraria"][data-theme] .turn-line[data-usage]::after {
+  width: calc(clamp(0, var(--usage), 1) * 240px);
+  background-image: url("./art/terraria-hearts.svg");
+}
+
+/* The window is not known: a heart and a mana star beside the line. */
+html[data-style="terraria"][data-theme] .turn-line:not([data-usage])::before,
+html[data-style="terraria"][data-theme] .turn-line:not([data-usage])::after {
+  content: "";
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  margin-right: 8px;
+  vertical-align: -6px;
+  background: url("./art/terraria-heart.svg") center / 22px 22px no-repeat;
+}
+
+html[data-style="terraria"][data-theme] .turn-line:not([data-usage])::after {
+  height: 24px;
+  margin: 0 0 0 8px;
+  background: url("./art/terraria-star.svg") center / 22px 24px no-repeat;
+}
+
+html[data-style="terraria"][data-theme] .notice {
+  border-radius: 6px;
+}
+
+html[data-style="terraria"][data-theme] .error {
+  border: 2px solid var(--red);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--red) 12%, transparent);
+}
+
+/* ── The composer: a dialogue box, standing on the grass ──────────────── */
+
+html[data-style="terraria"][data-theme] .composer {
+  position: relative;
+  padding-bottom: max(26px, calc(env(safe-area-inset-bottom) + 12px));
+  background:
+    var(--tr-ground) left bottom -34px / 192px 60px repeat-x,
+    linear-gradient(180deg, transparent 0, var(--background) 14px);
+}
+
+html[data-style="terraria"][data-theme] .composer-box,
+html[data-style="terraria"][data-theme] .composer-box:has(.composer-input:not(:placeholder-shown)),
+html[data-style="terraria"][data-theme] .tasks-composer-box {
+  padding: 1px;
+  border: 8px solid transparent;
+  border-image: url("./art/terraria-dialog.svg") 4 / 8px stretch;
+  border-radius: 0;
+  background: var(--tr-dialog);
+  background-clip: padding-box;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] :is(.composer-box, .tasks-composer-box):focus-within {
+  border-image-source: url("./art/terraria-dialog-focus.svg");
+}
+
+html[data-style="terraria"][data-theme] :is(.composer-input, .tasks-composer-box textarea) {
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  caret-color: var(--tr-yellow);
+  font-family: var(--ui);
+}
+
+html[data-style="terraria"][data-theme] :is(.composer-input, .tasks-composer-box textarea)::placeholder {
+  color: #c9d0f7;
+}
+
+/* Its buttons: slots. To send, the shortsword in the gold one. */
+html[data-style="terraria"][data-theme] :is(.composer-btn, .tasks-composer-btn),
+html[data-style="terraria"][data-theme] .composer-btn.stop,
+html[data-style="terraria"][data-theme] .composer-btn.stop:hover {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/terraria-slot-18.svg") center / 36px 36px no-repeat;
+  color: #ffffff;
+  box-shadow: none;
+  opacity: 1;
+}
+
+html[data-style="terraria"][data-theme] :is(.composer-btn, .tasks-composer-btn):hover:not(:disabled) {
+  color: var(--tr-yellow);
+  filter: brightness(1.2);
+}
+
+html[data-style="terraria"][data-theme] .composer-btn:is(.attach.open, .effort-btn.open, .effort-btn.set) {
+  background-image: url("./art/terraria-gold-18.svg");
+  color: var(--tr-gold-ink);
+  filter: none;
+}
+
+html[data-style="terraria"][data-theme] :is(.composer-btn, .tasks-composer-btn).send,
+html[data-style="terraria"][data-theme] :is(.composer-btn, .tasks-composer-btn).send:hover:not(:disabled) {
+  background:
+    url("./art/terraria-sword.svg") center / 32px 32px no-repeat,
+    url("./art/terraria-gold-18.svg") center / 36px 36px no-repeat;
+  color: transparent;
+}
+
+html[data-style="terraria"][data-theme] .composer-btn.send:active:not(:disabled) {
+  rotate: 24deg;
+}
+
+html[data-style="terraria"][data-theme] .composer-btn.send:disabled,
+html[data-style="terraria"][data-theme] .tasks-composer-btn.send:disabled {
+  background:
+    url("./art/terraria-sword-off.svg") center / 32px 32px no-repeat,
+    url("./art/terraria-bin-18.svg") center / 36px 36px no-repeat;
+  color: transparent;
+  opacity: 1;
+  filter: none;
+}
+
+html[data-style="terraria"][data-theme] :is(.composer-btn, .tasks-composer-btn).send > svg {
+  visibility: hidden;
+}
+
+html[data-style="terraria"][data-theme] .composer-btn.stop svg {
+  color: #ff5a6a;
+  fill: #ff5a6a;
+}
+
+/* Slash commands: a menu over the box, the one under the pointer yellow. */
+html[data-style="terraria"][data-theme] .command-menu li {
+  border-radius: 4px;
+  background: transparent;
+}
+
+html[data-style="terraria"][data-theme] .command-menu .name {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+html[data-style="terraria"][data-theme] .command-menu li:is(.on, :hover) {
+  background: var(--tr-option-on);
+}
+
+html[data-style="terraria"][data-theme] .command-menu li:is(.on, :hover) .name {
+  color: var(--tr-yellow);
+  text-shadow: var(--tr-stroke);
+}
+
+html[data-style="terraria"][data-theme] .command-menu li:is(.on, :hover) .hint {
+  color: #ffffff;
+}
+
+/* What waits its turn. */
+html[data-style="terraria"][data-theme] .queue-panel {
+  border: 6px solid transparent;
+  border-image: url("./art/terraria-option.svg") 3 / 6px stretch;
+  border-radius: 0;
+  background-color: var(--tr-option);
+  background-clip: padding-box;
+}
+
+html[data-style="terraria"][data-theme] .queue-panel.parked {
+  box-shadow: inset 4px 0 0 #ff4a5c;
+}
+
+/* A question, and suggested replies: the box an NPC speaks in, what you can
+   answer in yellow along its foot. */
+html[data-style="terraria"][data-theme] :is(.question, .replies) {
+  border: 8px solid transparent;
+  border-image: url("./art/terraria-dialog.svg") 4 / 8px stretch;
+  border-radius: 0;
+  background-color: var(--tr-dialog);
+  background-clip: padding-box;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] :is(.option, .reply) {
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--tr-yellow);
+  font-family: var(--tr-hand);
+  font-weight: 700;
+  text-shadow: var(--tr-stroke);
+  box-shadow: none;
+  transition: scale 0.12s ease-out;
+}
+
+html[data-style="terraria"][data-theme] :is(.option, .reply):is(:hover, :focus-visible) {
+  background: transparent;
+  color: #ffffff;
+  scale: 1.05;
+  outline: 0;
+}
+
+html[data-style="terraria"][data-theme] .reply.on {
+  background: var(--tr-option-on);
+  color: #ffffff;
+}
+
+/* ── Buttons: the menu's ──────────────────────────────────────────────── */
+
+html[data-style="terraria"][data-theme] :is(.text-btn, .login-btn, .replies-send, .dial-btn, .bell-btn:not(.icon-btn), .emp-pill, .emp-new, .new-chat, .new-chat-more, .queue-steer, .search-cancel, .settings-back, .sleep-now, .share-go, .share-cancel) {
+  border: 8px solid transparent;
+  border-image: url("./art/terraria-button.svg") 4 / 8px stretch;
+  border-radius: 0;
+  background-color: #4a5b99;
+  background-clip: padding-box;
+  color: #ffffff;
+  font-family: var(--tr-hand);
+  font-weight: 700;
+  text-shadow: var(--tr-stroke);
+  box-shadow: none;
+  opacity: 1;
+  transition: none;
+}
+
+html[data-style="terraria"][data-theme] :is(.text-btn, .replies-send, .bell-btn:not(.icon-btn), .emp-pill, .emp-new, .queue-steer, .search-cancel, .settings-back, .sleep-now, .share-go, .share-cancel) {
+  padding: 0 8px;
+}
+
+html[data-style="terraria"][data-theme] :is(.text-btn, .login-btn, .replies-send, .dial-btn, .bell-btn:not(.icon-btn), .emp-pill, .emp-new, .new-chat, .new-chat-more, .queue-steer, .search-cancel, .settings-back, .sleep-now, .share-go, .share-cancel):is(:hover, :focus-visible):not(:disabled) {
+  border-image-source: url("./art/terraria-button-hover.svg");
+  background-color: #5a6cb0;
+  color: var(--tr-yellow);
+  outline: 0;
+}
+
+html[data-style="terraria"][data-theme] :is(.text-btn, .login-btn, .replies-send, .bell-btn:not(.icon-btn), .sleep-now, .share-go):disabled {
+  border-image-source: url("./art/terraria-button-off.svg");
+  background-color: #39426e;
+  color: #9aa3cc;
+  text-shadow: none;
+  opacity: 1;
+  cursor: default;
+}
+
+/* The one to press, in yellow already; the one to think twice about, red. */
+html[data-style="terraria"][data-theme] :is(.text-btn.primary, .project-form .text-btn.primary, .bell-btn.pri, .emp-pill.strong, .login-btn) {
+  color: var(--tr-yellow);
+}
+
+html[data-style="terraria"][data-theme] .text-btn.danger,
+html[data-style="terraria"][data-theme] .text-btn.danger:hover {
+  color: #ff8a94;
+}
+
+html[data-style="terraria"][data-theme] .text-btn kbd {
+  border-radius: 3px;
+  background: rgb(10 13 30 / 40%);
+  color: #ffffff;
+  text-shadow: none;
+}
+
+/* ── Windows: the menu's panel ────────────────────────────────────────── */
+
+html[data-style="terraria"][data-theme] :is(.modal, .session-menu, .backend-menu, .command-menu, .effort-pop, .plus-pop, .pane-menu, .unsent-menu, .which-key, .search-panel) {
+  border: 10px solid transparent;
+  border-image: url("./art/terraria-menu.svg") 5 / 10px stretch;
+  border-radius: 0;
+  background-color: var(--tr-menu);
+  background-clip: padding-box;
+  box-shadow: 0 6px 0 rgb(4 6 26 / 28%);
+}
+
+html[data-style="terraria"][data-theme] :is(.session-menu, .backend-menu, .command-menu, .effort-pop, .plus-pop, .pane-menu, .unsent-menu) {
+  padding: 0;
+}
+
+html[data-style="terraria"][data-theme] .modal-scrim {
+  background: rgb(8 10 34 / 62%);
+}
+
+html[data-style="terraria"][data-theme] .modal-head {
+  border-bottom: 2px solid var(--tr-row-line);
+  color: #ffffff;
+  font-family: var(--tr-hand);
+  text-shadow: var(--tr-stroke);
+}
+
+html[data-style="terraria"][data-theme] :is(.session-menu, .backend-menu, .pane-menu, .plus-pop, .unsent-menu) button {
+  border-radius: 4px;
+  color: #ffffff;
+}
+
+html[data-style="terraria"][data-theme] :is(.session-menu, .backend-menu, .pane-menu, .plus-pop, .unsent-menu) button:is(:hover, :focus-visible):not(:disabled) {
+  background: var(--tr-option-on);
+  color: var(--tr-yellow);
+  text-shadow: var(--tr-stroke);
+  outline: 0;
+}
+
+html[data-style="terraria"][data-theme] :is(.session-menu, .backend-menu) button.danger {
+  color: #ff8a94;
+}
+
+html[data-style="terraria"][data-theme] .session-menu-sep {
+  height: 2px;
+  border: 0;
+  background: var(--tr-row-line);
+  opacity: 0.8;
+}
+
+/* Fields: darker, let into the panel. */
+html[data-style="terraria"][data-theme] :is(input:not([type="range"], [type="checkbox"], [type="radio"], [type="file"]), textarea, select):not(.composer-input) {
+  border: 6px solid transparent;
+  border-image: url("./art/terraria-field.svg") 3 / 6px stretch;
+  border-radius: 0;
+  background-color: var(--tr-field);
+  background-clip: padding-box;
+  color: #ffffff;
+  caret-color: var(--tr-yellow);
+}
+
+html[data-style="terraria"][data-theme] :is(input, textarea, select):not(.composer-input):focus-visible {
+  outline: 2px solid var(--tr-gold);
+  outline-offset: -2px;
+}
+
+html[data-style="terraria"][data-theme] :is(input, textarea):not(.composer-input)::placeholder {
+  color: #aab3e0;
+}
+
+html[data-style="terraria"][data-theme] .tasks-composer-box textarea:not(.composer-input),
+html[data-style="terraria"][data-theme] .search-field input:not(.composer-input) {
+  border: 0;
+  background: transparent;
+  outline: 0;
+}
+
+/* A slider: a dark groove, one of the map's round gold buttons to drag. */
+html[data-style="terraria"][data-theme] input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 12px;
+  border: 2px solid var(--tr-edge);
+  border-radius: 6px;
+  background: var(--tr-field);
+}
+
+html[data-style="terraria"][data-theme] input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/terraria-round.svg") center / 22px 22px no-repeat;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/terraria-round.svg") center / 22px 22px no-repeat;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] .slider.effort-track {
+  border: 2px solid var(--tr-edge);
+  border-radius: 6px;
+  background: var(--tr-field);
+}
+
+html[data-style="terraria"][data-theme] .slider-ticks span.on {
+  background: var(--tr-yellow);
+}
+
+html[data-style="terraria"][data-theme] .slider-thumb {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/terraria-round.svg") center / 22px 22px no-repeat;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] .effort-stops button.on {
+  color: var(--tr-yellow);
+  font-weight: 700;
+  text-shadow: var(--tr-stroke);
+}
+
+/* A checkbox: a small slot, a check in it. */
+html[data-style="terraria"][data-theme] input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 2px solid var(--tr-edge);
+  border-radius: 5px;
+  background: var(--tr-field);
+  vertical-align: -4px;
+}
+
+html[data-style="terraria"][data-theme] input[type="checkbox"]:checked {
+  background: url("./art/terraria-check.svg") center / 14px 12px no-repeat var(--tr-field);
+}
+
+/* A choice of several: Create World's — dark, the chosen one lighter. */
+html[data-style="terraria"][data-theme] :is(.segmented, .emp-tabs, .proj-tabs, .bell-tabs, .sleep-tabs, .dsess-filters, .install-tabs) {
+  gap: 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] :is(.segmented button, .emp-tab, .proj-tab, .bell-tabs button, .sleep-tabs button, .share-seg, .dsess-filter, .install-tabs button) {
+  padding-block: 0;
+  border: 6px solid transparent;
+  border-image: url("./art/terraria-option.svg") 3 / 6px stretch;
+  border-radius: 0;
+  background-color: var(--tr-option);
+  background-clip: padding-box;
+  color: #c3caf2;
+  font-family: var(--tr-hand);
+  font-weight: 700;
+  box-shadow: none;
+  transition: none;
+}
+
+html[data-style="terraria"][data-theme] :is(.segmented button, .emp-tab, .proj-tab, .bell-tabs button, .sleep-tabs button, .share-seg, .dsess-filter, .install-tabs button):hover {
+  background-color: var(--tr-option);
+  color: var(--tr-yellow);
+}
+
+html[data-style="terraria"][data-theme] :is(.segmented button.on, .emp-tab.on, .proj-tab.on, .bell-tabs button.on, .sleep-tabs button.on, .share-seg.on, .dsess-filter.on, .install-tabs button.on) {
+  border-image-source: url("./art/terraria-option-on.svg");
+  background-color: var(--tr-option-on);
+  color: #ffffff;
+  text-shadow: var(--tr-stroke);
+}
+
+/* ── Rows of a menu: cards ────────────────────────────────────────────── */
+
+html[data-style="terraria"][data-theme] :is(.task-card, .task-template, .work-card, .kpi-card, .emp-stat, .emp-approval, .emp-attention, .emp-report-row, .dsess-card, .switcher-card, .sleep-bar, .memory-row, .install-box, .bell-card) {
+  border: 8px solid transparent;
+  border-image: url("./art/terraria-row.svg") 4 / 8px stretch;
+  border-radius: 0;
+  background-color: var(--tr-row);
+  background-clip: padding-box;
+  box-shadow: none;
+  --task-card: var(--tr-row);
+  --task-card-hover: #4253a0;
+  --task-kind: var(--tr-yellow);
+  --task-prompt: #ffffff;
+  --task-dim: var(--tr-ink-dim);
+  --task-rule: var(--tr-row-line);
+  --task-dash: var(--tr-row-line);
+  --task-round: rgb(255 255 255 / 12%);
+  --task-error: #7a3050;
+}
+
+html[data-style="terraria"][data-theme] :is(.task-card, .task-template, .kpi-card, .dsess-card, .emp-report-row, .switcher-card):hover,
+html[data-style="terraria"][data-theme] .dsess-card.on {
+  border-image-source: url("./art/terraria-row-hover.svg");
+  background-color: #4253a0;
+}
+
+/* A measure of progress: hearts, full and empty. */
+html[data-style="terraria"][data-theme] .kpi-track {
+  height: 22px;
+  border-radius: 0;
+  background: url("./art/terraria-hearts-empty.svg") left center / 24px 22px repeat-x;
+}
+
+html[data-style="terraria"][data-theme] .kpi-fill {
+  border-radius: 0;
+  background: url("./art/terraria-hearts.svg") left center / 24px 22px repeat-x;
+}
+
+html[data-style="terraria"][data-theme] .emp-avatar {
+  border: 2px solid var(--tr-slot-line);
+  border-radius: 6px;
+  background: var(--tr-slot);
+  color: #ffffff;
+  font-family: var(--tr-hand);
+  font-weight: 700;
+  text-shadow: var(--tr-stroke);
+}
+
+/* What it has spent: coins. */
+html[data-style="terraria"][data-theme] .emp-spend > svg {
+  width: 12px;
+  height: 16px;
+  background: url("./art/terraria-coin-gold.svg") center / 12px 16px no-repeat;
+}
+
+html[data-style="terraria"][data-theme] .emp-spend > svg > * {
+  visibility: hidden;
+}
+
+/* ── Notices ──────────────────────────────────────────────────────────── */
+
+html[data-style="terraria"][data-theme] .search-field {
+  border: 6px solid transparent;
+  border-image: url("./art/terraria-field.svg") 3 / 6px stretch;
+  border-radius: 0;
+  background-color: var(--tr-field);
+  background-clip: padding-box;
+  color: #ffffff;
+}
+
+html[data-style="terraria"][data-theme] .search-row {
+  border: 2px solid transparent;
+  border-radius: 6px;
+}
+
+html[data-style="terraria"][data-theme] .search-row:is(:hover, .on, :focus-visible) {
+  border-color: var(--tr-gold);
+  background: #4253a0;
+  outline: 0;
+}
+
+html[data-style="terraria"][data-theme] .bell-card .bell-source {
+  color: var(--tr-yellow);
+  font-family: var(--tr-hand);
+  font-weight: 700;
+}
+
+html[data-style="terraria"][data-theme] .bell-card .bell-mark {
+  width: 22px;
+  height: 24px;
+  background: url("./art/terraria-fallen.svg") center / 22px 24px no-repeat;
+}
+
+html[data-style="terraria"][data-theme] .bell-card svg.bell-mark > * {
+  visibility: hidden;
+}
+
+html[data-style="terraria"][data-theme] .bell-title {
+  font-family: var(--tr-hand);
+}
+
+/* Something went wrong: an empty heart, and the words in red. */
+html[data-style="terraria"][data-theme] .app-oops {
+  padding-left: 38px;
+  border: 8px solid transparent;
+  border-image: url("./art/terraria-dialog.svg") 4 / 8px stretch;
+  border-radius: 0;
+  background: url("./art/terraria-heart-empty.svg") 6px center / 22px 22px no-repeat var(--tr-dialog);
+  background-clip: padding-box;
+  color: #ffb0b8;
+  font-weight: 700;
+  text-shadow: var(--tr-stroke);
+  box-shadow: none;
+}
+
+/* ── Pages ────────────────────────────────────────────────────────────── */
+
+html[data-style="terraria"][data-theme] :is(.tasks-head h1, .proj-head h1, .emp-head h1, .bell-title) {
+  font-family: var(--tr-hand);
+}
+
+html[data-style="terraria"][data-theme] .task-kind::before {
+  content: "";
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  margin-right: 6px;
+  vertical-align: -6px;
+  background: url("./art/terraria-clock.svg") center / 22px 22px no-repeat;
+}
+
+html[data-style="terraria"][data-theme] .proj-session {
+  border: 2px solid transparent;
+  border-radius: 6px;
+}
+
+html[data-style="terraria"][data-theme] .proj-session:hover {
+  border-color: var(--tr-slot-line);
+  background: var(--tr-slot);
+  color: #ffffff;
+  --fg: #ffffff;
+  --fg-dim: var(--tr-ink-dim);
+}
+
+/* ── No session open: the Guide at home ───────────────────────────────── */
+
+html[data-style="terraria"][data-theme] :is(.placeholder, .loading, .login) {
+  position: relative;
+  overflow: hidden;
+  background:
+    var(--tr-ground) left bottom / 192px 60px repeat-x,
+    var(--tr-hills) left bottom 54px / 320px 128px repeat-x,
+    var(--tr-clouds) 40px 40px / 480px 132px repeat-x,
+    var(--tr-orb) right 12% top 9% / 120px 120px no-repeat,
+    var(--tr-stars) 0 0 / 192px 192px repeat,
+    var(--tr-sky);
+  color: #ffffff;
+  font-family: var(--tr-hand);
+  font-weight: 700;
+  text-shadow: var(--tr-stroke);
+}
+
+html[data-style="terraria"][data-theme] .placeholder {
+  flex: 1 1 auto;
+}
+
+html[data-style="terraria"][data-theme] .placeholder > p {
+  font-size: 1.25rem;
+}
+
+html[data-style="terraria"][data-theme] .placeholder::before {
+  content: "";
+  width: min(552px, 94%);
+  aspect-ratio: 184 / 100;
+  margin-bottom: 0.4rem;
+  background: var(--tr-home) center / contain no-repeat;
+}
+
+/* A slime, on the grass at the foot of the page. */
+html[data-style="terraria"][data-theme] :is(.placeholder, .loading)::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  bottom: 54px;
+  width: 48px;
+  height: 33px;
+  background: url("./art/terraria-slime-blue.svg") center / 48px 33px no-repeat;
+  transform-origin: 50% 100%;
+  animation: tr-hop 14s linear infinite;
+  pointer-events: none;
+}
+
+html[data-style="terraria"][data-theme] .placeholder .backend-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(22rem, 86%);
+}
+
+html[data-style="terraria"][data-theme] .placeholder .backend-choice .text-btn {
+  width: 100%;
+  min-height: 42px;
+  justify-content: center;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+/* Signing in: the title screen. */
+html[data-style="terraria"][data-theme] .login-box {
+  border: 10px solid transparent;
+  border-image: url("./art/terraria-menu.svg") 5 / 10px stretch;
+  border-radius: 0;
+  background-color: var(--tr-menu);
+  background-clip: padding-box;
+  padding: 22px;
+}
+
+html[data-style="terraria"][data-theme] .login-title {
+  color: #b9794a;
+  font-family: var(--tr-hand);
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-shadow:
+    2px 0 0 #2fb558, -2px 0 0 #2fb558, 0 2px 0 #2fb558, 0 -2px 0 #2fb558,
+    2px 2px 0 #2fb558, -2px -2px 0 #2fb558, 2px -2px 0 #2fb558, -2px 2px 0 #2fb558,
+    4px 0 0 #0a5a1e, -4px 0 0 #0a5a1e, 0 4px 0 #0a5a1e, 0 -4px 0 #0a5a1e,
+    3px 3px 0 #0a5a1e, -3px -3px 0 #0a5a1e, 3px -3px 0 #0a5a1e, -3px 3px 0 #0a5a1e,
+    4px 2px 0 #0a5a1e, -4px 2px 0 #0a5a1e, 2px 4px 0 #0a5a1e, -2px 4px 0 #0a5a1e,
+    4px -2px 0 #0a5a1e, -4px -2px 0 #0a5a1e, 2px -4px 0 #0a5a1e, -2px -4px 0 #0a5a1e;
+}
+
+html[data-style="terraria"][data-theme] .login-input {
+  font-family: var(--ui);
+  text-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] .login-error {
+  color: #ff8a94;
+}
+
+html[data-style="terraria"][data-theme] .login-btn {
+  padding: 2px 8px;
+}
+
+/* ── Small things ─────────────────────────────────────────────────────── */
+
+/* To the bottom: one of the map's round gold buttons. */
+html[data-style="terraria"][data-theme] .to-bottom,
+html[data-style="terraria"][data-theme] .to-bottom:hover {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/terraria-round.svg") center / 44px 44px no-repeat;
+  color: #3a2c1c;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] .to-bottom:hover {
+  filter: brightness(1.15);
+}
+
+/* What has the keyboard's focus: the gold edge. */
+html[data-style="terraria"][data-theme] :is(button, [role="button"], [role="radio"], [role="tab"], a):focus-visible {
+  outline: 2px solid var(--tr-gold);
+  outline-offset: 1px;
+}
+
+html[data-style="terraria"][data-theme="light"] .timeline :is(button, [role="button"], a):focus-visible {
+  outline-color: #f09a05;
+}
+
+html[data-style="terraria"][data-theme] .tag {
+  border-radius: 5px;
+}
+
+/* At night a star falls across the page now and then. */
+html[data-style="terraria"][data-theme] .main {
+  position: relative;
+  isolation: isolate;
+}
+
+html[data-style="terraria"][data-theme="dark"] .main-chat::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 40px;
+  right: 6%;
+  width: 52px;
+  height: 52px;
+  background: url("./art/terraria-falling.svg") center / 52px 52px no-repeat;
+  opacity: 0;
+  animation: tr-fall 23s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes tr-fall {
+  0%, 90% {
+    opacity: 0;
+    translate: 0 0;
+  }
+
+  91% {
+    opacity: 0.75;
+    translate: 0 0;
+  }
+
+  99% {
+    opacity: 0.55;
+    translate: -300px 300px;
+  }
+
+  100% {
+    opacity: 0;
+    translate: -320px 320px;
+  }
+}
+
+html[data-style="terraria"][data-theme] .dial-btn {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-style="terraria"][data-theme] .dial-scrim {
+  background: rgb(8 10 34 / 72%);
+}
+
+/* What shimmers is painted through its letters: no outline behind them. */
+html[data-style="terraria"][data-theme] .shimmer,
+html[data-style="terraria"][data-theme] .tool.group > .tool-head > .tool-name.shimmer {
+  text-shadow: none;
+}
+
+/* A frame has its own corners (themes.css rounds these, more specifically). */
+html[data-style="terraria"][data-theme]:root :is(.file-card, .question, .replies, .queue-panel, .composer-btn, .tasks-composer-btn, .new-chat, .new-chat-more, .install-box, .sidebar .session, .project-row, .emp-row, .text-btn, .option, .settings-back, .nav-item, .segmented, .segmented button, .command-menu li) {
+  border-radius: 0;
+}
+
+/* Search, and notices: the world dims behind the panel. */
+html[data-style="terraria"][data-theme] .search-sheet {
+  background: rgb(8 10 34 / 55%);
+}
+
+/* The theme cards are Tailwind's (its utilities are !important): they take
+   their colours from the tokens, so the tokens are a slot's here. */
+html[data-style="terraria"][data-theme] .settings-body .tw {
+  --card: var(--tr-slot);
+  --card-foreground: #ffffff;
+  --accent: #5b63c8;
+  --accent-foreground: #ffffff;
+  --border: var(--tr-slot-line);
+  --muted-foreground: #d5dbfa;
+  --ring: var(--tr-gold);
+}
+
+/* A page's head (Tasks, a project): the same sky as a chat's. */
+html[data-style="terraria"][data-theme] :is(.tasks-head, .proj-head) {
+  position: relative;
+  isolation: isolate;
+  height: calc(var(--head-h) + 8px);
+  padding-bottom: 8px;
+  background: var(--tr-stars) 0 0 / 192px 192px repeat, var(--tr-sky-head);
+  color: #ffffff;
+  --fg: #ffffff;
+  --fg-dim: #e6eaff;
+}
+
+html[data-style="terraria"][data-theme] :is(.tasks-head, .proj-head)::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 16px;
+  background: var(--background);
+  -webkit-mask: url("./art/terraria-cloudline.svg") left bottom / 192px 16px repeat-x;
+  mask: url("./art/terraria-cloudline.svg") left bottom / 192px 16px repeat-x;
+  pointer-events: none;
+}
+
+html[data-style="terraria"][data-theme] :is(.tasks-head, .proj-head) h1 {
+  color: #ffffff;
+  font-family: var(--tr-hand);
+  font-weight: 700;
+  text-shadow: var(--tr-stroke);
+}
+
+/* Its round buttons: slots. */
+html[data-style="terraria"][data-theme] :is(.tasks-round, .proj-round, .moon-btn.proj-moon) {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/terraria-slot-18.svg") center / 36px 36px no-repeat;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+html[data-style="terraria"][data-theme] :is(.tasks-round, .proj-round, .moon-btn.proj-moon):hover {
+  background: url("./art/terraria-gold-18.svg") center / 36px 36px no-repeat;
+  color: var(--tr-gold-ink);
+}
+
+/* Where a task is written stands on the grass too. */
+html[data-style="terraria"][data-theme] .tasks-composer {
+  padding-bottom: 26px;
+  background:
+    var(--tr-ground) left bottom -34px / 192px 60px repeat-x,
+    linear-gradient(180deg, transparent 0, var(--background) 14px);
+}
+
+/* Signing in: the place itself on the ground, a slime going by. */
+html[data-style="terraria"][data-theme] .login::before {
+  content: "";
+  position: absolute;
+  left: max(2%, calc(50% - 560px));
+  bottom: 54px;
+  width: 390px;
+  height: 174px;
+  background: var(--tr-surface) center / 390px 174px no-repeat;
+  pointer-events: none;
+}
+
+html[data-style="terraria"][data-theme] .login::after {
+  content: "";
+  position: absolute;
+  right: 22%;
+  bottom: 54px;
+  width: 48px;
+  height: 33px;
+  background: url("./art/terraria-slime.svg") center / 48px 33px no-repeat;
+  transform-origin: 50% 100%;
+  animation: tr-hop 14s linear infinite;
+  pointer-events: none;
+}
+
+html[data-style="terraria"][data-theme] .login-box {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 640px) {
+  html[data-style="terraria"][data-theme] .login::before {
+    left: 0;
+    width: 260px;
+    height: 116px;
+    background-size: 260px 116px;
+  }
+}
+
+@media (max-width: 640px) {
+  /* On a phone "New chat" floats over the ground: the list stops higher. */
+  html[data-style="terraria"][data-theme] .sidebar .session-list {
+    margin-bottom: 176px;
+  }
+}
+
+/* An employee's page: its head and the bar under it are the same sky. */
+html[data-style="terraria"][data-theme] .chat > .chat-header {
+  padding-bottom: 8px;
+  background: var(--tr-stars) 0 0 / 192px 192px repeat, var(--tr-sky-head);
+}
+
+/* A page with nothing under its head (Dream): the cloud's edge on the head. */
+html[data-style="terraria"][data-theme] .chat > .chat-header:not(:has(+ .emp-bar)) {
+  padding-bottom: 14px;
+  background:
+    var(--tr-cloudline) left bottom / 192px 16px repeat-x,
+    var(--tr-stars) 0 0 / 192px 192px repeat,
+    var(--tr-sky-head);
+}
+
+html[data-style="terraria"][data-theme] .emp-bar {
+  border-bottom: 0;
+  color: #ffffff;
+  --fg: #ffffff;
+  --fg-dim: #e6eaff;
+  --line: var(--tr-slot-line);
+}
+
+html[data-style="terraria"][data-theme] .emp-bar :is(.emp-status, .emp-restricted, .emp-spend) {
+  text-shadow: var(--tr-stroke);
+}
+
+html[data-style="terraria"][data-theme] .chat-top .emp-bar {
+  padding-bottom: 18px;
+}
+
+html[data-style="terraria"][data-theme] .chat > .emp-bar {
+  padding-bottom: 20px;
+  background:
+    var(--tr-cloudline) left bottom / 192px 16px repeat-x,
+    var(--tr-stars) 0 52px / 192px 192px repeat,
+    var(--tr-sky-foot);
+}
+
+/* The foot unfolded: its lines on a menu's panel, not on the house. */
+html[data-style="terraria"][data-theme] .sidebar-foot:not(.folded, .dial) {
+  background: rgb(47 59 110 / 94%);
+  box-shadow:
+    0 -2px 0 var(--tr-edge),
+    inset 0 2px 0 var(--tr-row-line);
+}
+
+/* Nothing here: the Guide has nothing to say; a bunny where a list is bare. */
+html[data-style="terraria"][data-theme] .search-empty::before {
+  content: "";
+  display: block;
+  width: 26px;
+  height: 46px;
+  margin: 0 auto 8px;
+  background: url("./art/terraria-guide.svg") center / 26px 46px no-repeat;
+}
+
+html[data-style="terraria"][data-theme] :is(.emp-empty, .session-empty)::before {
+  content: "";
+  display: inline-block;
+  width: 24px;
+  height: 20px;
+  margin-right: 8px;
+  vertical-align: -3px;
+  background: url("./art/terraria-bunny.svg") center / 24px 20px no-repeat;
+}
+
+/* A tooltip, as the game writes one: no box, the words in their outline.
+   (It is Tailwind's, its utilities !important: its ground and its text are
+   the tokens, so the tokens are what changes here.) */
+html[data-style="terraria"][data-theme] [data-slot="tooltip-content"] {
+  --foreground: transparent;
+  --background: #ffffff;
+  font-family: var(--tr-hand);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-shadow: var(--tr-stroke-2);
+}
+
+/* Quiet text on the day's page, a little darker than the least that reads. */
+html[data-style="terraria"][data-theme="light"]:root:root {
+  --dim: #565b84;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-style="terraria"][data-theme] .sidebar::before,
+  html[data-style="terraria"][data-theme] .sidebar::after,
+  html[data-style="terraria"][data-theme] .placeholder::after,
+  html[data-style="terraria"][data-theme] .loading::after,
+  html[data-style="terraria"][data-theme] .login::after,
+  html[data-style="terraria"][data-theme] .dot,
+  html[data-style="terraria"][data-theme] .session-unread,
+  html[data-style="terraria"][data-theme] .bell-dot,
+  html[data-style="terraria"][data-theme] .moon-btn.news::after,
+  html[data-style="terraria"][data-theme] .tool.group.running .tool-icon::before,
+  html[data-style="terraria"][data-theme] .tool-state > svg.spin,
+  html[data-style="terraria"][data-theme] .thinking.live > svg,
+  html[data-style="terraria"][data-theme] .working-dots::before,
+  html[data-style="terraria"][data-theme] .main-chat::after {
+    animation: none;
+  }
+
+  html[data-style="terraria"][data-theme] :is(.nav-item, .option, .reply) {
+    transition: none;
+  }
+}

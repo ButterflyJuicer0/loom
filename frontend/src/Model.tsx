@@ -2,9 +2,10 @@ import { Check, ChevronDown, ChevronLeft } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { MODELS, changeAgent, modelName, type AgentInfo } from "./api"
+import { t } from "./i18n"
 
 /** The session's model as the menu names it: its own pick, or the agent's default. */
-export const modelLabel = (model: string | null | undefined) => (model ? modelName(model) : "Default")
+export const modelLabel = (model: string | null | undefined) => (model ? modelName(model) : t("Default"))
 
 /**
  * The models a session can be on: the agent's default, then `MODELS` for its
@@ -35,7 +36,7 @@ export function ModelList({
       {onBack && (
         <>
           <button role="menuitem" className="session-menu-back" onClick={onBack}>
-            <ChevronLeft /> Model
+            <ChevronLeft /> {t("Model")}
           </button>
           <div className="session-menu-sep" />
         </>
@@ -46,7 +47,7 @@ export function ModelList({
           {model === current && <Check className="session-menu-more" />}
         </button>
       ))}
-      <div className="session-menu-note">From the next message on.</div>
+      <div className="session-menu-note">{t("From the next message on.")}</div>
     </>
   )
 }
@@ -76,7 +77,7 @@ export function ModelChip({ session }: { session: AgentInfo }) {
     <>
       <button
         className="chip button model-chip"
-        title="Model"
+        title={t("Model")}
         aria-haspopup="menu"
         aria-expanded={at !== null}
         onClick={(e) => {

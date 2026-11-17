@@ -4,6 +4,7 @@ import { createPortal, flushSync } from "react-dom"
 import { createRoot } from "react-dom/client"
 import { shareImage } from "./api"
 import type { TimelineItem } from "./agent"
+import { t } from "./i18n"
 import { Markdown } from "./markdown"
 import "./Share.css"
 
@@ -82,21 +83,21 @@ export function ShareView({
       <div className="share-list">
         <div className="share-inner">
           <div className="share-top">
-            <span>Pick what to share</span>
+            <span>{t("Pick what to share")}</span>
             <button
               type="button"
               className="text-btn"
               onClick={() => setOff(allOn ? new Set(segs.map((s) => s.key)) : new Set())}
             >
-              {allOn ? "Select none" : "Select all"}
+              {allOn ? t("Select none") : t("Select all")}
             </button>
           </div>
-          {segs.length === 0 && <div className="empty">Nothing to share yet.</div>}
+          {segs.length === 0 && <div className="empty">{t("Nothing to share yet.")}</div>}
           {segs.map((s) => {
             const on = !off.has(s.key)
             return (
               <div key={s.key} className={"share-seg" + (on ? " on" : "")} onClick={() => flip(s.key)}>
-                <button type="button" className="share-check" aria-pressed={on} title={on ? "Leave out" : "Include"}>
+                <button type="button" className="share-check" aria-pressed={on} title={on ? t("Leave out") : t("Include")}>
                   {on ? <CircleCheck /> : <Circle />}
                 </button>
                 <div className="share-body">
@@ -120,18 +121,18 @@ export function ShareView({
       <div className="share-bar-wrap">
         <div className="share-bar">
           <button type="button" className="share-cancel" onClick={onClose}>
-            Cancel
+            {t("Cancel")}
           </button>
           <span className="share-count">
             {typeof state === "object" && "error" in state ? (
               <span className="failed">{state.error}</span>
             ) : (
-              `${picked.length} of ${segs.length}`
+              t("{n} of {total}", { n: picked.length, total: segs.length })
             )}
           </span>
           <button type="button" className="share-go" disabled={picked.length === 0 || state === "making"} onClick={go}>
             <ShareIcon />
-            {state === "making" ? "Drawing…" : "Share image"}
+            {state === "making" ? t("Drawing…") : t("Share image")}
           </button>
         </div>
       </div>
@@ -179,30 +180,30 @@ function ShareDialog({
     })
   const save = () => {
     saveFile(file)
-    flash("Saved")
+    flash(t("Saved"))
   }
   const copy = () =>
     navigator.clipboard.write([new ClipboardItem({ "image/png": image })]).then(
-      () => flash("Copied"),
-      () => flash("Could not copy"),
+      () => flash(t("Copied")),
+      () => flash(t("Could not copy")),
     )
 
   return createPortal(
     <div className="share-scrim" onClick={onBack}>
-      <div className="share-dialog" role="dialog" aria-label="Share" onClick={(e) => e.stopPropagation()}>
+      <div className="share-dialog" role="dialog" aria-label={t("Share")} onClick={(e) => e.stopPropagation()}>
         <div className="share-dialog-head">
           <span className="share-dialog-title">{title}</span>
-          <button type="button" className="icon-btn" title="Back" onClick={onBack}>
+          <button type="button" className="icon-btn" title={t("Back")} onClick={onBack}>
             <X />
           </button>
         </div>
         <div className="share-preview">
-          <img src={url} alt="The conversation as an image" />
+          <img src={url} alt={t("The conversation as an image")} />
         </div>
         <div className="share-actions">
-          {canShare && <Action icon={<ShareIcon />} label="Share" onClick={share} />}
-          <Action icon={<Download />} label="Save image" onClick={save} />
-          {canCopy && <Action icon={<Copy />} label="Copy image" onClick={copy} />}
+          {canShare && <Action icon={<ShareIcon />} label={t("Share")} onClick={share} />}
+          <Action icon={<Download />} label={t("Save image")} onClick={save} />
+          {canCopy && <Action icon={<Copy />} label={t("Copy image")} onClick={copy} />}
         </div>
         <div className="share-said" aria-live="polite">{said ?? " "}</div>
       </div>

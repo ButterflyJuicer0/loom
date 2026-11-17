@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom"
 import { useEffect, useRef, useState } from "react"
+import { t } from "./i18n"
 import { isComposing } from "./ime"
 
 /**
@@ -10,7 +11,7 @@ import { isComposing } from "./ime"
 export function Confirm({
   title,
   detail,
-  action = "Delete",
+  action = t("Delete"),
   busyAction,
   danger = true,
   onYes,
@@ -74,7 +75,7 @@ export function Confirm({
           {error && <p className="confirm-error">{error}</p>}
           <div className="confirm-actions">
             <button className="text-btn" onClick={onClose} disabled={working}>
-              Cancel <kbd>n</kbd>
+              {t("Cancel")} <kbd>n</kbd>
             </button>
             <button className={"text-btn" + (danger ? " danger" : "")} onClick={() => void yes()} disabled={working}>
               {working ? (busyAction ?? `${action}…`) : <>{action} <kbd>y</kbd></>}

@@ -16,6 +16,7 @@
 // another chat. State is a small store for useSyncExternalStore.
 
 import { getToken } from "./api"
+import { t } from "./i18n"
 
 const CACHE = "loom-meeting-models-v1.13.7"
 const CACHED_FLAG = "loom_meeting_models_cached"
@@ -88,7 +89,7 @@ type ModelStatus =
 
 async function modelStatus(): Promise<ModelStatus> {
   const res = await fetch("/api/meeting/models", { headers: auth() })
-  if (!res.ok) throw new Error(`models: ${res.status}`)
+  if (!res.ok) throw new Error(t("models: {status}", { status: res.status }))
   return res.json()
 }
 
@@ -118,7 +119,7 @@ function filesOf(manifest: Record<string, Record<string, number>>, bundle: strin
   const names = Object.keys(manifest[bundle] ?? {})
   const pick = (test: (n: string) => boolean) => {
     const n = names.find(test)
-    if (!n) throw new Error(`model bundle ${bundle} is incomplete`)
+    if (!n) throw new Error(t("model bundle {bundle} is incomplete", { bundle }))
     return fileUrl(bundle, n)
   }
   const vocab = names.includes("bpe.vocab") ? fileUrl(bundle, "bpe.vocab") : undefined
@@ -153,7 +154,7 @@ async function downloadToBrowser(missing: { url: string; size: number }[]) {
   set({ phase: "browser", got, total })
   for (const f of missing) {
     const res = await fetch(f.url, { headers: auth() })
-    if (!res.ok || !res.body) throw new Error(`download failed: ${res.status}`)
+    if (!res.ok || !res.body) throw new Error(t("download failed: {status}", { status: res.status }))
     const reader = res.body.getReader()
     const chunks: Uint8Array[] = []
     for (;;) {
@@ -252,7 +253,7 @@ function coolDown() {
 export async function downloadModels() {
   try {
     const res = await fetch("/api/meeting/models", { method: "POST", headers: auth() })
-    if (!res.ok) throw new Error(`models: ${res.status}`)
+    if (!res.ok) throw new Error(t("models: {status}", { status: res.status }))
     const status: ModelStatus = await res.json()
     if (status.state === "ready") {
       manifest = status.files
@@ -279,7 +280,7 @@ async function watchServer() {
       warm()
       return set({ phase: "ready" })
     }
-    if (status.state === "missing") throw new Error(status.error ?? "download failed on the server")
+    if (status.state === "missing") throw new Error(status.error ?? t("download failed on the server"))
     set({ phase: "server", got: status.got, total: status.total, unpacking: !!status.unpacking })
     await new Promise((r) => setTimeout(r, 1000))
   }
@@ -305,7 +306,7 @@ function startWorker(script: string, files: Files, words = ""): Promise<Worker> 
       if (e.data.type === "ready") resolve(w)
       else if (e.data.type === "error") reject(new Error(e.data.message))
     }
-    w.onerror = (e) => reject(new Error(e.message || "worker failed"))
+    w.onerror = (e) => reject(new Error(e.message || t("worker failed")))
     w.postMessage({ type: "init", cache: CACHE, files, hotwords: words })
   })
 }
@@ -340,7 +341,7 @@ export async function startMeeting(sessionId: string, resume = false) {
 
     if (!manifest) {
       const status = await modelStatus()
-      if (status.state !== "ready") throw new Error("the speech models are not downloaded")
+      if (status.state !== "ready") throw new Error(t("the speech models are not downloaded"))
       manifest = status.files
       hotwords = status.hotwords ?? ""
       hotRev = status.hotwords_rev ?? ""
@@ -377,7 +378,7 @@ export async function startMeeting(sessionId: string, resume = false) {
     }
 
     if (!resume) await begin(sessionId)
-    if (!resume && begun !== sessionId) throw new Error("could not start the meeting on the server")
+    if (!resume && begun !== sessionId) throw new Error(t("could not start the meeting on the server"))
     flushTimer = window.setInterval(flush, 2000)
     set({ phase: "running", startedAt: Date.now(), lines: 0, systemAudio, partial: { me: "", them: "" } })
   } catch (e) {

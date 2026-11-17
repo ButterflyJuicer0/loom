@@ -17,6 +17,44 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **The interface in Chinese**: Settings → Language switches every menu,
+  dialog, tooltip and hint between 中文 and English, per device; Chinese is
+  the default. What an agent writes, and what is sent to one, is untouched.
+- **Themes**: Settings → Theme offers Loom's own look and eight designed
+  themes, each in light and dark and each a tribute drawn after the real
+  thing — every picture is Loom's own pixel art (hand-laid grids in
+  `frontend/tools/art/<id>.mjs`), made after looking at screenshots of the
+  game; nothing is taken from a game's files and no logo is reproduced.
+  **山山兔**: the Arknights plush rabbit, drawn sitting after the product
+  photographs — it hops up to sit on the composer while you type, turns on
+  a running tool card, and is a list's dots; other operator versions hop
+  while the agent works; label bars, sparkles and the photo set's lamp,
+  clock and rug around it.
+  **蔚蓝 (Celeste)**: the game's dialogue box with a portrait for what you
+  say, checkpoint plaques, dash crystals, crystal hearts, a zip mover for a
+  running tool, the cabin by night and Golden Ridge's dusk by day.
+  **以撒 (The Binding of Isaac)**: Rebirth's pixels — a Basement room with
+  its doors, the HUD's hearts and coin / bomb / key counters, the black item
+  banner for headings, paper menus, the D6 charging on a tool card.
+  **星露谷物语 (Stardew Valley)**: the wooden menu frame and its tabs, the
+  parchment dialogue box, the clock box, Junimos at work, a farm at the
+  sidebar's foot. **小丑牌 (Balatro)**: the left column of panels, the
+  swirling table, chips × mult on a tool card, Play Hand and Discard, cards
+  and Jokers. **我的世界 (Minecraft)**: dirt, stone buttons, container
+  windows and slots, advancement toasts, hearts and hunger over the composer,
+  the furnace while a tool runs. **死亡细胞 (Dead Cells)**: the Prisoners'
+  Quarters by night and the island at dusk by day, copper-framed panels,
+  the three scroll colours, the Beheaded's flame. **泰拉瑞亚 (Terraria)**:
+  the surface by day and night, inventory slots for sessions, life hearts
+  and mana stars, the NPC dialogue box, the gold-framed map. Built on
+  Tailwind CSS and shadcn/ui tokens; a theme is its own files
+  (`frontend/tools/themes/README.md`). In each theme a turn's context
+  usage is the game's own gauge (dash pips, the boss bar, the energy bar,
+  a score bar, the experience bar, the health bar, life hearts) and each
+  tool has its own picture (a pickaxe for Bash in 星露谷物语, a command
+  block in 我的世界, a bomb in 以撒 …). Pixel lettering is Fusion Pixel
+  (SIL OFL), bundled with Loom and fetched only by the themes that use it;
+  nothing is loaded from another site.
 - **New project from Move to project**: a session's … → Move to project ends
   in **New project…**: type a name, Enter, and the project is made and the
   session moved into it. Instructions are set later in Projects.
@@ -40,6 +78,19 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   of Loom's own leaves the sidebar too, into Loom's trash.
 
 ### Changed
+- **A theme's stylesheets load when it is chosen**: only the theme in use is
+  fetched (the default look fetches none), instead of all nine up front —
+  the page's own CSS is back to about 170 KB from 1.5 MB.
+- **A chat's header lists every action**: on a desktop the top right of a
+  chat no longer folds the model, continuing, sharing, meeting mode and
+  reload under `…`; each is its own icon beside the terminals and the canvas,
+  and hovering one (or reaching it with Tab) opens its name under it. The
+  model button says which model the chat is on. A phone keeps the one `…`.
+- **The agent's steps look lighter, and move**: a folded stretch of tool calls
+  is a soft chip with the tools as small tags; while it runs its mark spins
+  and its words shimmer, a finished one's check pops in, the chevron turns as
+  it opens and its steps slide down. Thinking has a spark, and "Working…" is
+  three dots in a wave. Nothing moves under the system's "reduce motion".
 - **The trash empties itself**: a deleted session stays in
   `~/.loom/sessions/.trash` for 30 days, so it can still be put back, and then
   goes for good (checked hourly).

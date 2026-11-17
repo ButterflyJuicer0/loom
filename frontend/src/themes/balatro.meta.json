@@ -1,0 +1,31 @@
+{
+  "id": "balatro",
+  "order": 50,
+  "name": {
+    "en": "Balatro",
+    "zh": "小丑牌"
+  },
+  "blurb": {
+    "en": "A swirling card table: chips × mult, a hand of cards, Play Hand and Discard",
+    "zh": "流动的漩涡牌桌：筹码 × 倍率、一手牌、出牌和弃牌"
+  },
+  "radius": "0.5rem",
+  "light": {
+    "background": "#e6dcae",
+    "foreground": "#263336",
+    "sidebar": "#2f3a3c",
+    "card": "#ffffff",
+    "bubble": "#ffffff",
+    "primary": "#0088ee",
+    "border": "#b3a66c"
+  },
+  "dark": {
+    "background": "#387058",
+    "foreground": "#ffffff",
+    "sidebar": "#2f3a3c",
+    "card": "#374244",
+    "bubble": "#ffffff",
+    "primary": "#0088ee",
+    "border": "#245040"
+  }
+}

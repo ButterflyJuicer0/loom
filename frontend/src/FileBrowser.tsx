@@ -29,6 +29,7 @@ import {
 import { Confirm, RenameInput } from "./Confirm"
 import { itemForAttachment, itemForPath, viewerFor, type CanvasItem, type Viewer } from "./canvasItems"
 import { formatBytes } from "./format"
+import { t } from "./i18n"
 
 // The project's workspace is listed too, but only to find and download a
 // file: it is the agents' working directory, not this session's to rename or
@@ -313,7 +314,7 @@ export function FileBrowser({
             {page && (
               <button
                 className="pane-btn"
-                title={`Show ${node.path} in the canvas`}
+                title={t("Show {path} in the canvas", { path: node.path })}
                 onClick={(e) => {
                   e.stopPropagation()
                   onOpen({
@@ -329,7 +330,7 @@ export function FileBrowser({
             {!(section === "workspace" && isDir) && (
               <button
                 className="pane-btn download"
-                title={isDir ? `Download ${node.path} as a zip` : `Download ${node.name}`}
+                title={isDir ? t("Download {path} as a zip", { path: node.path }) : t("Download {name}", { name: node.name })}
                 onClick={(e) => {
                   e.stopPropagation()
                   download(section, node)
@@ -348,46 +349,46 @@ export function FileBrowser({
     <div className="file-browser">
       {asking && (
         <Confirm
-          title={`Delete ${asking.node.name}?`}
+          title={t("Delete {name}?", { name: asking.node.name })}
           detail={
             asking.node.children
-              ? `The folder ${asking.node.path} and everything in it. This cannot be undone.`
-              : `${asking.node.path} — this cannot be undone.`
+              ? t("The folder {path} and everything in it. This cannot be undone.", { path: asking.node.path })
+              : t("{path} — this cannot be undone.", { path: asking.node.path })
           }
           onYes={() => void remove(asking.section as Editable, asking.node)}
           onClose={() => setAsking(null)}
         />
       )}
       {error && <div className="canvas-note failed">{error}</div>}
-      {!tree && !error && <div className="canvas-note">loading…</div>}
+      {!tree && !error && <div className="canvas-note">{t("loading…")}</div>}
       {tree && (
         <>
-          <div className="tree-section">Output</div>
+          <div className="tree-section">{t("Output")}</div>
           {output.length ? (
             rows("output", output, 0)
           ) : (
-            <div className="tree-empty">Nothing made in this session yet.</div>
+            <div className="tree-empty">{t("Nothing made in this session yet.")}</div>
           )}
           {workspace && (
             <>
-              <div className="tree-section" title="The project's working directory, shared by its sessions">
-                Workspace
+              <div className="tree-section" title={t("The project's working directory, shared by its sessions")}>
+                {t("Workspace")}
               </div>
               {workspace.length ? (
                 rows("workspace", workspace, 0)
               ) : (
-                <div className="tree-empty">The project's workspace is empty.</div>
+                <div className="tree-empty">{t("The project's workspace is empty.")}</div>
               )}
               {tree.workspace_truncated && (
-                <div className="tree-empty">Only the first {tree.workspace!.length} files are listed.</div>
+                <div className="tree-empty">{t("Only the first {n} files are listed.", { n: tree.workspace!.length })}</div>
               )}
             </>
           )}
-          <div className="tree-section">Uploads</div>
+          <div className="tree-section">{t("Uploads")}</div>
           {files.length ? (
             rows("files", files, 0)
           ) : (
-            <div className="tree-empty">Nothing attached in this session yet.</div>
+            <div className="tree-empty">{t("Nothing attached in this session yet.")}</div>
           )}
         </>
       )}

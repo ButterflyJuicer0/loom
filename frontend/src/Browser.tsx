@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import RFB from "@novnc/novnc"
 import { ArrowRightToLine, ChevronLeft, CornerDownLeft, Delete, Keyboard, Maximize, Minimize, RefreshCw, Send, X, ZoomIn, ZoomOut } from "lucide-react"
 import { getToken } from "./api"
+import { t } from "./i18n"
 
 /**
  * Loom's own browser — the Chromium that agents drive over CDP — shown here so
@@ -100,30 +101,30 @@ export function Browser({
       <div className="pane-head">
         <span className="pane-title">
           {narrow && (
-            <button className="pane-btn" onClick={onClose} title="Back to the chat">
+            <button className="pane-btn" onClick={onClose} title={t("Back to the chat")}>
               <ChevronLeft />
             </button>
           )}
-          browser
-          {state !== "connected" && <span className="browser-state">{state === "connecting" ? "connecting…" : "disconnected"}</span>}
+          {t("browser")}
+          {state !== "connected" && <span className="browser-state">{state === "connecting" ? t("connecting…") : t("disconnected")}</span>}
         </span>
         <span className="pane-actions">
           {state === "closed" && (
-            <button className="pane-btn" onClick={() => setAttempt((n) => n + 1)} title="Connect again">
+            <button className="pane-btn" onClick={() => setAttempt((n) => n + 1)} title={t("Connect again")}>
               <RefreshCw />
             </button>
           )}
           <button
             className={"pane-btn" + (typing ? " on" : "")}
             onClick={() => setTyping((t) => !t)}
-            title="Type text into the page"
+            title={t("Type text into the page")}
           >
             <Keyboard />
           </button>
           <button
             className="pane-btn"
             onClick={() => setFit((f) => !f)}
-            title={fit ? "Actual size; drag to pan on a touch screen" : "Fit the screen in the pane"}
+            title={fit ? t("Actual size; drag to pan on a touch screen") : t("Fit the screen in the pane")}
           >
             {fit ? <ZoomIn /> : <ZoomOut />}
           </button>
@@ -131,13 +132,13 @@ export function Browser({
             <button
               className="pane-btn"
               onClick={onToggleMaximized}
-              title={maximized ? "Back beside the chat" : "Full window"}
+              title={maximized ? t("Back beside the chat") : t("Full window")}
             >
               {maximized ? <Minimize /> : <Maximize />}
             </button>
           )}
           {!narrow && (
-            <button className="pane-btn" onClick={onClose} title="Close">
+            <button className="pane-btn" onClick={onClose} title={t("Close")}>
               <X />
             </button>
           )}
@@ -155,13 +156,13 @@ export function Browser({
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Text for the focused field"
+            placeholder={t("Text for the focused field")}
             autoCapitalize="off"
             autoCorrect="off"
             autoComplete="off"
             spellCheck={false}
           />
-          <button type="submit" className="pane-btn" title="Type it">
+          <button type="submit" className="pane-btn" title={t("Type it")}>
             <Send />
           </button>
           <button type="button" className="pane-btn" onClick={() => key(0xff08)} title="Backspace">

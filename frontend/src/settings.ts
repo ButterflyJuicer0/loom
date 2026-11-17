@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react"
 import type { AgentBackend } from "./api"
+import { language, type Language } from "./i18n"
+import { DEFAULT_THEME, themeById } from "./themes"
+import { loadTheme } from "./themes/index"
 
 /**
- * This device's preferences, from the Settings dialog: how Loom looks, how
- * big its text is, and which engine a new session starts on. Kept in
+ * This device's preferences, from the Settings dialog: how Loom looks (its
+ * theme, light or dark), which language it speaks, how big its text is, and
+ * which engine a new session starts on. Kept in
  * localStorage — a phone and a laptop may well want different ones — and
  * applied as soon as they change.
  */
@@ -11,6 +15,10 @@ export type Appearance = "dark" | "light"
 
 export type Settings = {
   appearance: Appearance
+  // Which theme (themes.ts): "default" is Loom's own look.
+  style: string
+  // Read by i18n.ts when the page loads; changing it reloads (setLanguage).
+  language: Language
   // Text size, as a multiple of the default 16px. Every size is in rem, so
   // this one scales the whole interface; see theme.css.
   fontScale: number
@@ -31,6 +39,8 @@ export type Settings = {
 const KEY = "loom_settings"
 const DEFAULTS: Settings = {
   appearance: "dark",
+  style: DEFAULT_THEME,
+  language,
   fontScale: 1,
   sidebarScale: 1,
   chatScale: 1,
@@ -50,10 +60,29 @@ function load(): Settings {
 }
 
 // The status bar and a home-screen app's chrome follow the page: black on a
-// phone and #212121 on a desktop when dark (see index.html), white when light.
-function apply({ appearance, fontScale, sidebarScale, chatScale, codeScale, cardTitleScale, cardTextScale, cardBodyScale }: Settings) {
+// phone and #212121 on a desktop when dark (see index.html), white when light,
+// and a theme's own background under any other theme.
+// The theme asked for last, while its stylesheets may still be on their way.
+let wanted = DEFAULT_THEME
+
+function apply({ appearance, style, fontScale, sidebarScale, chatScale, codeScale, cardTitleScale, cardTextScale, cardBodyScale }: Settings) {
   const root = document.documentElement
+  const theme = themeById(style)
   root.dataset.theme = appearance
+  // A designed theme is put on the page once its stylesheets have arrived
+  // (themes/index.ts); until then the page keeps the look it has. Only the
+  // latest choice counts if several are made while one loads.
+  wanted = theme.id
+  if (theme.id === DEFAULT_THEME) root.dataset.style = DEFAULT_THEME
+  else
+    loadTheme(theme.id).then(
+      () => {
+        if (wanted === theme.id) root.dataset.style = theme.id
+      },
+      () => {
+        if (wanted === theme.id) root.dataset.style = DEFAULT_THEME
+      },
+    )
   root.style.setProperty("--font-scale", String(fontScale))
   root.style.setProperty("--sidebar-scale", String(sidebarScale))
   root.style.setProperty("--chat-scale", String(chatScale))
@@ -63,7 +92,8 @@ function apply({ appearance, fontScale, sidebarScale, chatScale, codeScale, card
   root.style.setProperty("--card-body-scale", String(cardBodyScale))
   for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
     meta.dataset.dark ??= meta.content
-    meta.content = appearance === "light" ? "#ffffff" : meta.dataset.dark
+    meta.content =
+      theme.id !== DEFAULT_THEME ? theme[appearance].background : appearance === "light" ? "#ffffff" : meta.dataset.dark
   }
 }
 

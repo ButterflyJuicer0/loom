@@ -1,15 +1,18 @@
-import { ArchiveRestore, ChevronLeft, ChevronRight, Moon, Sun, Trash2, X } from "lucide-react"
+import { ArchiveRestore, ChevronLeft, ChevronRight, Languages, Moon, Sun, Trash2, X } from "lucide-react"
 import { useEffect, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import type { AgentBackend, AgentInfo, Project } from "./api"
 import type { Appearance, Settings } from "./settings"
+import { language, setLanguage, t, type Language } from "./i18n"
+import { ThemePicker } from "./ThemePicker"
+import { themeById } from "./themes"
 import { Slider } from "./Slider"
 import { BossPage, BossRow } from "./Boss"
 import { lastActive } from "./useLobby"
 
 /**
- * The gear at the foot of the sidebar: this device's appearance and text sizes, the
- * engine "+" starts a session on, the boss profile the employees share, and
+ * The gear at the foot of the sidebar: this device's language, theme,
+ * appearance and text sizes, the engine "+" starts a session on, the boss profile the employees share, and
  * the archived and the incognito sessions. Each choice takes
  * effect as it is made; there is nothing to save.
  */
@@ -37,7 +40,7 @@ export function SettingsDialog({
   onDelete: (id: string) => void
 }) {
   // A page opened from a row, in place of the list, with a way back.
-  const [page, setPage] = useState<"boss" | "archived" | "incognito" | null>(null)
+  const [page, setPage] = useState<"boss" | "archived" | "incognito" | "theme" | null>(null)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && (page ? setPage(null) : onClose())
     document.addEventListener("keydown", onKey)
@@ -46,17 +49,17 @@ export function SettingsDialog({
 
   return createPortal(
     <div className="modal-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal settings-dialog" role="dialog" aria-label="Settings">
+      <div className={"modal settings-dialog" + (page === "theme" ? " wide" : "")} role="dialog" aria-label={t("Settings")}>
         <div className="modal-head">
           {page ? (
             <button className="settings-back" onClick={() => setPage(null)}>
               <ChevronLeft />
-              {page === "boss" ? "Boss profile" : page === "archived" ? "Archived" : "Incognito"}
+              {page === "boss" ? t("Boss profile") : page === "archived" ? t("Archived") : page === "theme" ? t("Theme") : t("Incognito")}
             </button>
           ) : (
-            <span>Settings</span>
+            <span>{t("Settings")}</span>
           )}
-          <button className="icon-btn" onClick={onClose} title="Close">
+          <button className="icon-btn" onClick={onClose} title={t("Close")}>
             <X />
           </button>
         </div>
@@ -69,26 +72,47 @@ export function SettingsDialog({
           <div className="settings-body">
             <Archived sessions={archived} projects={projects} onOpen={onOpen} onUnarchive={onUnarchive} />
           </div>
+        ) : page === "theme" ? (
+          <div className="settings-body">
+            <div className="settings-sticky">
+              <Row label={t("Appearance")} hint={t("Every theme has a light and a dark side.")}>
+                <AppearanceSwitch value={settings.appearance} onChange={(appearance) => onChange({ appearance })} />
+              </Row>
+            </div>
+            <ThemePicker value={settings.style} appearance={settings.appearance} onChange={(style) => onChange({ style })} />
+          </div>
         ) : page === "incognito" ? (
           <div className="settings-body">
             <Incognito sessions={incognito} onOpen={onOpen} onKeep={onKeep} onDelete={onDelete} />
           </div>
         ) : (
           <div className="settings-body">
-            <Row label="Appearance" hint="On this device.">
-              <Segmented<Appearance>
-                value={settings.appearance}
+            <Row label={t("Language")} hint={t("Of the interface, on this device. Changing it reloads the page.")}>
+              <Segmented<Language>
+                value={language}
                 options={[
-                  ["light", "Light", <Sun key="s" />],
-                  ["dark", "Dark", <Moon key="m" />],
+                  ["zh", "中文", <Languages key="l" />],
+                  ["en", "English"],
                 ]}
-                onChange={(appearance) => onChange({ appearance })}
+                onChange={setLanguage}
               />
             </Row>
 
+            <Row label={t("Appearance")} hint={t("On this device.")}>
+              <AppearanceSwitch value={settings.appearance} onChange={(appearance) => onChange({ appearance })} />
+            </Row>
+
+            <PageRow
+              label={t("Theme")}
+              hint={t("{name}. Colours, corners and type for the whole interface.", {
+                name: themeById(settings.style).name[language],
+              })}
+              onOpen={() => setPage("theme")}
+            />
+
             <TextSizes settings={settings} onChange={onChange} />
 
-            <Row label="New sessions" hint="The agent + starts. A session keeps its agent for good.">
+            <Row label={t("New sessions")} hint={t("The agent + starts. A session keeps its agent for good.")}>
               <Segmented<AgentBackend>
                 value={settings.backend}
                 options={[
@@ -103,14 +127,14 @@ export function SettingsDialog({
             <BossRow onOpen={() => setPage("boss")} />
 
             <PageRow
-              label="Archived"
-              hint={archived.length ? `${archived.length}, hidden from the lists.` : "None."}
+              label={t("Archived")}
+              hint={archived.length ? t("{n}, hidden from the lists.", { n: archived.length }) : t("None.")}
               onOpen={() => setPage("archived")}
             />
 
             <PageRow
-              label="Incognito"
-              hint={incognito.length ? `${incognito.length}, out of Recents, with no memory.` : "None."}
+              label={t("Incognito")}
+              hint={incognito.length ? t("{n}, out of Recents, with no memory.", { n: incognito.length }) : t("None.")}
               onOpen={() => setPage("incognito")}
             />
           </div>
@@ -126,13 +150,13 @@ const AREAS: {
   key: "sidebarScale" | "chatScale" | "codeScale" | "cardTitleScale" | "cardTextScale" | "cardBodyScale"
   label: string
 }[] = [
-  { key: "sidebarScale", label: "Sidebar" },
-  { key: "chatScale", label: "Messages" },
-  { key: "codeScale", label: "Code" },
+  { key: "sidebarScale", label: t("Sidebar") },
+  { key: "chatScale", label: t("Messages") },
+  { key: "codeScale", label: t("Code") },
   // The phone's switcher cards; the recap is also a Working row's second line.
-  { key: "cardTitleScale", label: "Card title" },
-  { key: "cardTextScale", label: "Card summary" },
-  { key: "cardBodyScale", label: "Card text" },
+  { key: "cardTitleScale", label: t("Card title") },
+  { key: "cardTextScale", label: t("Card summary") },
+  { key: "cardBodyScale", label: t("Card text") },
 ]
 
 /**
@@ -149,10 +173,10 @@ function TextSizes({ settings, onChange }: { settings: Settings; onChange: (patc
     <div className="settings-row text-sizes">
       <div className="settings-text">
         <button className={"text-sizes-toggle" + (open ? " open" : "")} onClick={() => setOpen(!open)} aria-expanded={open}>
-          <span className="settings-label">Text size</span>
+          <span className="settings-label">{t("Text size")}</span>
           <ChevronRight />
         </button>
-        <span className="settings-hint">On this device.</span>
+        <span className="settings-hint">{t("On this device.")}</span>
         {changed && (
           <button
             className="settings-reset"
@@ -168,20 +192,20 @@ function TextSizes({ settings, onChange }: { settings: Settings; onChange: (patc
               })
             }
           >
-            Reset
+            {t("Reset")}
           </button>
         )}
       </div>
       {open && (
       <div className="size-rows">
         <div className="size-row">
-          <span className="size-name">Interface</span>
+          <span className="size-name">{t("Interface")}</span>
           <Slider
             min={12}
             max={20}
             step={1}
             value={px}
-            label="Interface text size"
+            label={t("Interface text size")}
             valueText={`${px}px`}
             onChange={(v) => onChange({ fontScale: v / 16 })}
           />
@@ -197,7 +221,7 @@ function TextSizes({ settings, onChange }: { settings: Settings; onChange: (patc
                 max={140}
                 step={5}
                 value={pct}
-                label={`${label} text size`}
+                label={t("{label} text size", { label })}
                 valueText={`${pct}%`}
                 onChange={(v) => onChange({ [key]: v / 100 })}
               />
@@ -242,15 +266,15 @@ function Archived({
   const name = (id?: string | null) => (id ? (projects.find((p) => p.id === id)?.name ?? "") : "")
   return (
     <div className="archived-list">
-      <p className="settings-hint">Hidden from the lists. Writing in one brings it back.</p>
-      {sessions.length === 0 && <p className="settings-hint">None.</p>}
+      <p className="settings-hint">{t("Hidden from the lists. Writing in one brings it back.")}</p>
+      {sessions.length === 0 && <p className="settings-hint">{t("None.")}</p>}
       {sessions.map((s) => (
         <div className="archived-item" key={s.id}>
           <button className="archived-open" onClick={() => onOpen(s.id)}>
-            <span className="archived-title">{s.title || "Untitled"}</span>
+            <span className="archived-title">{s.title || t("Untitled")}</span>
             {s.project_id && <span className="archived-project">{name(s.project_id)}</span>}
           </button>
-          <button className="icon-btn" title="Unarchive" onClick={() => void onUnarchive(s.id)}>
+          <button className="icon-btn" title={t("Unarchive")} onClick={() => void onUnarchive(s.id)}>
             <ArchiveRestore />
           </button>
         </div>
@@ -281,24 +305,38 @@ function Incognito({
   return (
     <div className="archived-list">
       <p className="settings-hint">
-        No memory, not in Recents. Each is deleted 30 days after its last message unless pinned or kept.
+        {t("No memory, not in Recents. Each is deleted 30 days after its last message unless pinned or kept.")}
       </p>
-      {sessions.length === 0 && <p className="settings-hint">None. New chat → Incognito chat starts one.</p>}
+      {sessions.length === 0 && <p className="settings-hint">{t("None. New chat → Incognito chat starts one.")}</p>}
       {sessions.map((s) => (
         <div className="archived-item" key={s.id}>
           <button className="archived-open" onClick={() => onOpen(s.id)}>
-            <span className="archived-title">{s.title || "Untitled"}</span>
-            <span className="archived-project">{s.pinned ? "pinned" : `${left(s)}d left`}</span>
+            <span className="archived-title">{s.title || t("Untitled")}</span>
+            <span className="archived-project">{s.pinned ? t("pinned") : t("{n}d left", { n: left(s) })}</span>
           </button>
-          <button className="keep-btn" title="Keep it: into Recents" onClick={() => onKeep(s.id)}>
-            Keep
+          <button className="keep-btn" title={t("Keep it: into Recents")} onClick={() => onKeep(s.id)}>
+            {t("Keep")}
           </button>
-          <button className="icon-btn" title="Delete" onClick={() => onDelete(s.id)}>
+          <button className="icon-btn" title={t("Delete")} onClick={() => onDelete(s.id)}>
             <Trash2 />
           </button>
         </div>
       ))}
     </div>
+  )
+}
+
+/** Light or dark: on the main page and above the themes. */
+function AppearanceSwitch({ value, onChange }: { value: Appearance; onChange: (value: Appearance) => void }) {
+  return (
+    <Segmented<Appearance>
+      value={value}
+      options={[
+        ["light", t("Light"), <Sun key="s" />],
+        ["dark", t("Dark"), <Moon key="m" />],
+      ]}
+      onChange={onChange}
+    />
   )
 }
 

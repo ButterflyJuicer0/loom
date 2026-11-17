@@ -1,6 +1,7 @@
 import { ChevronRight, Plus, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { addBossLine, bossProfile, deleteBossLine, updateBossLine, type BossLine } from "./api"
+import { t } from "./i18n"
 import { isComposing } from "./ime"
 import "./Boss.css"
 
@@ -14,8 +15,8 @@ export function BossRow({ onOpen }: { onOpen: () => void }) {
   return (
     <div className="settings-row archived">
       <button className="settings-text archived-head" onClick={onOpen}>
-        <span className="settings-label">Boss profile</span>
-        <span className="settings-hint">What every employee knows about you.</span>
+        <span className="settings-label">{t("Boss profile")}</span>
+        <span className="settings-hint">{t("What every employee knows about you.")}</span>
         <ChevronRight className="archived-fold" />
       </button>
     </div>
@@ -51,10 +52,10 @@ export function BossPage() {
   return (
     <div className="boss-page">
       <div className="settings-hint boss-intro">
-        Tell any employee something about yourself and it lands here, for all of them, from their next wake-up.
+        {t("Tell any employee something about yourself and it lands here, for all of them, from their next wake-up.")}
       </div>
       {error && <div className="boss-error">{error}</div>}
-      {lines?.length === 0 && <div className="settings-hint">Nothing yet.</div>}
+      {lines?.length === 0 && <div className="settings-hint">{t("Nothing yet.")}</div>}
       {lines?.map((line) =>
         editing === line.id ? (
           <EditLine
@@ -76,7 +77,7 @@ export function BossPage() {
           <button key={line.id} className="boss-line" onClick={() => setEditing(line.id)}>
             <span className="boss-text">{line.text}</span>
             <span className="boss-meta">
-              {day(line.at)} · {line.by_name ? `told ${line.by_name}` : "you wrote it"}
+              {day(line.at)} · {line.by_name ? t("told {name}", { name: line.by_name }) : t("you wrote it")}
             </span>
           </button>
         ),
@@ -118,15 +119,15 @@ function EditLine({
         }}
       />
       <div className="boss-actions">
-        <button className="boss-delete" onClick={onDelete} title="Delete this line">
-          <Trash2 /> Delete
+        <button className="boss-delete" onClick={onDelete} title={t("Delete this line")}>
+          <Trash2 /> {t("Delete")}
         </button>
         <span className="boss-spacer" />
         <button className="boss-button" onClick={onCancel}>
-          Cancel
+          {t("Cancel")}
         </button>
         <button className="boss-button strong" disabled={!text.trim()} onClick={() => onSave(text.trim())}>
-          Save
+          {t("Save")}
         </button>
       </div>
     </div>
@@ -152,7 +153,7 @@ function AddLine({ onAdd }: { onAdd: (text: string) => Promise<boolean> }) {
     <div className="boss-add">
       <input
         value={text}
-        placeholder="Add a line"
+        placeholder={t("Add a line")}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
           if (isComposing(e)) return
@@ -162,7 +163,7 @@ function AddLine({ onAdd }: { onAdd: (text: string) => Promise<boolean> }) {
           }
         }}
       />
-      <button className="icon-btn" onClick={send} disabled={!text.trim() || busy} title="Add">
+      <button className="icon-btn" onClick={send} disabled={!text.trim() || busy} title={t("Add")}>
         <Plus />
       </button>
     </div>

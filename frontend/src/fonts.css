@@ -29,3 +29,15 @@
   font-display: block;
   src: url("/fonts/MesloLGLNerdFontMono-BoldItalic.ttf") format("truetype");
 }
+
+
+/* For the pixel themes (--font-pixel in themes.css): Fusion Pixel, 12px,
+   proportional, Simplified Chinese — SIL Open Font License 1.1
+   (public/fonts/FusionPixel-OFL.txt). Fetched only by a page that uses it. */
+@font-face {
+  font-family: "Fusion Pixel";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/FusionPixel-12px-zh_hans.woff2") format("woff2");
+}

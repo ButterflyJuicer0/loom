@@ -5,6 +5,7 @@ import { createProject, isArchived, relaySession, type AgentBackend, type AgentI
 import { isComposing } from "./ime"
 import { BackendIcon } from "./BackendIcon"
 import { BACKENDS } from "./NewMenu"
+import { t } from "./i18n"
 
 /**
  * What can be done to one session, from the `…` on its row: rename, pin,
@@ -64,7 +65,7 @@ export function SessionMenu({
     setError(null)
     try {
       const r = await relaySession(session.id, text)
-      setSent(r.status === "queued" ? "Queued: it goes in when this turn ends." : "Sent.")
+      setSent(r.status === "queued" ? t("Queued: it goes in when this turn ends.") : t("Sent."))
       setMessage("")
       setTimeout(onClose, 1200)
     } catch (e) {
@@ -151,7 +152,7 @@ export function SessionMenu({
           {/* First: in Working it is what the menu is opened for most. */}
           {onDone && (
             <button role="menuitem" onClick={() => run(onDone)}>
-              <Check /> Done
+              <Check /> {t("Done")}
             </button>
           )}
           <button
@@ -161,25 +162,25 @@ export function SessionMenu({
               onRename()
             }}
           >
-            <Pencil /> Rename
+            <Pencil /> {t("Rename")}
           </button>
           <button role="menuitem" onClick={() => run(() => onPin(!session.pinned))}>
-            {session.pinned ? <PinOff /> : <Pin />} {session.pinned ? "Unpin" : "Pin"}
+            {session.pinned ? <PinOff /> : <Pin />} {session.pinned ? t("Unpin") : t("Pin")}
           </button>
           {onContinue && (
             // The tap carries it on as it is; the arrow picks another backend.
             <div className="new-menu-kind">
               <button role="menuitem" onClick={() => run(() => onContinue())}>
-                <CornerDownRight /> <span className="session-menu-label">Continue in new chat</span>
+                <CornerDownRight /> <span className="session-menu-label">{t("Continue in new chat")}</span>
               </button>
-              <button className="new-menu-more" title="Continue on another engine" onClick={() => setView("continue")}>
+              <button className="new-menu-more" title={t("Continue on another engine")} onClick={() => setView("continue")}>
                 <ChevronRight />
               </button>
             </div>
           )}
           {ownChat && (
             <button role="menuitem" onClick={() => setView("send")}>
-              <Send /> <span className="session-menu-label">Send a message…</span>
+              <Send /> <span className="session-menu-label">{t("Send a message…")}</span>
             </button>
           )}
           <div className="session-menu-sep" />
@@ -187,22 +188,22 @@ export function SessionMenu({
             role="menuitem"
             onClick={() => setView("move")}
             disabled={busy}
-            title={busy ? "Wait for the turn to end" : undefined}
+            title={busy ? t("Wait for the turn to end") : undefined}
           >
             {current ? (
               <>
-                <Folder /> Project <Scrolling text={current.name} />
+                <Folder /> {t("Project")} <Scrolling text={current.name} />
               </>
             ) : (
               <>
-                <FolderInput /> Move to project
+                <FolderInput /> {t("Move to project")}
               </>
             )}
             <ChevronRight className="session-menu-more" />
           </button>
           <div className="session-menu-sep" />
           <button role="menuitem" onClick={() => run(() => onArchive(!archived))}>
-            {archived ? <ArchiveRestore /> : <Archive />} {archived ? "Unarchive" : "Archive"}
+            {archived ? <ArchiveRestore /> : <Archive />} {archived ? t("Unarchive") : t("Archive")}
           </button>
           <button
             role="menuitem"
@@ -212,20 +213,20 @@ export function SessionMenu({
               onDelete()
             }}
           >
-            <Trash2 /> Delete
+            <Trash2 /> {t("Delete")}
           </button>
         </>
       ) : view === "send" ? (
         <div className="session-menu-send">
           <button role="menuitem" className="session-menu-back" onClick={() => setView("main")}>
-            <ChevronLeft /> Send to <Scrolling text={session.title ?? session.id} />
+            <ChevronLeft /> {t("Send to")} <Scrolling text={session.title ?? session.id} />
           </button>
           <div className="session-menu-sep" />
           <textarea
             autoFocus
             rows={4}
             value={message}
-            placeholder={busy ? "It is working: this waits for the turn to end." : "Write to this session without opening it."}
+            placeholder={busy ? t("It is working: this waits for the turn to end.") : t("Write to this session without opening it.")}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !isComposing(e)) {
@@ -237,14 +238,14 @@ export function SessionMenu({
           <div className="session-menu-send-row">
             <span className="session-menu-note">{sent ?? "⌘/Ctrl + Enter"}</span>
             <button className="text-btn" disabled={!message.trim() || sending || !!sent} onClick={() => void sendIt()}>
-              <Send /> {sending ? "Sending…" : "Send"}
+              <Send /> {sending ? t("Sending…") : t("Send")}
             </button>
           </div>
         </div>
       ) : view === "continue" && onContinue ? (
         <>
           <button role="menuitem" className="session-menu-back" onClick={() => setView("main")}>
-            <ChevronLeft /> Continue in new chat
+            <ChevronLeft /> {t("Continue in new chat")}
           </button>
           <div className="session-menu-sep" />
           {BACKENDS.map((b) => (
@@ -257,7 +258,7 @@ export function SessionMenu({
       ) : (
         <>
           <button role="menuitem" className="session-menu-back" onClick={() => setView("main")}>
-            <ChevronLeft /> Move to project
+            <ChevronLeft /> {t("Move to project")}
           </button>
           <div className="session-menu-sep" />
           {projects.map((p) => (
@@ -273,7 +274,7 @@ export function SessionMenu({
           ))}
           {newName === null ? (
             <button role="menuitem" onClick={() => setNewName("")}>
-              <FolderPlus /> <span className="session-menu-label">New project…</span>
+              <FolderPlus /> <span className="session-menu-label">{t("New project…")}</span>
             </button>
           ) : (
             <div className="session-menu-new-project">
@@ -281,7 +282,7 @@ export function SessionMenu({
               <input
                 autoFocus
                 value={newName}
-                placeholder="Project name"
+                placeholder={t("Project name")}
                 enterKeyHint="go"
                 disabled={creating}
                 onChange={(e) => setNewName(e.target.value)}
@@ -294,7 +295,7 @@ export function SessionMenu({
                 }}
               />
               <button className="text-btn" disabled={!newName.trim() || creating} onClick={() => void createAndMove()}>
-                {creating ? "Creating…" : "Create"}
+                {creating ? t("Creating…") : t("Create")}
               </button>
             </div>
           )}
@@ -302,12 +303,12 @@ export function SessionMenu({
             <>
               <div className="session-menu-sep" />
               <button role="menuitem" onClick={() => run(() => onMove(null))}>
-                <FolderMinus /> Remove from {current.name}
+                <FolderMinus /> {t("Remove from {name}", { name: current.name })}
               </button>
             </>
           )}
           <div className="session-menu-note">
-            It carries on in the project's workspace; files it already made stay where they are.
+            {t("It carries on in the project's workspace; files it already made stay where they are.")}
           </div>
         </>
       )}

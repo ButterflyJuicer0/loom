@@ -4,6 +4,7 @@ import { FitAddon } from "@xterm/addon-fit"
 import { Unicode11Addon } from "@xterm/addon-unicode11"
 import "@xterm/xterm/css/xterm.css"
 import { getSocket } from "./socket"
+import { t } from "./i18n"
 
 // Mirrors the local iTerm2 "Default" profile palette so index-colored output
 // (prompts, ls, TUIs) renders identically in the browser. The background,
@@ -155,7 +156,7 @@ export function Terminal({ sessionId, active }: Props) {
       channel
         .join()
         .receive("error", (resp) =>
-          term.write(`\r\n[join error] ${JSON.stringify(resp)}\r\n`),
+          term.write(`\r\n[${t("join error")}] ${JSON.stringify(resp)}\r\n`),
         )
     }
 

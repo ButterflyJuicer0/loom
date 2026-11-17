@@ -7,7 +7,7 @@
   --line: #16314f;
   --fg: #ecdef4;
   --fg-dim: #7f93a8;
-  --accent: #38ff9d;
+  --loom-accent: #38ff9d;
   --blue: #388eff;
   --red: #ff54b0;
   --mono: "MesloLGL Nerd Font Mono", Menlo, Monaco, monospace;
@@ -81,7 +81,7 @@
 }
 
 .brand {
-  color: var(--accent);
+  color: var(--loom-accent);
   font-weight: bold;
   letter-spacing: 1px;
 }
@@ -140,12 +140,12 @@
 
 .session.active {
   background: var(--bg-card);
-  box-shadow: inset 2px 0 0 var(--accent);
+  box-shadow: inset 2px 0 0 var(--loom-accent);
 }
 
 /* Walking the list with j/k; see the keys in App.tsx. */
 .session.cursor {
-  outline: 1px solid var(--accent);
+  outline: 1px solid var(--loom-accent);
   outline-offset: -1px;
 }
 
@@ -223,7 +223,7 @@
 }
 
 .dot.running {
-  background: var(--accent);
+  background: var(--loom-accent);
   animation: pulse 1.4s ease-in-out infinite;
 }
 
@@ -240,7 +240,7 @@
 
 /* A device that is connected. Steady, not pulsing: pulsing means working. */
 .dot.online {
-  background: var(--accent);
+  background: var(--loom-accent);
 }
 
 /* ── Devices ─────────────────────────────────────────────────────────────
@@ -282,7 +282,7 @@
 }
 
 .push-btn.on svg {
-  color: var(--accent);
+  color: var(--loom-accent);
 }
 
 .push-btn:disabled {
@@ -472,7 +472,7 @@
   padding: 8px;
   border-radius: 6px;
   background: var(--bg-card);
-  color: var(--accent);
+  color: var(--loom-accent);
   font-size: 0.846rem;
   word-break: break-all;
   user-select: all;
@@ -815,7 +815,7 @@
 }
 
 .tree-row.cursor {
-  outline: 1px solid var(--accent);
+  outline: 1px solid var(--loom-accent);
   outline-offset: -1px;
 }
 
@@ -1291,7 +1291,7 @@
 
 .which-key-key {
   min-width: 3.5rem;
-  color: var(--accent);
+  color: var(--loom-accent);
 }
 
 .key-help-hint {
@@ -1412,7 +1412,7 @@
   padding: 6px 8px;
   border-radius: 6px;
   background: var(--bg-card);
-  color: var(--accent);
+  color: var(--loom-accent);
   font-size: 0.846rem;
   word-break: break-all;
 }
@@ -1740,7 +1740,7 @@
 
 .project-row.holds-active .session-label,
 .project-row.holds-active .project-icon {
-  color: var(--accent);
+  color: var(--loom-accent);
 }
 
 .project-new-row {
@@ -1945,9 +1945,9 @@
 }
 
 .dsess-filter.on {
-  border-color: var(--accent, var(--blue));
+  border-color: var(--loom-accent, var(--blue));
   color: var(--fg);
-  background: color-mix(in srgb, var(--accent, var(--blue)) 14%, transparent);
+  background: color-mix(in srgb, var(--loom-accent, var(--blue)) 14%, transparent);
 }
 
 .dsess-group {
@@ -2008,8 +2008,8 @@
 }
 
 .dsess-card.on {
-  border-color: color-mix(in srgb, var(--accent, var(--blue)) 50%, transparent);
-  background: color-mix(in srgb, var(--accent, var(--blue)) 10%, transparent);
+  border-color: color-mix(in srgb, var(--loom-accent, var(--blue)) 50%, transparent);
+  background: color-mix(in srgb, var(--loom-accent, var(--blue)) 10%, transparent);
 }
 
 .dsess-card-top {
@@ -2256,7 +2256,7 @@
   display: flex;
   align-items: flex-start;
   gap: 5px;
-  color: var(--accent, var(--blue));
+  color: var(--loom-accent, var(--blue));
   font-size: 0.846rem;
   line-height: 1.4;
 }
@@ -2301,7 +2301,7 @@
 .dsess-go {
   padding: 5px 12px;
   border-radius: 8px;
-  background: var(--accent, var(--blue));
+  background: var(--loom-accent, var(--blue));
   color: var(--bg);
   font-weight: 600;
 }

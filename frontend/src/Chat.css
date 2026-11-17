@@ -227,16 +227,16 @@
   align-items: center;
   gap: 4px;
   padding: 3px 9px;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, var(--bg-card));
+  color: var(--loom-accent);
+  background: color-mix(in srgb, var(--loom-accent) 12%, var(--bg-card));
 }
 
 .chip.button.terminal-toggle:hover {
-  background: color-mix(in srgb, var(--accent) 22%, var(--bg-card));
+  background: color-mix(in srgb, var(--loom-accent) 22%, var(--bg-card));
 }
 
 .chip.button.terminal-toggle.on {
-  background: var(--accent);
+  background: var(--loom-accent);
   color: var(--bg);
 }
 
@@ -276,7 +276,7 @@
 }
 
 .chip.status.running {
-  color: var(--accent);
+  color: var(--loom-accent);
 }
 
 .chip.status.interrupted {
@@ -516,7 +516,7 @@
 /* The caret is how you can tell a live stream from a finished message. */
 .bubble.assistant.live::after {
   content: "▌";
-  color: var(--accent);
+  color: var(--loom-accent);
   animation: blink 1s step-start infinite;
 }
 
@@ -709,7 +709,7 @@ pre.code {
 .question {
   align-self: stretch;
   padding: 10px 12px;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--loom-accent);
   border-radius: 8px;
   background: #04221a;
   line-height: 1.5;
@@ -724,17 +724,17 @@ pre.code {
 
 .option {
   padding: 4px 10px;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--loom-accent);
   border-radius: 12px;
   background: transparent;
-  color: var(--accent);
+  color: var(--loom-accent);
   font-family: var(--mono);
   font-size: 0.923rem;
   cursor: pointer;
 }
 
 .option:hover {
-  background: var(--accent);
+  background: var(--loom-accent);
   color: var(--bg);
 }
 
@@ -948,7 +948,7 @@ pre.code {
 }
 
 .command-menu .name {
-  color: var(--accent);
+  color: var(--loom-accent);
 }
 
 .command-menu .hint {
@@ -1268,7 +1268,7 @@ pre.code {
 }
 
 .file-ext {
-  color: var(--accent);
+  color: var(--loom-accent);
   font-size: 0.7rem;
   font-weight: 600;
   line-height: 1;
@@ -1393,12 +1393,12 @@ pre.code {
 /* Output still streaming out of a running tool. Marked so a stalled build
    looks different from a finished one. */
 .tool-output.live {
-  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--loom-accent);
 }
 
 .tool-output.live::after {
   content: "▍";
-  color: var(--accent);
+  color: var(--loom-accent);
   animation: pulse 1.1s ease-in-out infinite;
 }
 
@@ -1474,7 +1474,7 @@ h3.md-h {
   display: inline-block;
   width: 1.4em;
   vertical-align: -0.125em;
-  color: var(--accent);
+  color: var(--loom-accent);
 }
 
 .md-quote {

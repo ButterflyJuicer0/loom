@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { DeviceSessionsDialog } from "./DeviceSessions"
 import { DEVICE_ICONS, DeviceIcon, ICON_LABELS, deviceIcon } from "./DeviceIcon"
+import { t } from "./i18n"
 import { isComposing } from "./ime"
 import {
   androidInstall,
@@ -90,9 +91,9 @@ export function DevicesDialog({
   const remove = async (device: Device) => {
     const working = employees.filter((e) => e.workstation === device.id).map((e) => e.name)
     const stops = working.length
-      ? `\n\nIt is the workstation of ${working.join(", ")}, who will stop working until given another.`
+      ? "\n\n" + t("It is the workstation of {names}, who will stop working until given another.", { names: working.join(t(", ")) })
       : ""
-    if (!confirm(`Remove ${device.name}? loom-node uninstalls itself from it: right away if it is online, otherwise the next time it connects.${stops}`)) return
+    if (!confirm(t("Remove {name}? loom-node uninstalls itself from it: right away if it is online, otherwise the next time it connects.", { name: device.name }) + stops)) return
     try {
       await deleteDevice(device.id)
       if (install?.id === device.id) setInstall(null)
@@ -117,10 +118,10 @@ export function DevicesDialog({
 
   return createPortal(
     <div className="modal-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal devices" role="dialog" aria-label="Devices">
+      <div className="modal devices" role="dialog" aria-label={t("Devices")}>
         <div className="modal-head">
-          <span>Devices</span>
-          <button className="icon-btn" onClick={onClose} title="Close">
+          <span>{t("Devices")}</span>
+          <button className="icon-btn" onClick={onClose} title={t("Close")}>
             <X />
           </button>
         </div>
@@ -128,8 +129,7 @@ export function DevicesDialog({
         <div className="device-list">
           {devices.length === 0 && (
             <div className="device-empty">
-              No devices yet. Add your Mac, PC or a WSL box, run the command it
-              gives you there, and agents can run commands on it.
+              {t("No devices yet. Add your Mac, PC or a WSL box, run the command it gives you there, and agents can run commands on it.")}
             </div>
           )}
           {groupDevices(devices).map((g) => (
@@ -166,13 +166,13 @@ export function DevicesDialog({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="name, e.g. mac"
+            placeholder={t("name, e.g. mac")}
             autoCapitalize="off"
             autoCorrect="off"
             spellCheck={false}
           />
           <button type="submit" className="text-btn" disabled={name.trim() === "" || adding}>
-            {adding ? "Adding…" : "Add"}
+            {adding ? t("Adding…") : t("Add")}
           </button>
         </form>
       </div>
@@ -205,9 +205,9 @@ function groupDevices(devices: Device[]): { label: string; devices: Device[] }[]
   }
   for (const d of sorted.filter((d) => d.online)) {
     const i = deviceIcon(d)
-    push(i === null ? "Other" : ICON_LABELS[i], d)
+    push(i === null ? t("Other") : ICON_LABELS[i], d)
   }
-  for (const d of sorted.filter((d) => !d.online)) push("Offline", d)
+  for (const d of sorted.filter((d) => !d.online)) push(t("Offline"), d)
   return groups
 }
 
@@ -217,7 +217,7 @@ function groupDevices(devices: Device[]): { label: string; devices: Device[] }[]
  */
 function IconPicker({ value, onChange }: { value: Device["icon"]; onChange: (icon: Device["icon"]) => void }) {
   return (
-    <div className="device-icons" role="radiogroup" aria-label="Icon">
+    <div className="device-icons" role="radiogroup" aria-label={t("Icon")}>
       {DEVICE_ICONS.map((i) => (
         <button
           key={i}
@@ -263,7 +263,7 @@ function DeviceRow({
     <div className="device">
       <span
         className={"dot" + (device.online ? " online" : "")}
-        title={device.online ? "online" : "offline"}
+        title={device.online ? t("online") : t("offline")}
       />
       <DeviceIcon icon={deviceIcon(device)} />
       <div className="device-body">
@@ -286,7 +286,7 @@ function DeviceRow({
         ) : (
           <span
             className="device-name"
-            title="Double-click to rename"
+            title={t("Double-click to rename")}
             onDoubleClick={() => {
               setDraft(device.name)
               setEditing(true)
@@ -300,14 +300,14 @@ function DeviceRow({
         </span>
       </div>
       {device.online && device.os !== "windows" && device.os !== "android" && (
-        <button className="device-action" onClick={onSessions} title="Claude Code and Codex sessions on this device">
-          sessions
+        <button className="device-action" onClick={onSessions} title={t("Claude Code and Codex sessions on this device")}>
+          {t("sessions")}
         </button>
       )}
-      <button className="device-action" onClick={onReinstall} title="New install command (replaces this device's token)">
-        install
+      <button className="device-action" onClick={onReinstall} title={t("New install command (replaces this device's token)")}>
+        {t("install")}
       </button>
-      <button className="session-del device-del" onClick={onRemove} title="Remove device">
+      <button className="session-del device-del" onClick={onRemove} title={t("Remove device")}>
         <X />
       </button>
     </div>
@@ -342,7 +342,7 @@ function InstallBox({ code, onDone }: { code: string; onDone: () => void }) {
       <div className="install-system">
         <span />
         <button className="text-btn" onClick={() => copy(text)}>
-          {copied === text ? "Copied" : "Copy"}
+          {copied === text ? t("Copied") : t("Copy")}
         </button>
       </div>
       <code className="install-command" onClick={(e) => selectAll(e.currentTarget)}>
@@ -367,14 +367,14 @@ function InstallBox({ code, onDone }: { code: string; onDone: () => void }) {
 
       {tab === "unix" && (
         <>
-          <div className="install-hint">Run in a terminal — works once, within 2 minutes:</div>
+          <div className="install-hint">{t("Run in a terminal — works once, within 2 minutes:")}</div>
           {block(unix.command)}
         </>
       )}
 
       {tab === "windows" && (
         <>
-          <div className="install-hint">Run in PowerShell — works once, within 2 minutes:</div>
+          <div className="install-hint">{t("Run in PowerShell — works once, within 2 minutes:")}</div>
           {block(windows.command)}
         </>
       )}
@@ -382,11 +382,11 @@ function InstallBox({ code, onDone }: { code: string; onDone: () => void }) {
       {tab === "android" && (
         <>
           <div className="install-hint">
-            Install the{" "}
+            {t("Install the")}{" "}
             <a href={android.appUrl} target="_blank" rel="noreferrer">
-              Loom Node app
+              {t("Loom Node app")}
             </a>
-            , open it, and enter this code:
+            {t(", open it, and enter this code:")}
           </div>
           {block(code)}
         </>
@@ -394,7 +394,7 @@ function InstallBox({ code, onDone }: { code: string; onDone: () => void }) {
 
       <div className="install-actions">
         <button className="text-btn" onClick={onDone}>
-          Done
+          {t("Done")}
         </button>
       </div>
     </div>
@@ -410,12 +410,12 @@ function selectAll(el: HTMLElement) {
 }
 
 function seen(device: Device): string {
-  if (device.online) return "online"
-  if (!device.last_seen_at) return "never connected"
+  if (device.online) return t("online")
+  if (!device.last_seen_at) return t("never connected")
   const mins = Math.floor((Date.now() - Date.parse(device.last_seen_at)) / 60000)
-  if (mins < 1) return "seen just now"
-  if (mins < 60) return `seen ${mins}m ago`
+  if (mins < 1) return t("seen just now")
+  if (mins < 60) return t("seen {n}m ago", { n: mins })
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `seen ${hours}h ago`
-  return `seen ${Math.floor(hours / 24)}d ago`
+  if (hours < 24) return t("seen {n}h ago", { n: hours })
+  return t("seen {n}d ago", { n: Math.floor(hours / 24) })
 }

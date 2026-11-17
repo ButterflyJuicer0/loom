@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { searchSessions, type AgentInfo, type SearchHit } from "./api"
 import { lastActive } from "./useLobby"
+import { t } from "./i18n"
 
 /**
  * ChatGPT's search: the sidebar's button opens it over everything. Empty, it
@@ -71,7 +72,7 @@ export function SearchSheet({
               ref={input}
               type="search"
               value={query}
-              placeholder="Search chats"
+              placeholder={t("Search chats")}
               enterKeyHint="search"
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
@@ -81,17 +82,17 @@ export function SearchSheet({
             />
           </label>
           <button className="search-cancel" onClick={onClose}>
-            Cancel
+            {t("Cancel")}
           </button>
         </div>
         <div className="search-results">
-          {!q && <div className="search-heading">Recents</div>}
+          {!q && <div className="search-heading">{t("Recents")}</div>}
           {rows.map(({ session, snippet }) => (
             <button key={session.id} className="search-row" onClick={() => pick(session.id)}>
               <span className="search-title">
                 <Marked text={session.title ?? session.id} query={q} />
               </span>
-              {session.archived_at != null && <span className="search-archived">archived</span>}
+              {session.archived_at != null && <span className="search-archived">{t("archived")}</span>}
               {snippet && (
                 <span className="search-snippet">
                   <Marked text={snippet} query={q} />
@@ -99,7 +100,7 @@ export function SearchSheet({
               )}
             </button>
           ))}
-          {q && hits !== null && rows.length === 0 && <div className="search-empty">No chats mention “{q}”.</div>}
+          {q && hits !== null && rows.length === 0 && <div className="search-empty">{t("No chats mention “{q}”.", { q })}</div>}
         </div>
       </div>
     </div>,

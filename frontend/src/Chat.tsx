@@ -14,6 +14,7 @@ import {
   HatGlasses,
   Inbox,
   Merge,
+  LoaderCircle,
   MessageSquare,
   Mic,
   Paperclip,
@@ -23,8 +24,10 @@ import {
   Plus,
   RotateCw,
   Share as ShareIcon,
+  Sparkles,
   Square,
   SquareTerminal,
+  Wrench,
   X,
 } from "lucide-react"
 import {
@@ -39,6 +42,8 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+  type ReactElement,
   type ReactNode,
 } from "react"
 import { Grabber } from "./Switcher"
@@ -47,6 +52,7 @@ import { openMeeting, stopMeeting } from "./meeting"
 import { createPortal } from "react-dom"
 import { EffortButton } from "./Effort"
 import { ModelList, modelLabel } from "./Model"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./components/ui/tooltip"
 import { Card as NoticeCard } from "./Notices"
 import {
   applySnapshot,
@@ -66,6 +72,7 @@ import { itemForAttachment, itemForOutput, itemForPath, type CanvasItem } from "
 import { BackendIcon } from "./BackendIcon"
 import { BACKENDS } from "./NewMenu"
 import { formatBytes } from "./format"
+import { t } from "./i18n"
 import { isComposing } from "./ime"
 import { Markdown, MessageCopy, OutputLink } from "./markdown"
 import { ShareView } from "./Share"
@@ -218,7 +225,7 @@ export function Chat({
   // Kept while the transcript is: the timeline follows the end whenever the
   // items change, so a fresh array on every render (the app's keys re-render
   // it) would pull it back down just after `gg` or `k` scrolled it up.
-  const items = useMemo(() => foldFinished(buildTimeline(transcript), busy), [transcript, busy])
+  const items = useMemo(() => foldFinished(buildTimeline(transcript, t), busy), [transcript, busy])
   const replies = useMemo(() => (busy ? null : currentReplies(items)), [items, busy])
   const [draft, setDraft] = useDraft(session.id, remoteDraft)
   const narrow = useNarrow()
@@ -232,7 +239,7 @@ export function Chat({
     (path: string, label: ReactNode) => {
       const item = itemForPath(path)
       return item ? (
-        <button type="button" className="md-download" title={`Show ${path}`} onClick={() => onOpenCanvas(item)}>
+        <button type="button" className="md-download" title={t("Show {name}", { name: path })} onClick={() => onOpenCanvas(item)}>
           {label}
         </button>
       ) : (
@@ -294,7 +301,7 @@ export function Chat({
       {...drop.handlers}
     >
       {drop.dragging && (
-        <div className="drop-note">drop to attach to this conversation</div>
+        <div className="drop-note">{t("drop to attach to this conversation")}</div>
       )}
 
       <div className="chat-top" ref={topRef}>
@@ -304,14 +311,14 @@ export function Chat({
           <button
             className={"icon-btn" + (narrow ? " glass" : "")}
             onClick={onToggleSidebar}
-            title="Show sidebar"
+            title={t("Show sidebar")}
           >
             {narrow ? <TwoLines /> : <PanelLeft />}
           </button>
         )}
 
         {project && (
-          <button className="chat-project" onClick={project.onOpen} title={`Back to ${project.name}`}>
+          <button className="chat-project" onClick={project.onOpen} title={t("Back to {name}", { name: project.name })}>
             <ChevronLeft />
             <span>{project.name}</span>
           </button>
@@ -339,40 +346,17 @@ export function Chat({
               onShare={() => setSharing(true)}
             />
           ) : (
-            <>
-          <button
-            className={"chip button terminal-toggle" + (terminalOpen ? " on" : "")}
-            onClick={onToggleTerminal}
-            title={
-              (terminalOpen ? "Hide" : "Show") +
-              ` terminals — ${terminalCount || "none"} running` +
-              " (they open in your home directory)"
-            }
-          >
-            <SquareTerminal />
-            {terminalCount > 0 && <span className="count">{terminalCount}</span>}
-          </button>
-          <button
-            className={"chip button canvas-toggle" + (canvasOpen ? " on" : "")}
-            onClick={onToggleCanvas}
-            title={(canvasOpen ? "Hide" : "Show") + " the canvas"}
-          >
-            <AppWindow />
-          </button>
-          {/* The rest, as on a phone: the model, continuing, keeping. */}
-          <PaneMenu
-            session={session}
-            panes={false}
-            terminalOpen={terminalOpen}
-            terminalCount={terminalCount}
-            onToggleTerminal={onToggleTerminal}
-            canvasOpen={canvasOpen}
-            onToggleCanvas={onToggleCanvas}
-            onContinue={onContinue}
-            onKeep={incognito?.onKeep}
-            onShare={() => setSharing(true)}
-          />
-            </>
+            <HeaderActions
+              session={session}
+              terminalOpen={terminalOpen}
+              terminalCount={terminalCount}
+              onToggleTerminal={onToggleTerminal}
+              canvasOpen={canvasOpen}
+              onToggleCanvas={onToggleCanvas}
+              onContinue={onContinue}
+              onKeep={incognito?.onKeep}
+              onShare={() => setSharing(true)}
+            />
           )}
         </div>
       </header>
@@ -383,10 +367,10 @@ export function Chat({
       {session.flagged_at && (
         <div className="chat-banner flagged continue-row">
           {session.kind && session.kind !== "incognito" ? (
-            "Stopped by a safety classifier; Loom goes on in a fresh session next time."
+            t("Stopped by a safety classifier; Loom goes on in a fresh session next time.")
           ) : (
             <>
-              Stopped by a safety classifier; later replies here may be too.
+              {t("Stopped by a safety classifier; later replies here may be too.")}
               {onContinue && !busy && <ContinueButton onContinue={onContinue} />}
             </>
           )}
@@ -504,12 +488,12 @@ function PinChip({ pinned, onPin }: { pinned: boolean; onPin: (pinned: boolean) 
       onClick={() => onPin(!pinned)}
       title={
         pinned
-          ? "Incognito, pinned: in Pinned, never deleted. Tap to unpin."
-          : "Incognito: no memory, not in Recents, deleted 30 days after its last message. Tap to pin."
+          ? t("Incognito, pinned: in Pinned, never deleted. Tap to unpin.")
+          : t("Incognito: no memory, not in Recents, deleted 30 days after its last message. Tap to pin.")
       }
     >
       <HatGlasses />
-      <span>{pinned ? "Unpin" : "Pin"}</span>
+      <span>{pinned ? t("Unpin") : t("Pin")}</span>
     </button>
   )
 }
@@ -526,7 +510,7 @@ function ContinueButton({ onContinue }: { onContinue: () => Promise<void> }) {
           onContinue().catch((e) => setState((e as Error).message))
         }}
       >
-        <CornerDownRight /> Continue in a new chat
+        <CornerDownRight /> {t("Continue in a new chat")}
       </button>
       {state !== "idle" && state !== "going" && <span className="failed">{state}</span>}
     </div>
@@ -563,7 +547,7 @@ function ReplyCard({
   const picked = replies.some((r) => lines.includes(r))
 
   return (
-    <div className="replies" role="group" aria-label="Suggested replies">
+    <div className="replies" role="group" aria-label={t("Suggested replies")}>
       {replies.map((reply) => {
         const on = lines.includes(reply)
         return (
@@ -580,7 +564,7 @@ function ReplyCard({
         )
       })}
       <button type="button" className="replies-send" disabled={!picked} onClick={onSend}>
-        Send
+        {t("Send")}
       </button>
     </div>
   )
@@ -643,20 +627,20 @@ function QuestionCard({
   const answered = picks.some((p) => p.length > 0)
 
   return (
-    <div className="replies questions" role="group" aria-label="Questions">
+    <div className="replies questions" role="group" aria-label={t("Questions")}>
       <div className="questions-head">
         <button
           type="button"
           className="questions-back"
           onClick={() => go(page - 1)}
           disabled={page === 0}
-          aria-label="Previous question"
+          aria-label={t("Previous question")}
         >
-          ‹ Back
+          ‹ {t("Back")}
         </button>
         <span className="questions-count">
           {page + 1}/{questions.length}
-          {questions[page]?.multi && " · Pick any"}
+          {questions[page]?.multi && " · " + t("Pick any")}
         </span>
       </div>
       <div
@@ -690,11 +674,11 @@ function QuestionCard({
       </div>
       {page < last ? (
         <button type="button" className="replies-send next" onClick={() => go(page + 1)}>
-          Next
+          {t("Next")}
         </button>
       ) : (
         <button type="button" className="replies-send" disabled={!answered} onClick={onSend}>
-          Send
+          {t("Send")}
         </button>
       )}
     </div>
@@ -729,22 +713,21 @@ function readAnswers(
   return { picks, rest }
 }
 
-/**
- * The terminals and the canvas on a phone, folded into one `…`: the header has
- * room for the title or for four buttons, not both. And the model, which swaps
- * the list in place, and a reload.
- */
 /** What meeting mode sent the agent, one line until opened. */
 function MeetingFold({ text, at }: { text: string; at?: number }) {
   const [open, setOpen] = useState(false)
   const lines = text.split("\n").filter((l) => /^\[[^\]]*\] /.test(l))
   const summary = text.startsWith("【会议模式开始】")
-    ? "Meeting started"
+    ? t("Meeting started")
     : text.startsWith("【会议取消】")
-      ? "Meeting cancelled"
+      ? t("Meeting cancelled")
       : text.includes("【会议结束】")
-        ? `Meeting ended${lines.length ? ` · ${lines.length} lines` : ""}`
-        : `Transcript · ${lines.length} line${lines.length === 1 ? "" : "s"}`
+        ? lines.length
+          ? t("Meeting ended · {n} lines", { n: lines.length })
+          : t("Meeting ended")
+        : lines.length === 1
+          ? t("Transcript · {n} line", { n: lines.length })
+          : t("Transcript · {n} lines", { n: lines.length })
   return (
     <div className={"meeting-fold" + (open ? " open" : "")}>
       <button className="meeting-fold-head" onClick={() => setOpen(!open)} aria-expanded={open}>
@@ -767,18 +750,220 @@ function MeetingItem({ sessionId, onPick }: { sessionId: string; onPick: () => v
     <button
       role="menuitem"
       disabled={elsewhere}
-      title={elsewhere ? "A meeting is running in another chat" : undefined}
+      title={elsewhere ? t("A meeting is running in another chat") : undefined}
       onClick={() => {
         onPick()
         void (here ? stopMeeting() : openMeeting(sessionId))
       }}
     >
       {here ? <Square /> : <Mic />}
-      {here ? "End meeting" : "Meeting mode"}
+      {here ? t("End meeting") : t("Meeting mode")}
     </button>
   )
 }
 
+/** A header button's name, opening under it on hover or keyboard focus. */
+function Tip({ label, children }: { label: string; children: ReactElement }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={8} collisionPadding={8} className="tw head-tip">
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+/**
+ * The header's actions on a desktop, each its own button with its name under
+ * it on hover: the model, the terminals, the canvas, continuing in a new chat,
+ * sharing, keeping (an incognito chat), meeting mode and a reload. The model
+ * and continuing open a short list; the rest act at once. A phone has no room
+ * and no hover, so there they stay folded in `PaneMenu`.
+ */
+function HeaderActions({
+  session,
+  terminalOpen,
+  terminalCount,
+  onToggleTerminal,
+  canvasOpen,
+  onToggleCanvas,
+  onContinue,
+  onKeep,
+  onShare,
+}: {
+  session: AgentInfo
+  terminalOpen: boolean
+  terminalCount: number
+  onToggleTerminal: () => void
+  canvasOpen: boolean
+  onToggleCanvas: () => void
+  onContinue?: (backend?: AgentBackend) => Promise<void>
+  onKeep?: () => void
+  onShare?: () => void
+}) {
+  // The list that is open, and where: under its button, right edges in line.
+  const [menu, setMenu] = useState<{ kind: "model" | "continue"; top: number; right: number } | null>(null)
+  const ref = useRef<HTMLDivElement>(null)
+  const meeting = useMeeting()
+  const meetingHere = meeting.sessionId === session.id && meeting.phase === "running"
+  const meetingElsewhere = meeting.phase === "running" && !meetingHere
+
+  useEffect(() => {
+    if (!menu) return
+    const away = (e: PointerEvent) => {
+      if (ref.current?.contains(e.target as Node)) return
+      if ((e.target as Element | null)?.closest?.(".head-btn[aria-haspopup]")) return
+      setMenu(null)
+    }
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenu(null)
+    document.addEventListener("pointerdown", away)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("pointerdown", away)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [menu])
+
+  const toggle = (kind: "model" | "continue") => (e: ReactMouseEvent<HTMLButtonElement>) => {
+    if (menu?.kind === kind) return setMenu(null)
+    const r = e.currentTarget.getBoundingClientRect()
+    setMenu({ kind, top: r.bottom + 4, right: window.innerWidth - r.right })
+  }
+
+  const terminalTip = terminalCount
+    ? terminalOpen
+      ? t("Hide terminals — {n} running (they open in your home directory)", { n: terminalCount })
+      : t("Show terminals — {n} running (they open in your home directory)", { n: terminalCount })
+    : terminalOpen
+      ? t("Hide terminals — none running (they open in your home directory)")
+      : t("Show terminals — none running (they open in your home directory)")
+  const modelTip = t("Model: {name}", { name: modelLabel(session.model) })
+  const canvasTip = canvasOpen ? t("Hide the canvas") : t("Show the canvas")
+  const meetingTip = meetingElsewhere
+    ? t("A meeting is running in another chat")
+    : meetingHere
+      ? t("End meeting")
+      : t("Meeting mode")
+
+  return (
+    <TooltipProvider delayDuration={120} skipDelayDuration={400}>
+      <Tip label={modelTip}>
+        <button
+          className={"chip button head-btn" + (menu?.kind === "model" ? " on" : "")}
+          aria-label={modelTip}
+          aria-haspopup="menu"
+          aria-expanded={menu?.kind === "model"}
+          onClick={toggle("model")}
+        >
+          <Cpu />
+        </button>
+      </Tip>
+      <Tip label={terminalTip}>
+        <button
+          className={"chip button head-btn terminal-toggle" + (terminalOpen ? " on" : "")}
+          aria-label={terminalTip}
+          aria-pressed={terminalOpen}
+          onClick={onToggleTerminal}
+        >
+          <SquareTerminal />
+          {terminalCount > 0 && <span className="count">{terminalCount}</span>}
+        </button>
+      </Tip>
+      <Tip label={canvasTip}>
+        <button
+          className={"chip button head-btn canvas-toggle" + (canvasOpen ? " on" : "")}
+          aria-label={canvasTip}
+          aria-pressed={canvasOpen}
+          onClick={onToggleCanvas}
+        >
+          <AppWindow />
+        </button>
+      </Tip>
+      {onContinue && (
+        <Tip label={t("Continue in new chat")}>
+          <button
+            className={"chip button head-btn" + (menu?.kind === "continue" ? " on" : "")}
+            aria-label={t("Continue in new chat")}
+            aria-haspopup="menu"
+            aria-expanded={menu?.kind === "continue"}
+            onClick={toggle("continue")}
+          >
+            <CornerDownRight />
+          </button>
+        </Tip>
+      )}
+      {onShare && (
+        <Tip label={t("Share…")}>
+          <button className="chip button head-btn" aria-label={t("Share…")} onClick={onShare}>
+            <ShareIcon />
+          </button>
+        </Tip>
+      )}
+      {onKeep && (
+        <Tip label={t("Keep chat")}>
+          <button className="chip button head-btn" aria-label={t("Keep chat")} onClick={onKeep}>
+            <Inbox />
+          </button>
+        </Tip>
+      )}
+      <Tip label={meetingTip}>
+        {/* `aria-disabled`, not `disabled`: a disabled button gets no hover,
+            and the tip is what says why it does nothing. */}
+        <button
+          className={"chip button head-btn" + (meetingHere ? " on" : "")}
+          aria-label={meetingTip}
+          aria-disabled={meetingElsewhere}
+          onClick={() => {
+            if (meetingElsewhere) return
+            void (meetingHere ? stopMeeting() : openMeeting(session.id))
+          }}
+        >
+          {meetingHere ? <Square /> : <Mic />}
+        </button>
+      </Tip>
+      <Tip label={t("Reload")}>
+        <button className="chip button head-btn" aria-label={t("Reload")} onClick={() => location.reload()}>
+          <RotateCw />
+        </button>
+      </Tip>
+      {menu &&
+        createPortal(
+          <div className="session-menu pane-menu" role="menu" ref={ref} style={{ top: menu.top, right: menu.right }}>
+            {menu.kind === "model" ? (
+              <ModelList session={session} onDone={() => setMenu(null)} />
+            ) : (
+              onContinue && (
+                <>
+                  <div className="session-menu-note">{t("Continue in new chat")}</div>
+                  {BACKENDS.map((b) => (
+                    <button
+                      key={b.id}
+                      role="menuitem"
+                      onClick={() => {
+                        setMenu(null)
+                        void onContinue(b.id).catch(() => {})
+                      }}
+                    >
+                      <BackendIcon backend={b.id} />
+                      <span className="session-menu-label">{b.label}</span>
+                      {b.id === session.backend && <Check className="session-menu-more" />}
+                    </button>
+                  ))}
+                </>
+              )
+            )}
+          </div>,
+          document.body,
+        )}
+    </TooltipProvider>
+  )
+}
+
+/**
+ * The same on a phone, folded into one `…`: the header has room for the title
+ * or for the buttons, not both. The model swaps the list in place.
+ */
 function PaneMenu({
   session,
   terminalOpen,
@@ -789,11 +974,8 @@ function PaneMenu({
   onContinue,
   onKeep,
   onShare,
-  panes = true,
 }: {
   session: AgentInfo
-  /** Terminals and canvas too: a phone's header has no room for their own buttons. */
-  panes?: boolean
   terminalOpen: boolean
   terminalCount: number
   onToggleTerminal: () => void
@@ -826,8 +1008,8 @@ function PaneMenu({
   return (
     <>
       <button
-        className={"chip button pane-more" + (panes ? "" : " desk") + (panes && (terminalOpen || canvasOpen) ? " on" : "")}
-        title={panes ? "Model, terminals, canvas and more" : "Model and more"}
+        className={"chip button pane-more" + (terminalOpen || canvasOpen ? " on" : "")}
+        title={t("Model, terminals, canvas and more")}
         aria-haspopup="menu"
         aria-expanded={at !== null}
         onClick={(e) => {
@@ -837,7 +1019,7 @@ function PaneMenu({
         }}
       >
         <Ellipsis />
-        {panes && terminalCount > 0 && <span className="count">{terminalCount}</span>}
+        {terminalCount > 0 && <span className="count">{terminalCount}</span>}
       </button>
       {at &&
         createPortal(
@@ -847,7 +1029,7 @@ function PaneMenu({
             ) : view === "continue" && onContinue ? (
               <>
                 <button role="menuitem" className="session-menu-back" onClick={() => setView("main")}>
-                  <ChevronLeft /> Continue in new chat
+                  <ChevronLeft /> {t("Continue in new chat")}
                 </button>
                 <div className="session-menu-sep" />
                 {BACKENDS.map((b) => (
@@ -866,32 +1048,28 @@ function PaneMenu({
             <>
             <button role="menuitem" onClick={() => setView("model")}>
               <Cpu />
-              Model
+              {t("Model")}
               <span className="pane-menu-count">{modelLabel(session.model)}</span>
               <ChevronRight />
             </button>
             <div className="session-menu-sep" />
-            {panes && (
-              <>
-                <button role="menuitem" onClick={() => pick(onToggleTerminal)}>
-                  <SquareTerminal />
-                  {terminalOpen ? "Hide terminals" : "Terminals"}
-                  {terminalCount > 0 && <span className="pane-menu-count">{terminalCount}</span>}
-                </button>
-                <button role="menuitem" onClick={() => pick(onToggleCanvas)}>
-                  <AppWindow />
-                  {canvasOpen ? "Hide canvas" : "Canvas"}
-                </button>
-              </>
-            )}
+            <button role="menuitem" onClick={() => pick(onToggleTerminal)}>
+              <SquareTerminal />
+              {terminalOpen ? t("Hide terminals") : t("Terminals")}
+              {terminalCount > 0 && <span className="pane-menu-count">{terminalCount}</span>}
+            </button>
+            <button role="menuitem" onClick={() => pick(onToggleCanvas)}>
+              <AppWindow />
+              {canvasOpen ? t("Hide canvas") : t("Canvas")}
+            </button>
             {onContinue && (
               // The tap carries it on as it is; the arrow picks another backend.
               <div className="new-menu-kind">
                 <button role="menuitem" onClick={() => pick(() => void onContinue().catch(() => {}))}>
                   <CornerDownRight />
-                  <span className="session-menu-label">Continue in new chat</span>
+                  <span className="session-menu-label">{t("Continue in new chat")}</span>
                 </button>
-                <button className="new-menu-more" title="Continue on another engine" onClick={() => setView("continue")}>
+                <button className="new-menu-more" title={t("Continue on another engine")} onClick={() => setView("continue")}>
                   <ChevronRight />
                 </button>
               </div>
@@ -899,13 +1077,13 @@ function PaneMenu({
             {onShare && (
               <button role="menuitem" onClick={() => pick(onShare)}>
                 <ShareIcon />
-                Share…
+                {t("Share…")}
               </button>
             )}
             {onKeep && (
               <button role="menuitem" onClick={() => pick(onKeep)}>
                 <Inbox />
-                Keep chat
+                {t("Keep chat")}
               </button>
             )}
             <div className="session-menu-sep" />
@@ -914,7 +1092,7 @@ function PaneMenu({
             {/* A home-screen app has no reload of its own. */}
             <button role="menuitem" onClick={() => location.reload()}>
               <RotateCw />
-              Reload
+              {t("Reload")}
             </button>
             </>
             )}
@@ -1087,17 +1265,16 @@ function Timeline({
             // Scrolling up gets here first and loads more on its own; this is
             // for `gg`, which lands on it, and for anyone who would rather click.
             <button type="button" className="notice show-earlier" onClick={showMore}>
-              {hidden} earlier
+              {t("{n} earlier", { n: hidden })}
             </button>
           ) : truncatedBefore ? (
             <div className="notice">
-              earlier messages are no longer kept in memory (up to #
-              {truncatedBefore})
+              {t("earlier messages are no longer kept in memory (up to #{n})", { n: truncatedBefore })}
             </div>
           ) : null}
 
           {items.length === 0 && !before && (
-            <div className="empty">Send a message to start.</div>
+            <div className="empty">{t("Send a message to start.")}</div>
           )}
 
           {visible.map((item, n) => (
@@ -1118,8 +1295,8 @@ function Timeline({
         <button
           className="to-bottom"
           onClick={toBottom}
-          title="Jump to the latest"
-          aria-label="Jump to the latest"
+          title={t("Jump to the latest")}
+          aria-label={t("Jump to the latest")}
         >
           <ArrowDown />
         </button>
@@ -1158,7 +1335,7 @@ function EarlierDays({ ids, currentAt, open }: { ids: string[]; currentAt: numbe
     channel
       .join()
       .receive("ok", (snapshot: Snapshot) => {
-        const items = foldFinished(buildTimeline(applySnapshot(snapshot, emptyTranscript)), false)
+        const items = foldFinished(buildTimeline(applySnapshot(snapshot, emptyTranscript), t), false)
         heightRef.current = ref.current?.closest(".timeline")?.scrollHeight ?? null
         setDays((d) => [...d, { id: next, at: snapshot.meta.created_at, items }])
         setLoading(false)
@@ -1180,7 +1357,7 @@ function EarlierDays({ ids, currentAt, open }: { ids: string[]; currentAt: numbe
       <div ref={ref} hidden />
       {next && !failed && (
         <button type="button" className="notice show-earlier" onClick={load} disabled={loading}>
-          {loading ? "loading…" : "earlier days"}
+          {loading ? t("loading…") : t("earlier days")}
         </button>
       )}
       {[...days].reverse().map((day) => (
@@ -1250,13 +1427,13 @@ function ItemView({ item, sessionId, onAnswer }: ItemProps) {
             {item.files.length > 0 && <SentFiles sessionId={sessionId} files={item.files} />}
             {item.refs.length > 0 && <SentRefs refs={item.refs} />}
             {item.uploads && item.uploads.length > 0 && <LocalFiles files={item.uploads} sending={!item.failed} />}
-            {item.queued && <span className="tag">queued</span>}
-            {item.origin === "phone" && <span className="tag">phone</span>}
-            {item.origin === "cron" && <span className="tag"><ClockIcon /> cron</span>}
-            {item.origin === "dream" && <span className="tag"><Moon /> dream</span>}
-            {item.origin === "tidy" && <span className="tag"><Merge /> merged</span>}
-            {item.origin === "handoff" && <span className="tag"><Forward /> handed off</span>}
-            {item.origin === "relay" && <span className="tag"><Forward /> sent here</span>}
+            {item.queued && <span className="tag">{t("queued")}</span>}
+            {item.origin === "phone" && <span className="tag">{t("phone")}</span>}
+            {item.origin === "cron" && <span className="tag"><ClockIcon /> {t("cron")}</span>}
+            {item.origin === "dream" && <span className="tag"><Moon /> {t("dream")}</span>}
+            {item.origin === "tidy" && <span className="tag"><Merge /> {t("merged")}</span>}
+            {item.origin === "handoff" && <span className="tag"><Forward /> {t("handed off")}</span>}
+            {item.origin === "relay" && <span className="tag"><Forward /> {t("sent here")}</span>}
             {item.at && <Clock at={item.at} />}
           </div>
           {item.text.trim() !== "" && !item.pending && <MessageCopy text={item.text} />}
@@ -1278,8 +1455,12 @@ function ItemView({ item, sessionId, onAnswer }: ItemProps) {
     case "thinking":
       // Opus returns thinking blocks with empty text under the default
       // display, so the fallback is the normal case rather than an edge case.
+      // While it streams the words shimmer; see theme.css, "The agent's steps".
       return (
-        <div className="thinking">{item.text.trim() || "thought for a moment"}</div>
+        <div className={"thinking" + (item.streaming ? " live" : "")}>
+          <Sparkles />
+          <span className={item.streaming ? "shimmer" : undefined}>{item.text.trim() || t("thought for a moment")}</span>
+        </div>
       )
 
     case "tool":
@@ -1369,18 +1550,18 @@ function UnsentMark({ id, reason }: { id: string; reason: string }) {
 
   return (
     <span className="unsent">
-      <button ref={mark} className="unsent-mark" title={`Not sent: ${reason}`} aria-label="Not sent" onClick={toggle}>
+      <button ref={mark} className="unsent-mark" title={t("Not sent: {reason}", { reason })} aria-label={t("Not sent")} onClick={toggle}>
         !
       </button>
       {at &&
         createPortal(
           <span className="unsent-menu" role="menu" ref={menu} style={at}>
-            <span className="unsent-why">Not sent: {reason}</span>
+            <span className="unsent-why">{t("Not sent: {reason}", { reason })}</span>
             <button role="menuitem" onClick={() => (setAt(null), resend(id))}>
-              Resend
+              {t("Resend")}
             </button>
             <button role="menuitem" className="danger" onClick={() => (setAt(null), discard(id))}>
-              Delete
+              {t("Delete")}
             </button>
           </span>,
           document.body,
@@ -1404,10 +1585,10 @@ const when = (iso: string | null) =>
         minute: "2-digit",
         hour12: false,
       })
-    : "never"
+    : t("never")
 
 function CronJobs({ jobs }: { jobs: CronJob[] }) {
-  if (jobs.length === 0) return <div className="notice">no scheduled jobs</div>
+  if (jobs.length === 0) return <div className="notice">{t("no scheduled jobs")}</div>
 
   return (
     <div className="cron-jobs">
@@ -1419,8 +1600,8 @@ function CronJobs({ jobs }: { jobs: CronJob[] }) {
             <span className="cron-dim">UTC</span>
           </div>
           <div className="cron-dim">
-            → {job.target_title ?? job.target} · next {when(job.next_at)}
-            {job.last_run_at && <> · last {when(job.last_run_at)}</>}
+            → {job.target_title ?? job.target} · {t("next {when}", { when: when(job.next_at) })}
+            {job.last_run_at && <> · {t("last {when}", { when: when(job.last_run_at) })}</>}
           </div>
           {job.last_error && <div className="cron-error">{job.last_error}</div>}
           <div className="cron-dim cron-id">{job.id}</div>
@@ -1503,7 +1684,7 @@ function Title({
         <span
           ref={nameRef}
           className={"chat-name" + (shift > 0 ? " marquee" : "")}
-          title="Double-click to rename"
+          title={t("Double-click to rename")}
           style={
             shift > 0
               ? ({
@@ -1552,12 +1733,14 @@ function QueuePanel({
       <div className="queue-head">
         <span>
           {interrupted
-            ? `${n} message${n > 1 ? "s" : ""} parked — they go out with your next one`
-            : `${n} queued — sent when this turn ends`}
+            ? n > 1
+              ? t("{n} messages parked — they go out with your next one", { n })
+              : t("{n} message parked — they go out with your next one", { n })
+            : t("{n} queued — sent when this turn ends", { n })}
         </span>
         {onSteer && !interrupted && (
-          <button className="queue-steer" title="Put them into the running turn now" onClick={onSteer}>
-            Send now
+          <button className="queue-steer" title={t("Put them into the running turn now")} onClick={onSteer}>
+            {t("Send now")}
           </button>
         )}
       </div>
@@ -1566,7 +1749,7 @@ function QueuePanel({
           <span className="queue-text">{text}</span>
           <button
             className="queue-drop"
-            title="Discard this message"
+            title={t("Discard this message")}
             onClick={() => onDrop(i)}
           >
             <X />
@@ -1634,11 +1817,11 @@ function FileCard({
           <span className="file-name">{name}</span>
         </>
       )}
-      {loading && <span className="file-spinner" aria-label="loading" />}
+      {loading && <span className="file-spinner" aria-label={t("loading")} />}
       {onRemove && (
         <button
           className="file-drop"
-          title="Remove"
+          title={t("Remove")}
           onClick={(e) => {
             e.stopPropagation()
             onRemove()
@@ -1679,7 +1862,7 @@ function useResolved(image: string | Promise<string> | null): [string | null, bo
 
 function extension(name: string): string {
   const dot = name.lastIndexOf(".")
-  return dot > 0 && dot < name.length - 1 ? name.slice(dot + 1).slice(0, 5).toUpperCase() : "FILE"
+  return dot > 0 && dot < name.length - 1 ? name.slice(dot + 1).slice(0, 5).toUpperCase() : t("FILE")
 }
 
 /** A message's files still on this device: on their way, or not got through with it. */
@@ -1705,13 +1888,13 @@ function RefChip({ title, onClick, onRemove }: { title: string; onClick?: () => 
   return (
     <span
       className={"ref-chip" + (onClick ? " clickable" : "")}
-      title={onRemove ? `${title} — the agent reads it if it needs to` : title}
+      title={onRemove ? t("{title} — the agent reads it if it needs to", { title }) : title}
       onClick={onClick}
     >
       <MessageSquare />
       <span className="ref-chip-title">{title}</span>
       {onRemove && (
-        <button className="ref-chip-x" title="Remove" onClick={onRemove}>
+        <button className="ref-chip-x" title={t("Remove")} onClick={onRemove}>
           <X />
         </button>
       )}
@@ -1767,7 +1950,7 @@ function SentFile({ sessionId, file }: { sessionId: string; file: AgentFile }) {
       image={isThumbnail(file.content_type) ? blobUrl(attachmentUrl(sessionId, file.path)) : null}
       busy={state === "busy"}
       error={typeof state === "object" ? state.error : null}
-      title={`${item ? "Show" : "Download"} ${file.name} · ${formatBytes(file.size)}`}
+      title={`${item ? t("Show {name}", { name: file.name }) : t("Download {name}", { name: file.name })} · ${formatBytes(file.size)}`}
       onClick={item ? () => openCanvas(item) : download}
     />
   )
@@ -1821,18 +2004,20 @@ function OutputCard({ sessionId, file }: { sessionId: string; file: OutputFile }
   }
 
   const size = formatBytes(file.size)
-  const what = dir ? `${file.files} file${file.files === 1 ? "" : "s"} · ${size}` : size
+  const what = dir
+    ? `${file.files === 1 ? t("{n} file", { n: String(file.files) }) : t("{n} files", { n: String(file.files) })} · ${size}`
+    : size
 
   return (
     <FileCard
       name={name}
-      label={dir ? (file.index ? "PAGE" : "DIR") : undefined}
+      label={dir ? (file.index ? t("PAGE") : t("DIR")) : undefined}
       image={!dir && isThumbnail(file.content_type) ? blobUrl(outputUrl(sessionId, file.path)) : null}
       busy={state === "busy"}
       error={typeof state === "object" ? state.error : null}
       title={
-        `${item ? "Show" : dir ? "Download as a zip:" : "Download"} ${file.path} · ${what}` +
-        (file.updated ? " · updated" : "")
+        `${item ? t("Show {name}", { name: file.path }) : dir ? t("Download as a zip: {name}", { name: file.path }) : t("Download {name}", { name: file.path })} · ${what}` +
+        (file.updated ? " · " + t("updated") : "")
       }
       onClick={item ? () => openCanvas(item) : download}
     />
@@ -1873,7 +2058,7 @@ function DownloadLink({
     <button
       type="button"
       className={className + (state === "busy" ? " busy" : "") + (failed ? " failed" : "")}
-      title={failed ? state.error : `Download ${path}`}
+      title={failed ? state.error : t("Download {name}", { name: path })}
       onClick={start}
     >
       {label}
@@ -1898,12 +2083,13 @@ function ToolCard({
   const live = !result && item.streamed !== ""
 
   return (
-    <div className={"tool" + (result && !result.ok ? " failed" : "")}>
+    // `data-tool` is the tool's name, for a theme to give each its own picture.
+    <div className={"tool" + (result && !result.ok ? " failed" : "")} data-tool={item.name}>
       <div className="tool-head" onClick={() => setOpen((v) => !v)}>
         <span className="tool-name">{item.name}</span>
         <span className="tool-summary">{summary}</span>
         <span className="tool-state">
-          {result ? result.ok ? <Check /> : <X /> : "…"}
+          {result ? result.ok ? <Check className="tool-done" /> : <X /> : <LoaderCircle className="spin" />}
         </span>
       </div>
 
@@ -1944,20 +2130,34 @@ function ToolGroup({
   const running = item.steps.some((s) => s.kind === "tool" && s.result === null)
 
   return (
-    <div className={"tool group" + (open ? " open" : "") + (running ? " running" : "")}>
-      <div className="tool-head" onClick={() => setOpen((v) => !v)}>
-        <span className="tool-name">
-          {running ? "using" : "used"} {item.tools} tool{item.tools === 1 ? "" : "s"}
+    <div className={"tool group" + (open ? " open" : "") + (running ? " running" : "")} data-tool={names[0]}>
+      <div className="tool-head" role="button" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <span className="tool-icon">{running ? <LoaderCircle className="spin" /> : <Wrench />}</span>
+        <span className={"tool-name" + (running ? " shimmer" : "")}>
+          {running
+            ? item.tools === 1
+              ? t("using {n} tool", { n: item.tools })
+              : t("using {n} tools", { n: item.tools })
+            : item.tools === 1
+              ? t("used {n} tool", { n: item.tools })
+              : t("used {n} tools", { n: item.tools })}
         </span>
-        <span className="tool-summary">{names.join(", ")}</span>
+        <span className="tool-summary tool-chips">
+          {names.map((name) => (
+            <span key={name} className="tool-chip" data-tool={name}>
+              {name}
+            </span>
+          ))}
+        </span>
         <span className={"tool-state" + (item.failed > 0 ? " bad" : "")}>
           {item.failed > 0 && (
             <>
               {item.failed} <X />
             </>
           )}
-          {running ? "…" : item.failed > 0 ? null : <Check />}
-          {open ? <ChevronDown /> : <ChevronRight />}
+          {!running && item.failed === 0 && <Check className="tool-done" />}
+          {/* One mark that turns, rather than two that swap. */}
+          <ChevronRight className="tool-chevron" />
         </span>
       </div>
 
@@ -1980,21 +2180,29 @@ function TurnLine({ item }: { item: Extract<TimelineItem, { kind: "turn" }> }) {
     parts.push(
       item.contextWindow
         ? `${formatTokens(item.contextTokens)} / ${formatTokens(item.contextWindow)}`
-        : `${formatTokens(item.contextTokens)} ctx`,
+        : t("{n} ctx", { n: formatTokens(item.contextTokens) }),
     )
   }
+  const usage =
+    item.contextTokens > 0 && item.contextWindow ? Math.min(1, item.contextTokens / item.contextWindow) : null
   const model = item.model ? modelName(item.model) : null
   // Another model than asked for: Claude Code fell back, or the API answered
   // from another one. Said, not hidden in the footnote's gray.
   const off = model && item.expected && modelName(item.expected) !== model ? modelName(item.expected) : null
   return (
-    <div className="turn-line">
+    // `--usage` is how full the context is, 0 to 1, for a theme to draw as a
+    // gauge (a health bar, an energy bar); absent when the window is unknown.
+    <div
+      className="turn-line"
+      data-usage={usage === null ? undefined : Math.round(usage * 100)}
+      style={usage === null ? undefined : ({ "--usage": usage.toFixed(3) } as CSSProperties)}
+    >
       <Clock at={item.at} />
       {parts.map((part) => ` · ${part}`)}
       {model && " · "}
       {model && (
         <span className={"turn-model" + (off ? " off" : "")} title={item.model ?? undefined}>
-          {off ? `${model}, not ${off}` : model}
+          {off ? t("{model}, not {expected}", { model, expected: off }) : model}
         </span>
       )}
     </div>
@@ -2029,11 +2237,15 @@ function Working({ status, queued }: { status: string; queued: number }) {
   if (status !== "starting" && status !== "running") return null
   return (
     <div className={"working " + status} role="status">
-      <span className="working-dot" />
+      <span className="working-dots" aria-hidden>
+        <i />
+        <i />
+        <i />
+      </span>
       {/* `starting` is the backend booting — seconds for a cold Claude Code
           process. Saying so beats looking hung. */}
-      {status === "starting" ? "Starting…" : "Working…"}
-      {queued > 0 ? ` · ${queued} queued` : ""}
+      <span className="shimmer">{status === "starting" ? t("Starting…") : t("Working…")}</span>
+      {queued > 0 ? " · " + t("{n} queued", { n: queued }) : ""}
     </div>
   )
 }
@@ -2052,9 +2264,9 @@ function TwoLines() {
 // What a message can be instead of a prompt. `/compact` goes to the backend
 // (Codex's adapter turns it into an RPC); `/reload` and `/cron` are loom's own.
 const COMMANDS = [
-  { name: "/compact", hint: "summarize the conversation to free up context" },
-  { name: "/reload", hint: "reload Claude Code and Codex config: settings, MCP, skills" },
-  { name: "/cron", hint: "list every scheduled job" },
+  { name: "/compact", hint: t("summarize the conversation to free up context") },
+  { name: "/reload", hint: t("reload Claude Code and Codex config: settings, MCP, skills") },
+  { name: "/cron", hint: t("list every scheduled job") },
 ]
 
 // Only a message that *starts* with `/` is a command, and only while the first
@@ -2235,10 +2447,10 @@ function Composer({
           enterKeyHint="send"
           placeholder={
             busy
-              ? "Queue a message for when this turn ends…"
+              ? t("Queue a message for when this turn ends…")
               : interrupted
-                ? "Stopped — type to continue"
-                : "Message the agent…"
+                ? t("Stopped — type to continue")
+                : t("Message the agent…")
           }
           onChange={(e) => {
             setText(e.target.value)
@@ -2313,7 +2525,7 @@ function Composer({
             <button
               className="composer-btn stop"
               onClick={onInterrupt}
-              title="Stop the turn"
+              title={t("Stop the turn")}
             >
               <Square fill="currentColor" />
             </button>
@@ -2327,12 +2539,12 @@ function Composer({
               disabled={!sendable}
               title={
                 attachments.preparing
-                  ? "Preparing…"
+                  ? t("Preparing…")
                   : interrupted
-                    ? "Continue"
+                    ? t("Continue")
                     : busy
-                      ? "Send — it reaches the agent mid-turn"
-                      : "Send"
+                      ? t("Send — it reaches the agent mid-turn")
+                      : t("Send")
               }
             >
               <ArrowUp />
@@ -2389,7 +2601,7 @@ function PlusMenu({
     <div className="plus" ref={root}>
       <button
         className={"composer-btn attach" + (open ? " open" : "")}
-        title="Attach files or a chat — or drop files anywhere in the conversation"
+        title={t("Attach files or a chat — or drop files anywhere in the conversation")}
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
@@ -2399,12 +2611,12 @@ function PlusMenu({
         <div className="plus-pop" role="menu">
           <button role="menuitem" onClick={() => (setOpen(false), onFiles())}>
             <Paperclip />
-            <span className="session-menu-label">Files</span>
+            <span className="session-menu-label">{t("Files")}</span>
           </button>
           {recent.length > 0 && (
             <button role="menuitem" onClick={() => (setOpen(false), setChoosing(true))}>
               <MessageSquare />
-              <span className="session-menu-label">Reference a chat…</span>
+              <span className="session-menu-label">{t("Reference a chat…")}</span>
             </button>
           )}
         </div>
@@ -2454,23 +2666,24 @@ function ChatPicker({
 
   return createPortal(
     <div className="modal-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal chat-picker" role="dialog" aria-label="Reference a chat">
+      <div className="modal chat-picker" role="dialog" aria-label={t("Reference a chat")}>
         <div className="modal-head">
-          <span>Reference a chat</span>
-          <button className="icon-btn" title="Close" onClick={onClose}>
+          <span>{t("Reference a chat")}</span>
+          <button className="icon-btn" title={t("Close")} onClick={onClose}>
             <X />
           </button>
         </div>
         <input
           ref={input}
           className="chat-picker-search"
-          placeholder="Filter by title"
+          placeholder={t("Filter by title")}
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
         <div className="chat-picker-hint">
-          The agent gets where it is, and reads it only if it needs to.
-          {full && ` At most ${MAX_REFS} per message.`}
+          {full
+            ? t("The agent gets where it is, and reads it only if it needs to. At most {n} per message.", { n: MAX_REFS })
+            : t("The agent gets where it is, and reads it only if it needs to.")}
         </div>
         <div className="chat-picker-list">
           {shown.map((s) => {
@@ -2479,15 +2692,15 @@ function ChatPicker({
               <button
                 key={s.id}
                 disabled={on || full}
-                onClick={() => onPick({ id: s.id, title: s.title ?? "Untitled" })}
+                onClick={() => onPick({ id: s.id, title: s.title ?? t("Untitled") })}
               >
                 <MessageSquare />
-                <span className="session-menu-label">{s.title ?? "Untitled"}</span>
+                <span className="session-menu-label">{s.title ?? t("Untitled")}</span>
                 {on && <Check className="chat-picker-on" />}
               </button>
             )
           })}
-          {shown.length === 0 && <div className="chat-picker-none">No chat matches.</div>}
+          {shown.length === 0 && <div className="chat-picker-none">{t("No chat matches.")}</div>}
         </div>
       </div>
     </div>,
@@ -2577,7 +2790,7 @@ function toolSummary(name: string, input: Record<string, unknown>): string {
     case "Glob":
       return str("pattern")
     case "Grep":
-      return str("pattern") + (input.path ? ` in ${str("path")}` : "")
+      return input.path ? t("{pattern} in {path}", { pattern: str("pattern"), path: str("path") }) : str("pattern")
     case "WebFetch":
       return str("url")
     case "Task":
@@ -2589,7 +2802,7 @@ function toolSummary(name: string, input: Record<string, unknown>): string {
     case "shell":
       return (input.cwd ? `${str("cwd")} ` : "") + str("command")
     case "apply_patch":
-      return patchFiles(str("patch")).join(", ") || changedFiles(input) || "patch"
+      return patchFiles(str("patch")).join(", ") || changedFiles(input) || t("patch")
     case "web_search":
       return str("query")
 

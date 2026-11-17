@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from "r
 import { createPortal } from "react-dom"
 import type { AgentInfo } from "./api"
 import { unread } from "./Sidebar"
+import { t } from "./i18n"
 
 // How far up a card has to be thrown, or how fast, to count as Done.
 const THROW_PX = 90
@@ -119,7 +120,7 @@ export function Switcher({
               onTouchCancel={end}
             >
               <div className="switcher-title">
-                <span className={"dot " + s.status} title={s.status} />
+                <span className={"dot " + s.status} title={t(s.status)} />
                 <span className="switcher-label">{s.title ?? s.id}</span>
                 {unread(s) && <span className="session-unread" />}
               </div>
@@ -145,7 +146,7 @@ export function Switcher({
           ))}
         </div>
       )}
-      <div className="switcher-hint">Swipe a card up when it is done</div>
+      <div className="switcher-hint">{t("Swipe a card up when it is done")}</div>
     </div>,
     document.body,
   )
@@ -158,7 +159,7 @@ export function Switcher({
  */
 export function Grabber({ onOpen }: { onOpen: () => void }) {
   return (
-    <div className="grabber" role="button" aria-label="Switch between the sessions in Working" onClick={onOpen}>
+    <div className="grabber" role="button" aria-label={t("Switch between the sessions in Working")} onClick={onOpen}>
       <span />
     </div>
   )

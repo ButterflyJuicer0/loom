@@ -1,0 +1,1924 @@
+/* ── 蔚蓝 (Celeste) ───────────────────────────────────────────────────────
+   A tribute to the game, drawn after its own screens (tools/art/celeste.mjs).
+
+   By night it is the Prologue: a black-blue sky with stars and falling snow,
+   the cabin and its lamp post at the foot of the sidebar, ground with snow on
+   it and blue ice under the snow. By day it is Golden Ridge at dusk: a
+   periwinkle-to-pink sky in bands of cloud, pale peaks, the Summit's prayer
+   flags, purple rock.
+
+   What each thing is:
+     the page, the composer      a ledge: snow on top, ice (or rock) round it
+     what you said               the dialogue box, a portrait in it
+     menus, dialogs, questions   the same dark box with its twig corners
+     a group of tool calls       a zip mover: steel block, traffic light,
+                                 a block running its rail while it works
+     code                        a dream block
+     a quote, suggested replies,
+     cards                       postcards
+     a turn's end                a checkpoint's plaque, numbered
+     a list's dots               dash crystals
+     done / failed               a crystal heart / spikes
+     thinking / working          a golden feather / Madeline, her hair blue
+                                 and a dash's trail behind her
+     unread                      a strawberry with wings
+
+   Every selector starts `html[data-style="celeste"][data-theme]`: as specific
+   as themes.css's shapes, and after them, so these win. */
+
+html[data-style="celeste"] {
+  --c-sky: linear-gradient(180deg, #a9a4e2 0%, #cba2e0 26%, #eda4dc 52%, #f7c6e4 78%, #f8e2ec 100%);
+  --c-ground: #5c4888;
+  --c-snow: #d49ae6;
+  --c-terrain: url("./art/celeste-terrain.svg");
+  --c-ledge: url("./art/celeste-ledge.svg");
+  --c-metal: url("./art/celeste-metal.svg");
+  --c-girder: url("./art/celeste-girder.svg");
+  --c-girder-fg: #2a2148;
+  --c-girder-fill: #e6edf4;
+  --c-pip: #2c7fd6;
+  --c-plank: url("./art/celeste-plank.svg");
+  --c-postcard: url("./art/celeste-postcard.svg");
+  --c-key: #b02860;
+  --c-link: #2964aa;
+  --c-plaque: #484888;
+  --c-hi-a: #84ff54;
+  --c-hi-b: #fcff59;
+}
+
+html[data-style="celeste"][data-theme="dark"] {
+  --c-sky: linear-gradient(180deg, #03050f 0%, #070b1e 45%, #0d1430 100%);
+  --c-ground: #070a18;
+  --c-snow: #ffffff;
+  --c-terrain: url("./art/celeste-terrain-night.svg");
+  --c-ledge: url("./art/celeste-ledge-night.svg");
+  --c-metal: url("./art/celeste-metal-night.svg");
+  --c-girder: url("./art/celeste-girder-night.svg");
+  --c-girder-fg: #e8eefa;
+  --c-girder-fill: #1a2140;
+  --c-pip: #48b0f8;
+  --c-plank: url("./art/celeste-plank-night.svg");
+  --c-postcard: url("./art/celeste-postcard-night.svg");
+  --c-key: #90e8f8;
+  --c-link: #90e8f8;
+}
+
+/* ── 1. The sidebar and its ground ──────────────────────────────────── */
+
+html[data-style="celeste"][data-theme] .sidebar {
+  /* Positioned already: beside the page on a desktop, a drawer on a phone. */
+  isolation: isolate;
+  overflow: clip;
+  border-right: 0;
+  background:
+    url("./art/celeste-dusk.svg") left top / 320px 240px repeat-x,
+    var(--c-sky);
+}
+
+html[data-style="celeste"][data-theme="dark"] .sidebar {
+  background: var(--c-sky);
+}
+
+/* The quiet text of the sidebar, dark enough to read on the dusk's pink. */
+html[data-style="celeste"][data-theme="light"] .sidebar {
+  --fg-dim: #382a60;
+}
+
+/* Night: stars that blink. Dusk: nothing — the bands of cloud are the sky's. */
+html[data-style="celeste"][data-theme="dark"] .sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 9rem;
+  z-index: -1;
+  background: url("./art/celeste-stars.svg") 0 0 / 192px repeat;
+  animation: celeste-blink 2.4s steps(2, jump-none) infinite;
+  pointer-events: none;
+}
+
+@keyframes celeste-blink {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Night: snow falling past. Dusk: Golden Ridge's two clouds, going by. */
+html[data-style="celeste"][data-theme] .sidebar::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 3.2rem;
+  left: 0;
+  width: calc(100% + 360px);
+  height: 120px;
+  background: url("./art/celeste-clouds.svg") 0 0 / 360px 120px repeat-x;
+  opacity: 0.8;
+  animation: celeste-drift 90s steps(180) infinite;
+  pointer-events: none;
+}
+
+@keyframes celeste-drift {
+  to {
+    transform: translate3d(-360px, 0, 0);
+  }
+}
+
+html[data-style="celeste"][data-theme="dark"] .sidebar::after {
+  top: -312px;
+  right: -312px;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  background: var(--c-snow);
+  mask-image: url("./art/celeste-snow.svg");
+  mask-size: 312px 312px;
+  opacity: 0.7;
+  animation: celeste-snow-near 18s linear infinite;
+}
+
+/* The foot is the ground: snow along its top, the dark of a ledge's inside
+   (purple rock by day) under the buttons, and the scene standing on it. */
+html[data-style="celeste"][data-theme] .sidebar-foot:not(.dial) {
+  position: relative;
+  padding-top: 24px;
+  border-top: 0;
+  background:
+    var(--c-ledge) left top / 96px 20px repeat-x,
+    linear-gradient(var(--c-ground), var(--c-ground)) 0 6px / 100% 100% no-repeat;
+}
+
+html[data-style="celeste"][data-theme="light"] .sidebar-foot:not(.dial) {
+  --fg: #ffffff;
+  --fg-dim: #e6daf6;
+  --bg-card: #7a62a8;
+  --line: #8a70b8;
+  color: #ffffff;
+}
+
+html[data-style="celeste"][data-theme] .sidebar-foot:not(.dial)::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% - 2px);
+  height: 92px;
+  z-index: -1;
+  background:
+    url("./art/celeste-flags.svg") left bottom / 300px 92px no-repeat,
+    url("./art/celeste-ridge.svg") left bottom / 320px 80px repeat-x;
+  pointer-events: none;
+}
+
+html[data-style="celeste"][data-theme="dark"] .sidebar-foot:not(.dial)::before {
+  background:
+    url("./art/celeste-cabin.svg") left bottom / 300px 92px no-repeat,
+    url("./art/celeste-pines.svg") left 60px bottom / 192px 80px repeat-x;
+}
+
+/* The list stops above the scene, so no title is written on it. */
+html[data-style="celeste"][data-theme] .sidebar .session-list {
+  margin-bottom: 92px;
+}
+
+@media (max-width: 640px) {
+  /* A phone's drawer has no foot, only the floating "New chat": the ground
+     and the scene are the drawer's own. */
+  html[data-style="celeste"][data-theme] .drawer .sidebar {
+    background:
+      var(--c-ledge) left bottom calc(64px + env(safe-area-inset-bottom, 0px)) / 96px 20px repeat-x,
+      linear-gradient(var(--c-ground), var(--c-ground)) left bottom / 100% calc(78px + env(safe-area-inset-bottom, 0px)) no-repeat,
+      url("./art/celeste-flags.svg") left bottom calc(82px + env(safe-area-inset-bottom, 0px)) / 300px 92px no-repeat,
+      url("./art/celeste-ridge.svg") left bottom calc(82px + env(safe-area-inset-bottom, 0px)) / 320px 80px repeat-x,
+      url("./art/celeste-dusk.svg") left top / 320px 240px repeat-x,
+      var(--c-sky);
+  }
+
+  html[data-style="celeste"][data-theme="dark"] .drawer .sidebar {
+    background:
+      var(--c-ledge) left bottom calc(64px + env(safe-area-inset-bottom, 0px)) / 96px 20px repeat-x,
+      linear-gradient(var(--c-ground), var(--c-ground)) left bottom / 100% calc(78px + env(safe-area-inset-bottom, 0px)) no-repeat,
+      url("./art/celeste-cabin.svg") left bottom calc(82px + env(safe-area-inset-bottom, 0px)) / 300px 92px no-repeat,
+      url("./art/celeste-pines.svg") left 60px bottom calc(82px + env(safe-area-inset-bottom, 0px)) / 192px 80px repeat-x,
+      var(--c-sky);
+  }
+
+  html[data-style="celeste"][data-theme] .drawer .sidebar .session-list {
+    margin-bottom: calc(176px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 8px;
+  }
+}
+
+@media (min-width: 641px) {
+  /* On a desktop the sky is the whole window's, the sidebar a part of it. */
+  html[data-style="celeste"][data-theme] .app {
+    background:
+      url("./art/celeste-dusk.svg") left top / 320px 240px repeat-x,
+      var(--c-sky);
+  }
+
+  html[data-style="celeste"][data-theme="dark"] .app {
+    background: var(--c-sky);
+  }
+
+  html[data-style="celeste"][data-theme] .sidebar {
+    background: transparent;
+  }
+
+  /* The page itself is a ledge: snow lying along its top, ice down its sides. */
+  html[data-style="celeste"][data-theme] .main {
+    border-style: solid;
+    border-color: transparent;
+    border-width: 12px 8px 8px;
+    border-image: var(--c-terrain) 6 4 4 4 / 12px 8px 8px / 0 round;
+    border-radius: 0;
+    background-clip: padding-box;
+    box-shadow: none;
+  }
+}
+
+html[data-style="celeste"][data-theme] :is(.placeholder, .loading) {
+  background: transparent;
+}
+
+/* ── Weather across the page ────────────────────────────────────────────
+   Two sheets of snow, near and far, each a tile larger than the page by one
+   tile and slid by exactly that, so the loop has no seam; drawn as masks so
+   they can be white at night and the dusk's pink by day. While the agent is
+   at work the far sheet is the Summit's wind instead, and fast. Transforms,
+   so no repaint. They take no clicks. */
+
+html[data-style="celeste"][data-theme] .main {
+  position: relative;
+  isolation: isolate;
+}
+
+html[data-style="celeste"][data-theme] .main::before,
+html[data-style="celeste"][data-theme] .main::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  background-color: var(--c-snow);
+  mask-image: url("./art/celeste-snow.svg");
+  mask-repeat: repeat;
+  pointer-events: none;
+  will-change: transform;
+}
+
+html[data-style="celeste"][data-theme] .main::before {
+  inset: -312px -312px 0 0;
+  mask-size: 312px 312px;
+  opacity: 0.6;
+  animation: celeste-snow-near 16s linear infinite;
+}
+
+html[data-style="celeste"][data-theme] .main::after {
+  inset: -468px -468px 0 0;
+  mask-size: 468px 468px;
+  mask-position: 120px 60px;
+  opacity: 0.32;
+  animation: celeste-snow-far 30s linear infinite;
+}
+
+html[data-style="celeste"][data-theme] .main:has(.working[role="status"])::after {
+  inset: 0 -400px 0 0;
+  mask-image: url("./art/celeste-wind.svg");
+  mask-size: 400px 240px;
+  mask-position: 0 0;
+  opacity: 0.2;
+  animation: celeste-wind 2.4s linear infinite;
+}
+
+@keyframes celeste-snow-near {
+  to {
+    transform: translate3d(-312px, 312px, 0);
+  }
+}
+
+@keyframes celeste-snow-far {
+  to {
+    transform: translate3d(-468px, 468px, 0);
+  }
+}
+
+@keyframes celeste-wind {
+  to {
+    transform: translate3d(-400px, 0, 0);
+  }
+}
+
+/* ── 2. The name and the way round ──────────────────────────────────── */
+
+/* The name, and the Summit's flag flying beside it: two frames, taking turns. */
+html[data-style="celeste"][data-theme] .sidebar .brand {
+  position: relative;
+  padding-right: 34px;
+  color: #2a1f4e;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-shadow: 2px 2px 0 rgb(255 255 255 / 55%);
+}
+
+html[data-style="celeste"][data-theme="dark"] .sidebar .brand {
+  color: #ffffff;
+  text-shadow: 2px 2px 0 #20408a;
+}
+
+html[data-style="celeste"][data-theme] .sidebar .brand::before,
+html[data-style="celeste"][data-theme] .sidebar .brand::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 28px;
+  height: 26px;
+  margin-top: -14px;
+  background: url("./art/celeste-flag-a.svg") center / contain no-repeat;
+  animation: celeste-frame-a 0.9s steps(1) infinite;
+}
+
+html[data-style="celeste"][data-theme] .sidebar .brand::after {
+  background-image: url("./art/celeste-flag-b.svg");
+  animation-name: celeste-frame-b;
+}
+
+@keyframes celeste-frame-a {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes celeste-frame-b {
+  0% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+html[data-style="celeste"][data-theme] :is(.nav-item, .list-heading, .modal-head, .text-btn) {
+  font-weight: 700;
+}
+
+/* The five ways in wear the first five chapters' icons: Forsaken City, Old
+   Site, Celestial Resort, Golden Ridge, Mirror Temple. */
+html[data-style="celeste"][data-theme] .nav-item > svg.nav-icon {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 22px;
+  background: center / contain no-repeat;
+}
+
+html[data-style="celeste"][data-theme] .nav-item > svg.nav-icon > * {
+  visibility: hidden;
+}
+
+html[data-style="celeste"][data-theme] .nav-item.nav-new > svg.nav-icon {
+  background-image: url("./art/celeste-ch-city.svg");
+}
+
+html[data-style="celeste"][data-theme] .nav-item > svg.nav-icon.lucide-folder {
+  background-image: url("./art/celeste-ch-site.svg");
+}
+
+html[data-style="celeste"][data-theme] .nav-item > svg.nav-icon.lucide-users {
+  background-image: url("./art/celeste-ch-resort.svg");
+}
+
+html[data-style="celeste"][data-theme] .nav-item > svg.nav-icon.lucide-clock {
+  background-image: url("./art/celeste-ch-ridge.svg");
+}
+
+html[data-style="celeste"][data-theme] .nav-item > svg.nav-icon.lucide-messages-square {
+  background-image: url("./art/celeste-ch-temple.svg");
+}
+
+html[data-style="celeste"][data-theme] .list-heading {
+  letter-spacing: 0.08em;
+}
+
+html[data-style="celeste"][data-theme] :is(.nav-item, .project-row, .sidebar .session, .emp-row):hover {
+  background: rgb(255 255 255 / 30%);
+}
+
+html[data-style="celeste"][data-theme="dark"] :is(.nav-item, .project-row, .sidebar .session, .emp-row):hover {
+  background: rgb(88 136 248 / 20%);
+}
+
+/* The bell is the one on the hotel's front desk. */
+html[data-style="celeste"][data-theme] .sidebar-actions .bell-btn > svg {
+  width: 24px;
+  height: 20px;
+  background: url("./art/celeste-bell.svg") center / contain no-repeat;
+}
+
+html[data-style="celeste"][data-theme] .sidebar-actions .bell-btn > svg > * {
+  visibility: hidden;
+}
+
+/* ── 3. Session rows: a save file's list ────────────────────────────── */
+
+html[data-style="celeste"][data-theme] .sidebar .session {
+  position: relative;
+  padding-left: 20px;
+  border: 2px solid transparent;
+}
+
+/* The open one is a checkpoint's plaque, the menu's ▶ beside it blinking
+   between the game's two highlight colours. */
+html[data-style="celeste"][data-theme] :is(.sidebar .session.active, .nav-item.current, .project-row.current, .emp-row.active) {
+  --fg: #ffffff;
+  --fg-dim: #d4ccf0;
+  border: 2px solid transparent;
+  border-image: url("./art/celeste-plaque.svg") 1 / 2px;
+  background: var(--c-plaque) padding-box;
+  color: #ffffff;
+}
+
+html[data-style="celeste"][data-theme] .sidebar .session:is(:hover, .active)::before,
+html[data-style="celeste"][data-theme] .sidebar .session.active::after {
+  content: "▶";
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  translate: 0 -50%;
+  color: var(--c-plaque);
+  font-size: 0.6rem;
+  line-height: 1;
+}
+
+html[data-style="celeste"][data-theme="dark"] .sidebar .session:hover::before {
+  color: #a8c0ff;
+}
+
+html[data-style="celeste"][data-theme] .sidebar .session.active::before {
+  color: var(--c-hi-a);
+}
+
+html[data-style="celeste"][data-theme] .sidebar .session.active::after {
+  color: var(--c-hi-b);
+  animation: celeste-frame-b 0.8s steps(1) infinite;
+}
+
+/* Where a session stands is the colour of Madeline's hair: blue while it
+   runs (the dash is spent), pink while it starts; a skull where it was cut
+   short. One that is resting is a speck of snow. */
+html[data-style="celeste"][data-theme] .dot:is(.idle, .starting, .running, .interrupted) {
+  width: 18px;
+  height: 16px;
+  border-radius: 0;
+  background: center / contain no-repeat;
+  animation: none;
+}
+
+html[data-style="celeste"][data-theme] .dot.idle {
+  width: 6px;
+  height: 6px;
+  margin-inline: 6px;
+  background: color-mix(in srgb, var(--fg) 45%, transparent);
+}
+
+html[data-style="celeste"][data-theme] .dot.running {
+  background-image: url("./art/celeste-head-blue.svg");
+  animation: celeste-bob 0.8s steps(2, jump-none) infinite;
+}
+
+html[data-style="celeste"][data-theme] .dot.starting {
+  background-image: url("./art/celeste-head-pink.svg");
+  animation: celeste-bob 0.8s steps(2, jump-none) infinite;
+}
+
+html[data-style="celeste"][data-theme] .dot.interrupted {
+  width: 18px;
+  height: 18px;
+  background-image: url("./art/celeste-skull.svg");
+}
+
+/* A device that is there: a dash crystal. */
+html[data-style="celeste"][data-theme] .dot.online {
+  width: 14px;
+  height: 14px;
+  border-radius: 0;
+  background: url("./art/celeste-crystal-s.svg") center / contain no-repeat;
+}
+
+@keyframes celeste-bob {
+  50% {
+    translate: 0 -2px;
+  }
+}
+
+/* Not yet read: a strawberry with wings, beating them. */
+html[data-style="celeste"][data-theme] .session-unread {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 0;
+  background: none;
+}
+
+html[data-style="celeste"][data-theme] .session-unread::before,
+html[data-style="celeste"][data-theme] .session-unread::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("./art/celeste-unread-a.svg") center / contain no-repeat;
+  animation: celeste-frame-a 0.5s steps(1) infinite;
+}
+
+html[data-style="celeste"][data-theme] .session-unread::after {
+  background-image: url("./art/celeste-unread-b.svg");
+  animation-name: celeste-frame-b;
+}
+
+html[data-style="celeste"][data-theme] .session-queued {
+  border-radius: 0;
+}
+
+/* Pinned (where the page says so): a golden strawberry. */
+html[data-style="celeste"][data-theme] svg.session-pin {
+  width: 18px;
+  height: 20px;
+  background: url("./art/celeste-goldberry-s.svg") center / contain no-repeat;
+}
+
+html[data-style="celeste"][data-theme] svg.session-pin > * {
+  visibility: hidden;
+}
+
+/* ── 4. The chat's header ───────────────────────────────────────────── */
+
+html[data-style="celeste"][data-theme] .chat-header {
+  border-bottom: 0;
+  background: transparent;
+}
+
+/* Its title is a checkpoint's plaque, the flag on it. */
+html[data-style="celeste"][data-theme] .chat-header .chat-title {
+  --fg: #ffffff;
+  --fg-dim: #d4ccf0;
+  flex: 0 1 auto;
+  height: auto;
+  padding: 3px 12px 3px 28px;
+  border: 2px solid transparent;
+  border-radius: 0;
+  border-image: url("./art/celeste-plaque.svg") 1 / 2px;
+  background:
+    url("./art/celeste-check.svg") 8px center / 14px 14px no-repeat,
+    var(--c-plaque);
+  background-clip: padding-box;
+  color: #ffffff;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Its buttons are girder faces; the one that is on, a plank. */
+html[data-style="celeste"][data-theme] .chat-header :is(.chip.button, .icon-btn) {
+  border: 4px solid transparent;
+  border-radius: 0;
+  border-image: var(--c-girder) 4 fill / 8px;
+  background: transparent;
+  color: var(--c-girder-fg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: none;
+}
+
+html[data-style="celeste"][data-theme] .chat-header .chip.button.head-btn {
+  padding: 2px 4px;
+}
+
+html[data-style="celeste"][data-theme] .chat-header :is(.chip.button, .icon-btn):hover {
+  background: transparent;
+  color: var(--c-girder-fg);
+  filter: brightness(1.12);
+}
+
+html[data-style="celeste"][data-theme] .chat-header .chip.button.on {
+  border-image-source: var(--c-plank);
+  background: transparent;
+  color: #fff4e0;
+}
+
+html[data-style="celeste"][data-theme] .chat-header :is(.chip.button, .icon-btn):active {
+  translate: 0 2px;
+}
+
+html[data-style="celeste"][data-theme] .sidebar-head .icon-btn {
+  border-radius: 0;
+}
+
+/* ── The dark box: what you said, and everything that floats ────────────
+   The game's dialogue box, with a carved twig hooked round each corner.
+   Inside it Loom's colours are the box's own in both appearances, so what a
+   dialog holds reads on it: off-white words, the cyan of a keyword for
+   links, the menu's green for what is done. */
+
+html[data-style="celeste"][data-theme] :is(.modal, .session-menu, .backend-menu, .command-menu, .effort-pop, .plus-pop, .pane-menu, .search-panel, .unsent-menu, .which-key, .bubble.user, .question, .app-oops, .login-box) {
+  --background: #201820;
+  --foreground: #f3eef3;
+  --card: #2b2130;
+  --card-foreground: #f3eef3;
+  --popover: #201820;
+  --popover-foreground: #f3eef3;
+  --secondary: #32283a;
+  --secondary-foreground: #f3eef3;
+  --muted: #2b2130;
+  --muted-foreground: #b9aebd;
+  --accent: #3a2e42;
+  --accent-foreground: #f3eef3;
+  --border: #54405a;
+  --input: #6a546e;
+  --ring: #90e8f8;
+  --primary: #ff6478;
+  --primary-foreground: #1b1428;
+  --destructive: #ff7a8a;
+  --bg: #201820;
+  --bg-raised: #2b2130;
+  --bg-card: #30263a;
+  --line: #54405a;
+  --fg: #f3eef3;
+  --fg-dim: #b9aebd;
+  --loom-accent: #f3eef3;
+  --unread: #ff6478;
+  --surface-code: #17111a;
+  --surface-menu: #201820;
+  --surface-modal: #201820;
+  --surface-field: #17111a;
+  --composer: #2b2130;
+  --send-off-bg: #4a3e50;
+  --send-off-fg: #201820;
+  --blue: #90e8f8;
+  --red: #ff7a8a;
+  --green: #84ff54;
+  --shadow: rgb(0 0 0 / 45%);
+  --c-girder: url("./art/celeste-girder-night.svg");
+  --c-girder-fg: #e8eefa;
+  --c-plank: url("./art/celeste-plank-night.svg");
+  --c-postcard: url("./art/celeste-postcard-night.svg");
+  --c-key: #90e8f8;
+  --c-link: #90e8f8;
+  border: 4px solid transparent;
+  border-radius: 0;
+  border-image: url("./art/celeste-dialog.svg") 12 fill / 24px / 8px;
+  background: transparent;
+  box-shadow: none;
+  color: #f3eef3;
+}
+
+/* Where a panel fills a phone's screen there is no room outside it for the
+   twigs: they are drawn inside its edge instead, the page showing round the
+   box as the scene does round the game's. */
+@media (max-width: 640px) {
+  /* (Two classes, to outrank the box's own rule above.) */
+  html[data-style="celeste"][data-theme] .search-sheet > .search-panel.search-panel {
+    padding: calc(env(safe-area-inset-top, 0px) + 12px) 8px 0;
+    box-sizing: border-box;
+    border-image-outset: 0;
+  }
+
+  html[data-style="celeste"][data-theme] .search-sheet {
+    background: var(--c-ground);
+  }
+
+  html[data-style="celeste"][data-theme] .modal-scrim {
+    padding: max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  }
+}
+
+/* ── 5. What you said ───────────────────────────────────────────────── */
+
+html[data-style="celeste"][data-theme] .bubble.user {
+  position: relative;
+  min-height: 44px;
+  box-sizing: content-box;
+  padding: 6px 14px 6px 60px;
+}
+
+/* The speaker's portrait, at the left of the box. */
+html[data-style="celeste"][data-theme] .bubble.user::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  width: 48px;
+  height: 48px;
+  background: url("./art/celeste-portrait.svg") center / contain no-repeat;
+}
+
+/* And the ▼ that waits for you, in its corner. */
+html[data-style="celeste"][data-theme] .bubble.user::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  bottom: 0;
+  border: 4px solid transparent;
+  border-top: 5px solid #ffffff;
+  border-bottom: 0;
+  animation: celeste-bob 0.9s steps(2, jump-none) infinite;
+}
+
+/* A keyword is said in cyan. */
+html[data-style="celeste"][data-theme] .bubble.user :is(strong, a, code) {
+  color: #90e8f8;
+}
+
+html[data-style="celeste"][data-theme] .user-turn {
+  padding-right: 8px;
+}
+
+/* ── 6. The reply ───────────────────────────────────────────────────── */
+
+/* A heading: a peak under snow before it. */
+html[data-style="celeste"][data-theme] :is(h1, h2).md-h::before {
+  content: "";
+  display: inline-block;
+  width: 22px;
+  height: 14px;
+  margin-right: 8px;
+  vertical-align: -1px;
+  background: url("./art/celeste-peak.svg") center / contain no-repeat;
+}
+
+html[data-style="celeste"][data-theme] h1.md-h {
+  width: fit-content;
+  padding-bottom: 3px;
+  border-bottom: 2px dashed color-mix(in srgb, var(--fg) 30%, transparent);
+}
+
+html[data-style="celeste"][data-theme] h3.md-h {
+  color: var(--fg);
+}
+
+html[data-style="celeste"][data-theme] h3.md-h::before {
+  content: "▸ ";
+  color: #5888f8;
+}
+
+/* A list's dots are dash crystals. */
+html[data-style="celeste"][data-theme] ul.md-list > li:not(.md-task) {
+  position: relative;
+  list-style: none;
+}
+
+html[data-style="celeste"][data-theme] ul.md-list > li:not(.md-task)::before {
+  content: "";
+  position: absolute;
+  top: 0.42em;
+  left: -1.4em;
+  width: 14px;
+  height: 14px;
+  background: url("./art/celeste-crystal-s.svg") center / contain no-repeat;
+}
+
+html[data-style="celeste"][data-theme] ol.md-list > li::marker {
+  color: var(--c-key);
+  font-weight: 700;
+}
+
+/* A rule is a run of ledge: snow, ice hanging under it. */
+html[data-style="celeste"][data-theme] .md-hr {
+  height: 20px;
+  border: 0;
+  background: var(--c-ledge) left top / 96px 20px repeat-x;
+}
+
+/* A quote is a postcard: cream paper, a rose line inside its edge, a stamp. */
+html[data-style="celeste"][data-theme] :is(.md-quote, .replies) {
+  --bg: #f6ede4;
+  --bg-card: #efe2d8;
+  --bg-raised: #efe2d8;
+  --fg: #3a3038;
+  --fg-dim: #75626a;
+  --line: #d4a8a4;
+  --blue: #c8304c;
+  --c-key: #c8304c;
+  --c-link: #c8304c;
+  --loom-accent: #3a3038;
+  position: relative;
+  border: 6px solid transparent;
+  border-radius: 0;
+  border-image: url("./art/celeste-postcard.svg") 5 fill / 10px;
+  background: transparent;
+  box-shadow: none;
+  color: #3a3038;
+}
+
+html[data-style="celeste"][data-theme] .md-quote {
+  padding: 8px 40px 6px 10px;
+}
+
+html[data-style="celeste"][data-theme] .md-quote::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 22px;
+  height: 22px;
+  background: url("./art/celeste-stamp.svg") center / contain no-repeat;
+}
+
+html[data-style="celeste"][data-theme] .md-quote > :last-child {
+  margin-bottom: 0;
+}
+
+/* A table: thin lines, its head a plaque. */
+html[data-style="celeste"][data-theme] .md-table th {
+  border-color: #343470;
+  background: var(--c-plaque);
+  color: #ffffff;
+}
+
+html[data-style="celeste"][data-theme] .md-table td {
+  border-color: color-mix(in srgb, var(--fg) 22%, transparent);
+}
+
+html[data-style="celeste"][data-theme] .md-table tbody tr:hover {
+  background: color-mix(in srgb, #5888f8 12%, transparent);
+}
+
+/* A link, and a word of code, as the game marks a keyword. */
+html[data-style="celeste"][data-theme] .bubble.assistant a {
+  color: var(--c-link);
+}
+
+html[data-style="celeste"][data-theme] :not(pre) > code {
+  padding: 0 4px;
+  background: color-mix(in srgb, var(--c-key) 12%, transparent);
+  color: var(--c-key);
+}
+
+/* ── 7. Code and files ──────────────────────────────────────────────── */
+
+/* Code is a dream block: black, its white edge wandering, stars inside. */
+html[data-style="celeste"][data-theme] pre.code {
+  border: 8px solid transparent;
+  border-radius: 0;
+  border-image: url("./art/celeste-dream.svg") 4 / 8px round;
+  /* The stars are dimmed: there is code to read over them. */
+  background:
+    linear-gradient(rgb(5 5 13 / 55%), rgb(5 5 13 / 55%)),
+    url("./art/celeste-dreamstars.svg") 0 0 / 144px,
+    #05050d;
+  background-clip: padding-box;
+  box-shadow: none;
+  color: #e9ecff;
+}
+
+html[data-style="celeste"][data-theme] .code-block {
+  --bg-raised: #05050d;
+  --bg-card: #1c1c30;
+  --fg: #e9ecff;
+  --fg-dim: #a4a8c8;
+}
+
+html[data-style="celeste"][data-theme] .code-tools {
+  top: 9px;
+  right: 9px;
+  border-radius: 0;
+}
+
+/* A file is a B-side's cassette: a label to write on, the tape's window
+   across its middle. */
+html[data-style="celeste"][data-theme] .file-card {
+  --fg: #3a3038;
+  --fg-dim: #5a4850;
+  --loom-accent: #3a3038;
+  padding: 2px 4px;
+  border: 2px solid #1b1428;
+  border-radius: 0;
+  background:
+    linear-gradient(#1b1428, #1b1428) 15px 18px / 4px 4px no-repeat,
+    linear-gradient(#1b1428, #1b1428) 33px 18px / 4px 4px no-repeat,
+    linear-gradient(#b4b4c4, #b4b4c4) 9px 16px / 34px 8px no-repeat,
+    linear-gradient(#6aa8f0, #6aa8f0) 0 14px / 100% 12px no-repeat,
+    linear-gradient(#efe4cc, #efe4cc) 0 26px / 100% 30px no-repeat,
+    #ffffff;
+  color: #3a3038;
+}
+
+html[data-style="celeste"][data-theme] .file-card.image {
+  padding: 0;
+}
+
+html[data-style="celeste"][data-theme] .file-card.more {
+  background: #fbf6ea;
+}
+
+/* ── 8. Tool calls: a zip mover ─────────────────────────────────────── */
+
+html[data-style="celeste"][data-theme] .tool.group {
+  border: 6px solid transparent;
+  border-radius: 0;
+  border-image: var(--c-metal) 5 fill / 10px;
+  background: transparent;
+  box-shadow: none;
+  transition: none;
+}
+
+html[data-style="celeste"][data-theme] .tool.group:is(:hover, .open, .running) {
+  border: 6px solid transparent;
+  border-image: var(--c-metal) 5 fill / 10px;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-style="celeste"][data-theme] .tool.group > .tool-head {
+  position: relative;
+  padding: 5px 8px 5px 6px;
+}
+
+/* Its mark is the block's traffic light: dark at rest, green while it goes,
+   red where a call failed. */
+html[data-style="celeste"][data-theme] .tool-icon {
+  position: relative;
+  width: 18px;
+  height: 28px;
+  border-radius: 0;
+  background: url("./art/celeste-light.svg") center / contain no-repeat;
+}
+
+html[data-style="celeste"][data-theme] .tool-icon > svg {
+  display: none;
+}
+
+html[data-style="celeste"][data-theme] .tool.group:has(> .tool-head .tool-state.bad) .tool-icon {
+  background-image: url("./art/celeste-light-stop.svg");
+}
+
+html[data-style="celeste"][data-theme] .tool.group.running .tool-icon {
+  background: url("./art/celeste-light.svg") center / contain no-repeat;
+}
+
+html[data-style="celeste"][data-theme] .tool.group.running .tool-icon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("./art/celeste-light-go.svg") center / contain no-repeat;
+  animation: celeste-frame-a 0.7s steps(1) infinite;
+}
+
+/* While it runs, the block goes down its rail and comes slowly back. */
+html[data-style="celeste"][data-theme] .tool.group.running > .tool-head {
+  padding-bottom: 13px;
+  background: url("./art/celeste-rail.svg") left bottom 1px / 16px 4px repeat-x;
+}
+
+html[data-style="celeste"][data-theme] .tool.group.running > .tool-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 12px;
+  background: url("./art/celeste-zip.svg") left center / 24px 12px no-repeat;
+  animation: celeste-zip 2.6s infinite;
+  pointer-events: none;
+}
+
+@keyframes celeste-zip {
+  0% {
+    transform: translateX(0);
+    animation-timing-function: cubic-bezier(0.7, 0, 1, 0.6);
+  }
+
+  22%,
+  34% {
+    transform: translateX(calc(100% - 24px));
+    animation-timing-function: linear;
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
+
+html[data-style="celeste"][data-theme] .tool-chip {
+  border-radius: 0;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+/* Each tool has its own picture from the game, beside its name: on a folded
+   block's chips and on each call inside an open one. */
+html[data-style="celeste"][data-theme] .tool-chip:is([data-tool="Bash"], [data-tool="Read"], [data-tool="Grep"], [data-tool="Glob"], [data-tool="Edit"], [data-tool="Write"], [data-tool="WebSearch"], [data-tool="WebFetch"], [data-tool="Agent"], [data-tool^="mcp__"]) {
+  padding-left: 25px;
+  background-image: var(--tool-art), linear-gradient(color-mix(in srgb, var(--fg) 10%, transparent), color-mix(in srgb, var(--fg) 10%, transparent));
+  background-position: 3px center, 0 0;
+  background-size: 18px 18px, auto;
+  background-repeat: no-repeat, repeat;
+  background-color: transparent;
+  line-height: 20px;
+}
+
+html[data-style="celeste"][data-theme] .group-steps .tool:is([data-tool="Bash"], [data-tool="Read"], [data-tool="Grep"], [data-tool="Glob"], [data-tool="Edit"], [data-tool="Write"], [data-tool="WebSearch"], [data-tool="WebFetch"], [data-tool="Agent"], [data-tool^="mcp__"]) > .tool-head > .tool-name::before {
+  content: "";
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  vertical-align: -4px;
+  background: var(--tool-art) center / contain no-repeat;
+}
+
+html[data-style="celeste"][data-theme] [data-tool="Bash"] {
+  --tool-art: url("./art/celeste-tool-bash.svg");
+}
+
+html[data-style="celeste"][data-theme] [data-tool="Read"] {
+  --tool-art: url("./art/celeste-tool-read.svg");
+}
+
+html[data-style="celeste"][data-theme] :is([data-tool="Grep"], [data-tool="Glob"]) {
+  --tool-art: url("./art/celeste-tool-look.svg");
+}
+
+html[data-style="celeste"][data-theme] [data-tool="Edit"] {
+  --tool-art: url("./art/celeste-tool-edit.svg");
+}
+
+html[data-style="celeste"][data-theme] [data-tool="Write"] {
+  --tool-art: url("./art/celeste-tool-write.svg");
+}
+
+html[data-style="celeste"][data-theme] :is([data-tool="WebSearch"], [data-tool="WebFetch"]) {
+  --tool-art: url("./art/celeste-tool-web.svg");
+}
+
+html[data-style="celeste"][data-theme] [data-tool="Agent"] {
+  --tool-art: url("./art/celeste-tool-agent.svg");
+}
+
+html[data-style="celeste"][data-theme] [data-tool^="mcp__"] {
+  --tool-art: url("./art/celeste-tool-mcp.svg");
+}
+
+/* Done: a crystal heart. Failed: spikes. One call still out: a cog, turning. */
+html[data-style="celeste"][data-theme] svg.tool-done {
+  width: 18px;
+  height: 16px;
+  background: url("./art/celeste-heart-s.svg") center / contain no-repeat;
+}
+
+html[data-style="celeste"][data-theme] :is(.tool-state.bad, .tool.failed .tool-state) > svg:not(.tool-chevron) {
+  width: 16px;
+  height: 12px;
+  background: url("./art/celeste-spikes-s.svg") center / contain no-repeat;
+}
+
+html[data-style="celeste"][data-theme] .tool-state > svg.spin {
+  width: 18px;
+  height: 18px;
+  background: url("./art/celeste-cog.svg") center / contain no-repeat;
+  animation: celeste-turn 1.2s steps(8) infinite;
+}
+
+html[data-style="celeste"][data-theme] :is(svg.tool-done, .tool-state.bad > svg:not(.tool-chevron), .tool.failed .tool-state > svg, .tool-state > svg.spin) > * {
+  visibility: hidden;
+}
+
+@keyframes celeste-turn {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* A single call, inside the block: a plate bolted on. */
+html[data-style="celeste"][data-theme] .group-steps {
+  border-top: 2px solid color-mix(in srgb, var(--fg) 22%, transparent);
+}
+
+html[data-style="celeste"][data-theme] .group-steps .tool {
+  border: 2px solid color-mix(in srgb, var(--fg) 28%, transparent);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+
+html[data-style="celeste"][data-theme] .group-steps .tool.failed {
+  border-color: var(--red);
+}
+
+html[data-style="celeste"][data-theme] :is(.tool, .thinking, .working[role="status"], .tool-done) {
+  animation-timing-function: steps(3);
+}
+
+/* ── 9. Thinking, working, a turn's end ─────────────────────────────── */
+
+/* A thought: a golden feather, floating while it comes. */
+html[data-style="celeste"][data-theme] .thinking > svg {
+  width: 14px;
+  height: 20px;
+  margin-top: 0;
+  opacity: 1;
+  background: url("./art/celeste-feather-s.svg") center / contain no-repeat;
+}
+
+html[data-style="celeste"][data-theme] .thinking > svg > * {
+  visibility: hidden;
+}
+
+html[data-style="celeste"][data-theme] .thinking.live > svg {
+  animation: celeste-float 1.6s steps(4, jump-none) infinite;
+}
+
+@keyframes celeste-float {
+  50% {
+    translate: 0 -4px;
+  }
+}
+
+/* At work: Madeline mid-dash, her hair gone blue, two of the dash's
+   after-images behind her. Starting: standing, hair red, a dash in hand. */
+html[data-style="celeste"][data-theme] .working-dots {
+  gap: 0;
+  height: 28px;
+  padding: 0 4px 0 0;
+  align-items: flex-end;
+}
+
+html[data-style="celeste"][data-theme] .working-dots i {
+  width: 22px;
+  height: 28px;
+  margin-right: -6px;
+  border-radius: 0;
+  background: url("./art/celeste-trail.svg") center bottom / 18px 24px no-repeat;
+  opacity: 0.45;
+  animation: celeste-trail 0.6s steps(1) infinite;
+}
+
+html[data-style="celeste"][data-theme] .working-dots i:nth-child(2) {
+  opacity: 0.8;
+  animation-delay: 0.2s;
+}
+
+html[data-style="celeste"][data-theme] .working-dots i:nth-child(3) {
+  margin-right: 0;
+  background: url("./art/celeste-madeline-blue.svg") center / contain no-repeat;
+  opacity: 1;
+  animation: celeste-bob 0.4s steps(2, jump-none) infinite;
+}
+
+@keyframes celeste-trail {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* By day the after-images are darker, to show on the pale page. */
+html[data-style="celeste"][data-theme="light"] .working-dots i:not(:nth-child(3)) {
+  filter: brightness(0.8) saturate(1.3);
+  opacity: 0.6;
+}
+
+html[data-style="celeste"][data-theme="light"] .working-dots i:nth-child(2) {
+  opacity: 0.9;
+}
+
+html[data-style="celeste"][data-theme] .working.starting .working-dots i {
+  display: none;
+}
+
+html[data-style="celeste"][data-theme] .working.starting .working-dots i:nth-child(3) {
+  display: block;
+  background: url("./art/celeste-madeline-red.svg") center / contain no-repeat;
+  animation: none;
+}
+
+/* A turn's end is a checkpoint: its plaque, a flag and a number on it. */
+html[data-style="celeste"][data-theme] .timeline-inner {
+  counter-reset: celeste-checkpoint;
+}
+
+html[data-style="celeste"][data-theme] .turn-line {
+  counter-increment: celeste-checkpoint;
+}
+
+html[data-style="celeste"][data-theme] .turn-line::before {
+  content: counter(celeste-checkpoint, decimal-leading-zero);
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 5px 1px 21px;
+  border: 2px solid transparent;
+  border-image: url("./art/celeste-plaque.svg") 1 / 2px;
+  background:
+    url("./art/celeste-check.svg") 4px center / 12px 12px no-repeat,
+    var(--c-plaque);
+  background-clip: padding-box;
+  color: #e0b8f4;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* How full the context is: ten dashes, spent one by one — blue, as her hair
+   goes when a dash is spent; and flashing red near the end, as she does when
+   her grip is giving out. */
+html[data-style="celeste"][data-theme] .turn-line[data-usage]::after {
+  --w: calc(var(--usage) * 100%);
+  content: "";
+  display: inline-block;
+  width: 78px;
+  height: 8px;
+  margin-left: 10px;
+  vertical-align: -1px;
+  background: linear-gradient(to right, var(--c-pip) var(--w), color-mix(in srgb, var(--fg) 24%, transparent) var(--w));
+  mask-image: repeating-linear-gradient(to right, #000 0 6px, transparent 6px 8px);
+}
+
+html[data-style="celeste"][data-theme] .turn-line:is([data-usage^="9"]:not([data-usage="9"]), [data-usage="100"])::after {
+  --c-pip: #ff5a7a;
+  animation: celeste-tired 0.5s steps(1) infinite;
+}
+
+@keyframes celeste-tired {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+html[data-style="celeste"][data-theme] .bubble.assistant.live::after {
+  content: "▼";
+  color: #5888f8;
+  font-size: 0.7em;
+}
+
+/* ── 10. The composer: a ledge of its own ───────────────────────────── */
+
+html[data-style="celeste"][data-theme] :is(.composer-box, .tasks-composer-box) {
+  border-style: solid;
+  border-color: transparent;
+  border-width: 12px 8px 8px;
+  border-radius: 0;
+  border-image: var(--c-terrain) 6 4 4 4 / 12px 8px 8px / 0 round;
+  background: var(--card);
+  background-clip: padding-box;
+  box-shadow: 0 4px 0 rgb(0 0 0 / 22%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: none;
+}
+
+html[data-style="celeste"][data-theme] .composer-box:has(.composer-input:not(:placeholder-shown)) {
+  background: var(--card);
+  background-clip: padding-box;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-style="celeste"][data-theme] .composer-btn {
+  border-radius: 0;
+}
+
+/* The queue waits on a plate of its own. */
+html[data-style="celeste"][data-theme] .queue-panel {
+  border: 6px solid transparent;
+  border-radius: 0;
+  border-image: var(--c-metal) 5 fill / 10px;
+  background: transparent;
+}
+
+html[data-style="celeste"][data-theme] .queue-panel.parked {
+  box-shadow: 0 0 0 2px var(--red);
+}
+
+/* In a menu, what is under the hand is said in the game's highlight. */
+html[data-style="celeste"][data-theme] :is(.session-menu, .backend-menu, .pane-menu, .plus-pop, .unsent-menu) button {
+  border-radius: 0;
+}
+
+html[data-style="celeste"][data-theme] :is(.session-menu, .backend-menu, .pane-menu, .plus-pop, .unsent-menu) button:hover:not(:disabled),
+html[data-style="celeste"][data-theme] .command-menu li.on,
+html[data-style="celeste"][data-theme] .search-row:hover {
+  background: rgb(255 255 255 / 7%);
+  color: var(--c-hi-a);
+}
+
+html[data-style="celeste"][data-theme] .command-menu li {
+  border-radius: 0;
+}
+
+html[data-style="celeste"][data-theme] .command-menu .name {
+  color: #90e8f8;
+}
+
+html[data-style="celeste"][data-theme] .command-menu li.on .name {
+  color: var(--c-hi-b);
+}
+
+/* ── 11. Buttons and controls ───────────────────────────────────────── */
+
+/* Send is a dash, in the red of Madeline's hair while there is one to
+   spend and its blue when there is not. Stop is a red square. */
+html[data-style="celeste"][data-theme] :is(.composer-btn.send, .composer-btn.stop) {
+  border: 2px solid #1b1428;
+  border-radius: 0;
+  background: #c83a3a;
+  box-shadow:
+    inset 2px 2px 0 rgb(255 255 255 / 35%),
+    inset -2px -2px 0 rgb(0 0 0 / 25%);
+  color: #ffffff;
+  transition: none;
+}
+
+html[data-style="celeste"][data-theme] .composer-btn.send:hover:not(:disabled) {
+  background: #e04a48;
+  color: #ffffff;
+}
+
+html[data-style="celeste"][data-theme] .composer-btn.send:disabled {
+  background: #3c6ea8;
+  color: #b8d8f8;
+  opacity: 0.75;
+}
+
+html[data-style="celeste"][data-theme] :is(.composer-btn.stop, .composer-btn.stop:hover) {
+  background: #201820;
+  color: #ff5a7a;
+}
+
+html[data-style="celeste"][data-theme] :is(.composer-btn.send, .composer-btn.stop, .text-btn, .replies-send, .new-chat, .login-btn):active:not(:disabled) {
+  translate: 0 2px;
+}
+
+/* A button with words on it is a girder's face; the one that matters, a
+   wooden sign. */
+html[data-style="celeste"][data-theme] :is(.text-btn, .chip.button.keep-chip, .queue-steer) {
+  border: 4px solid transparent;
+  border-radius: 0;
+  border-image: var(--c-girder) 4 fill / 8px;
+  background: transparent;
+  color: var(--c-girder-fg);
+  transition: none;
+}
+
+html[data-style="celeste"][data-theme] .text-btn {
+  padding: 4px 10px;
+}
+
+html[data-style="celeste"][data-theme] .text-btn:hover {
+  background: transparent;
+  color: var(--c-girder-fg);
+  filter: brightness(1.1);
+}
+
+html[data-style="celeste"][data-theme] :is(.text-btn.primary, .project-form .text-btn.primary, .replies-send, .new-chat, .new-chat-more, .login-btn, .emp-new),
+html[data-style="celeste"][data-theme] :is(.text-btn.primary, .project-form .text-btn.primary, .replies-send, .emp-new):hover {
+  border: 4px solid transparent;
+  border-radius: 0;
+  border-image: var(--c-plank) 4 fill / 8px;
+  background: transparent;
+  color: #fff4e0;
+}
+
+html[data-style="celeste"][data-theme] .text-btn.danger,
+html[data-style="celeste"][data-theme] .text-btn.danger:hover {
+  background: transparent;
+  color: var(--destructive);
+}
+
+html[data-style="celeste"][data-theme="dark"] .text-btn.danger,
+html[data-style="celeste"][data-theme] :is(.modal, .session-menu, .question) .text-btn.danger {
+  color: #ff8a98;
+}
+
+html[data-style="celeste"][data-theme] .text-btn:disabled {
+  opacity: 0.45;
+}
+
+/* A choice of several: a girder; the one chosen is a block of snow on it. */
+html[data-style="celeste"][data-theme] .segmented {
+  padding: 3px;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--fg) 30%, transparent);
+}
+
+html[data-style="celeste"][data-theme] .segmented button {
+  border-radius: 0;
+}
+
+html[data-style="celeste"][data-theme] .segmented button.on {
+  background: #ffffff;
+  box-shadow: 0 2px 0 #5888f8;
+  color: #2a2148;
+}
+
+/* Tabs are the same: the open one a block of snow. */
+html[data-style="celeste"][data-theme] :is(.emp-tab, .proj-tab, .bell-tabs button, .dsess-filter, .task-day) {
+  border: 2px solid color-mix(in srgb, var(--fg) 32%, transparent);
+  border-radius: 0;
+  background: transparent;
+}
+
+html[data-style="celeste"][data-theme] :is(.emp-tab, .proj-tab, .bell-tabs button, .dsess-filter, .task-day).on {
+  border-color: var(--fg);
+  background: #ffffff;
+  box-shadow: 0 2px 0 #5888f8;
+  color: #2a2148;
+}
+
+/* Small buttons on a page or a card: girders too, the one that matters wood. */
+html[data-style="celeste"][data-theme] :is(.emp-pill, .bell-acts .bell-btn) {
+  padding: 2px 8px;
+  border: 4px solid transparent;
+  border-radius: 0;
+  border-image: var(--c-girder) 4 fill / 8px;
+  background: transparent;
+  color: var(--c-girder-fg);
+}
+
+html[data-style="celeste"][data-theme] :is(.emp-pill.strong, .bell-acts .bell-btn.pri) {
+  border-image-source: var(--c-plank);
+  background: transparent;
+  color: #fff4e0;
+  opacity: 1;
+}
+
+html[data-style="celeste"][data-theme] :is(.emp-pill, .bell-acts .bell-btn):hover {
+  background: transparent;
+  filter: brightness(1.1);
+}
+
+/* A phone's round buttons at the foot of its drawer: girder faces. */
+html[data-style="celeste"][data-theme] :is(.dial-btn, .sidebar-foot.dial .devices-btn svg) {
+  border: 4px solid transparent;
+  border-radius: 0;
+  border-image: var(--c-girder) 4 fill / 8px;
+  background: transparent;
+  color: var(--c-girder-fg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-style="celeste"][data-theme] .sidebar-foot.dial .devices-btn svg {
+  padding: 0.45rem;
+}
+
+html[data-style="celeste"][data-theme] :is(.search-field, .tasks-round, .tasks-composer-btn, .search-cancel) {
+  border-radius: 0;
+}
+
+html[data-style="celeste"][data-theme] .tasks-composer-btn.send {
+  border: 2px solid #1b1428;
+  background: #c83a3a;
+  box-shadow:
+    inset 2px 2px 0 rgb(255 255 255 / 35%),
+    inset -2px -2px 0 rgb(0 0 0 / 25%);
+  color: #ffffff;
+}
+
+html[data-style="celeste"][data-theme] .tasks-composer-btn.send:disabled {
+  background: #3c6ea8;
+  color: #b8d8f8;
+  opacity: 0.75;
+}
+
+/* Fields: cut square, a keyword's cyan round the one you are in. */
+html[data-style="celeste"][data-theme] :is(input, textarea, select):not(.composer-input):not([type="range"]):not([type="checkbox"]):not([type="radio"]) {
+  border-color: var(--input);
+  border-radius: 0;
+}
+
+html[data-style="celeste"][data-theme] :is(input, textarea, select, button, [role="button"]):focus-visible {
+  outline: 2px solid #48b0f8;
+  outline-offset: 1px;
+}
+
+html[data-style="celeste"][data-theme] .composer-input:focus-visible {
+  outline: 0;
+}
+
+/* A tick box: an empty frame, and a strawberry once it is collected. */
+html[data-style="celeste"][data-theme] input[type="checkbox"]:not(.tw *) {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin: 0 4px 0 0;
+  border: 2px solid var(--input);
+  border-radius: 0;
+  background: var(--surface-field) center / 14px 16px no-repeat;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+html[data-style="celeste"][data-theme] input[type="checkbox"]:not(.tw *):checked {
+  background-image: url("./art/celeste-berry-s.svg");
+}
+
+/* A slider is the gondola on its cable. */
+html[data-style="celeste"][data-theme] .slider {
+  --thumb: 26px;
+  --slider-h: 30px;
+}
+
+html[data-style="celeste"][data-theme] .slider::before {
+  top: 6px;
+  height: 2px;
+  margin-top: 0;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--fg) 55%, transparent);
+}
+
+html[data-style="celeste"][data-theme] .slider::after {
+  top: 6px;
+  height: 2px;
+  margin-top: 0;
+  border-radius: 0;
+  background: #48b0f8;
+}
+
+html[data-style="celeste"][data-theme] .slider-ticks {
+  align-items: flex-start;
+  padding-top: 4px;
+}
+
+html[data-style="celeste"][data-theme] .slider-ticks span {
+  width: 2px;
+  height: 6px;
+  border-radius: 0;
+}
+
+html[data-style="celeste"][data-theme] .slider input::-webkit-slider-thumb {
+  border-radius: 0;
+  background: url("./art/celeste-gondola-s.svg") center / contain no-repeat;
+  box-shadow: none;
+}
+
+html[data-style="celeste"][data-theme] .slider input::-moz-range-thumb {
+  border-radius: 0;
+  background: url("./art/celeste-gondola-s.svg") center / contain no-repeat;
+  box-shadow: none;
+}
+
+html[data-style="celeste"][data-theme] .slider-thumb {
+  border-radius: 0;
+  background: url("./art/celeste-gondola-s.svg") center / contain no-repeat;
+  box-shadow: none;
+}
+
+html[data-style="celeste"][data-theme] input[type="range"] {
+  accent-color: #48b0f8;
+}
+
+/* ── 12. Dialogs: the pause menu ────────────────────────────────────── */
+
+html[data-style="celeste"][data-theme] .modal-scrim {
+  background: rgb(5 5 13 / 72%);
+}
+
+/* A dialog has the knot at the middle of its upper edge, as the game's box. */
+html[data-style="celeste"][data-theme] .modal {
+  position: relative;
+}
+
+html[data-style="celeste"][data-theme] .modal::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -8px;
+  width: 34px;
+  height: 12px;
+  margin-left: -17px;
+  background: url("./art/celeste-knot.svg") center / contain no-repeat;
+  pointer-events: none;
+}
+
+html[data-style="celeste"][data-theme] .modal-head {
+  border-bottom: 2px solid #54405a;
+  letter-spacing: 0.04em;
+}
+
+html[data-style="celeste"][data-theme] .settings-row {
+  border-bottom-color: #3e3044;
+}
+
+/* ── 13. Questions and suggested replies ────────────────────────────── */
+
+/* A question is asked in the dialogue box, a key beside it; its answers are
+   the box's choices, a ▶ at the one under the hand. */
+html[data-style="celeste"][data-theme] .question {
+  position: relative;
+  padding: 10px 14px 10px 46px;
+}
+
+html[data-style="celeste"][data-theme] .question::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 10px;
+  width: 26px;
+  height: 24px;
+  background: url("./art/celeste-key.svg") center / contain no-repeat;
+}
+
+html[data-style="celeste"][data-theme] .options {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+html[data-style="celeste"][data-theme] .option {
+  position: relative;
+  padding: 4px 10px 4px 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #f3eef3;
+  font-weight: 700;
+  text-align: left;
+}
+
+html[data-style="celeste"][data-theme] .option:hover {
+  background: transparent;
+  color: var(--c-hi-a);
+}
+
+html[data-style="celeste"][data-theme] .option:hover::before {
+  content: "▶";
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  translate: 0 -50%;
+  font-size: 0.6rem;
+  animation: celeste-nudge 0.6s steps(2, jump-none) infinite;
+}
+
+@keyframes celeste-nudge {
+  50% {
+    translate: 3px -50%;
+  }
+}
+
+/* Suggested replies are lines on a postcard. */
+html[data-style="celeste"][data-theme] .replies {
+  padding: 10px 12px;
+}
+
+html[data-style="celeste"][data-theme] .reply {
+  border: 0;
+  border-bottom: 2px solid #d4a8a4;
+  border-radius: 0;
+  padding: 10px 8px;
+}
+
+html[data-style="celeste"][data-theme] .reply.on {
+  background: #f8d8dc;
+}
+
+/* ── 14. Pages and cards: postcards ─────────────────────────────────── */
+
+html[data-style="celeste"][data-theme] :is(.task-card, .task-template, .bell-card, .work-card, .kpi-card, .emp-stat, .emp-approval, .emp-attention, .emp-report-row, .dsess-card, .switcher-card) {
+  border: 6px solid transparent;
+  border-radius: 0;
+  border-image: var(--c-postcard) 5 fill / 10px;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-style="celeste"][data-theme] :is(.task-card, .task-template, .dsess-card, .switcher-card):hover {
+  background: transparent;
+  filter: brightness(1.04);
+}
+
+/* Tasks run to a timetable: the gondola, going along its cable. */
+html[data-style="celeste"][data-theme] .tasks-head {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(color-mix(in srgb, var(--fg) 45%, transparent), color-mix(in srgb, var(--fg) 45%, transparent)) left 0 top 9px / 100% 2px no-repeat;
+}
+
+html[data-style="celeste"][data-theme] .tasks-head::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 58%;
+  top: 7px;
+  width: 40%;
+  height: 22px;
+  background: url("./art/celeste-gondola-s.svg") left top / 26px 22px no-repeat;
+  animation: celeste-ride 40s linear infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes celeste-ride {
+  to {
+    transform: translateX(calc(100% - 26px));
+  }
+}
+
+/* Where there is room beside the column, it is the gondola whole. */
+@media (min-width: 1100px) {
+  html[data-style="celeste"][data-theme] .tasks-head::after {
+    left: 72%;
+    top: 5px;
+    width: 27%;
+    height: 68px;
+    background: url("./art/celeste-gondola.svg") left top / 60px 68px no-repeat;
+    animation-name: celeste-ride-wide;
+  }
+}
+
+@keyframes celeste-ride-wide {
+  to {
+    transform: translateX(calc(100% - 60px));
+  }
+}
+
+/* The bell's bands are marked with hearts: red for urgent, gold for
+   important, blue for the rest. */
+html[data-style="celeste"][data-theme] .bell-band::before {
+  width: 18px;
+  height: 16px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/celeste-heart-s.svg") center / contain no-repeat;
+}
+
+html[data-style="celeste"][data-theme] .bell-band.urgent::before {
+  background-image: url("./art/celeste-heart-s-red.svg");
+}
+
+html[data-style="celeste"][data-theme] .bell-band.important::before {
+  background-image: url("./art/celeste-heart-s-gold.svg");
+}
+
+html[data-style="celeste"][data-theme] .bell-p {
+  border-radius: 0;
+}
+
+/* A KPI's progress is a climb: the same dashes as the context gauge. */
+html[data-style="celeste"][data-theme] .kpi-track {
+  height: 8px;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--fg) 22%, transparent);
+  mask-image: repeating-linear-gradient(to right, #000 0 6px, transparent 6px 8px);
+}
+
+html[data-style="celeste"][data-theme] .kpi-fill {
+  border-radius: 0;
+  background: #2c7fd6;
+}
+
+html[data-style="celeste"][data-theme] .kpi-fill.over {
+  background: #ff5a7a;
+}
+
+html[data-style="celeste"][data-theme] :is(.kpi-status, .kpi-prio) {
+  border-radius: 0;
+}
+
+/* A project is a chapter: its name on a checkpoint's plaque. */
+html[data-style="celeste"][data-theme] .proj-head h1 {
+  flex: 0 1 auto;
+  margin-right: auto;
+  padding: 3px 12px 3px 28px;
+  border: 2px solid transparent;
+  border-image: url("./art/celeste-plaque.svg") 1 / 2px;
+  background:
+    url("./art/celeste-check.svg") 8px center / 14px 14px no-repeat,
+    var(--c-plaque);
+  background-clip: padding-box;
+  color: #ffffff;
+}
+
+html[data-style="celeste"][data-theme] .proj-round {
+  border-radius: 0;
+}
+
+html[data-style="celeste"][data-theme] :is(.proj-session, .tree-row) {
+  border-radius: 0;
+}
+
+/* ── 15. Nothing open, signing in, loading ──────────────────────────── */
+
+/* No session open: the memorial in the snow, Madeline resting by a fire. */
+html[data-style="celeste"][data-theme] .placeholder {
+  flex: 1 1 auto;
+  position: relative;
+  padding-top: 150px;
+  box-sizing: border-box;
+}
+
+html[data-style="celeste"][data-theme] .placeholder::before,
+html[data-style="celeste"][data-theme] .placeholder::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 128px);
+  top: calc(50% - 150px);
+  width: 256px;
+  height: 144px;
+  background: url("./art/celeste-camp.svg") center / contain no-repeat;
+  pointer-events: none;
+}
+
+html[data-style="celeste"][data-theme] .placeholder::after {
+  left: calc(50% - 128px + 184px);
+  top: calc(50% - 150px + 64px);
+  width: 40px;
+  height: 44px;
+  background-image: url("./art/celeste-fire-high.svg");
+  animation: celeste-frame-b 0.7s steps(1) infinite;
+}
+
+/* Signing in: the mountain, at night. */
+html[data-style="celeste"][data-theme] .login {
+  background:
+    url("./art/celeste-mountain.svg") center bottom / 600px 330px no-repeat,
+    url("./art/celeste-stars.svg") 0 0 / 192px repeat,
+    linear-gradient(180deg, #03050f 0%, #070b1e 45%, #111a40 100%);
+}
+
+html[data-style="celeste"][data-theme] .login-box {
+  margin-bottom: 32vh;
+}
+
+html[data-style="celeste"][data-theme] .login-title {
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-shadow: 2px 2px 0 #20408a;
+}
+
+html[data-style="celeste"][data-theme] .login-input {
+  padding-left: 40px;
+  border: 2px solid #6a546e;
+  border-radius: 0;
+  background: url("./art/celeste-key.svg") 9px center / 22px 20px no-repeat, #17111a;
+  color: #f3eef3;
+}
+
+/* Loading: the postcard the game shows between chapters. */
+html[data-style="celeste"][data-theme] .loading {
+  background:
+    url("./art/celeste-card.svg") center / 300px 200px no-repeat,
+    #05050d;
+  color: #3a3038;
+  font-weight: 700;
+}
+
+/* ── 16. Small things ───────────────────────────────────────────────── */
+
+html[data-style="celeste"][data-theme] ::selection {
+  background: rgb(72 176 248 / 40%);
+}
+
+/* Back to the foot of the page: a spring, on a girder's face so that it
+   reads over whatever is written behind it. */
+html[data-style="celeste"][data-theme] :is(.jump-btn, .to-bottom) {
+  width: 46px;
+  height: 40px;
+  border: 4px solid transparent;
+  border-radius: 0;
+  border-image: var(--c-girder) 4 / 8px;
+  background:
+    url("./art/celeste-spring.svg") center / 28px 22px no-repeat,
+    var(--c-girder-fill);
+  background-clip: padding-box;
+  box-shadow: 0 3px 0 rgb(0 0 0 / 25%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-style="celeste"][data-theme] :is(.jump-btn, .to-bottom) > svg {
+  visibility: hidden;
+}
+
+html[data-style="celeste"][data-theme] :is(.jump-btn, .to-bottom):hover {
+  border-color: transparent;
+  translate: 0 -3px;
+}
+
+html[data-style="celeste"][data-theme] .tag {
+  border-radius: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-style="celeste"][data-theme] .sidebar::before,
+  html[data-style="celeste"][data-theme] .sidebar::after,
+  html[data-style="celeste"][data-theme] .main::before,
+  html[data-style="celeste"][data-theme] .main::after,
+  html[data-style="celeste"][data-theme] .sidebar .brand::before,
+  html[data-style="celeste"][data-theme] .sidebar .brand::after,
+  html[data-style="celeste"][data-theme] .sidebar .session.active::after,
+  html[data-style="celeste"][data-theme] .dot,
+  html[data-style="celeste"][data-theme] .session-unread::before,
+  html[data-style="celeste"][data-theme] .session-unread::after,
+  html[data-style="celeste"][data-theme] .bubble.user::after,
+  html[data-style="celeste"][data-theme] .tool.group.running .tool-icon::after,
+  html[data-style="celeste"][data-theme] .tool.group.running > .tool-head::after,
+  html[data-style="celeste"][data-theme] .tool-state > svg.spin,
+  html[data-style="celeste"][data-theme] .thinking.live > svg,
+  html[data-style="celeste"][data-theme] .working-dots i,
+  html[data-style="celeste"][data-theme] .option:hover::before,
+  html[data-style="celeste"][data-theme] .placeholder::after,
+  html[data-style="celeste"][data-theme] .tasks-head::after,
+  html[data-style="celeste"][data-theme] .turn-line::after {
+    animation: none;
+  }
+
+  html[data-style="celeste"][data-theme] .sidebar .brand::after,
+  html[data-style="celeste"][data-theme] .session-unread::after,
+  html[data-style="celeste"][data-theme] .sidebar .session.active::after {
+    display: none;
+  }
+}

@@ -1,0 +1,2078 @@
+/* ── 山山兔 (Shanshan Rabbit) ─────────────────────────────────────────────
+   A tribute to the plush rabbit of 明日方舟's merchandise brand, drawn after
+   the brand's own photographs of it. The doll sits: on the composer while
+   you type, in its tent where no session is open, five of them (each
+   dressed as a different operator) in a row where you sign in. A step's
+   mark is the rabbit, turning while the step runs; three of them hop while
+   the agent works. Around it, the product cards' own graphics: a black
+   label bar with three mint stripes and a coral shadow for a name or a
+   heading, "◆" before a line, four-pointed sparkles, a checker strip, tags,
+   the orange tab of a photograph; and the photo set — the rug along the
+   foot, the mushroom lamp, the clock, the books, the string of star lights
+   (lit by night, with the lamp). What you say is the collar: pale blue,
+   soft, stitched.
+   Colours and corners are tokens (tools/themes/bunny.json); the pictures
+   are Loom's own, drawn by tools/art/bunny.mjs.
+
+   Each selector starts `html[data-style="bunny"][data-theme]`: as specific
+   as themes.css's shapes, and after them, so these win. */
+
+html[data-style="bunny"] {
+  --sb-card: url("./art/bunny-f-card.svg");
+  --sb-cream: url("./art/bunny-f-cream.svg");
+  --sb-pop: url("./art/bunny-f-pop.svg");
+  --sb-page: url("./art/bunny-f-page.svg");
+  --sb-scarf: url("./art/bunny-f-scarf.svg");
+  --sb-btn: url("./art/bunny-f-btn.svg");
+  --sb-fur: url("./art/bunny-f-fur.svg");
+  --sb-blue: url("./art/bunny-f-blue.svg");
+  --sb-field: url("./art/bunny-f-field.svg");
+  --sb-tag: url("./art/bunny-f-tag.svg");
+  --sb-nook: url("./art/bunny-nook.svg");
+  --sb-rug: url("./art/bunny-rug.svg");
+  --sb-clouds: url("./art/bunny-clouds.svg");
+  --sb-lights: url("./art/bunny-lights.svg");
+  --sb-room: url("./art/bunny-room.svg");
+  --sb-arrow: url("./art/bunny-arrow.svg");
+  --sb-stamp: url("./art/bunny-stamp.svg");
+  /* The doll's own colours, and the cards'. */
+  --sb-line: #5a3418;
+  --sb-ink: #33261f;
+  --sb-white: #ffffff;
+  --sb-white-shade: #f3e2d0;
+  --sb-paper: #fff3e3;
+  --sb-paper-shade: #f1d9bd;
+  --sb-fur-fill: #e2a672;
+  --sb-fur-ink: #33190a;
+  --sb-sky: #d6eefb;
+  --sb-blue-fill: #cfe6f7;
+  --sb-blue-ink: #1d3442;
+  --sb-rug-fill: #ffffff;
+  --sb-coral: #ff8f8f;
+  --sb-pink: #fbb5b7;
+  --sb-mint: #8ed5cf;
+  --sb-yellow: #fbe58a;
+  --sb-yellow-pale: #fff7d6;
+  --sb-label: #3a3a40;
+  --sb-label-ink: #ffffff;
+  --sb-drop: rgb(90 52 24 / 20%);
+  /* The label bar's three stripes; a strip of checks. */
+  --sb-stripes: repeating-linear-gradient(to bottom, var(--sb-mint) 0 2px, transparent 2px 5px);
+  --sb-checks: repeating-conic-gradient(var(--sb-pink) 0 25%, var(--sb-white) 0 50%);
+}
+
+html[data-style="bunny"][data-theme="dark"] {
+  --sb-card: url("./art/bunny-f-card-night.svg");
+  --sb-cream: url("./art/bunny-f-cream-night.svg");
+  --sb-pop: url("./art/bunny-f-pop-night.svg");
+  --sb-page: url("./art/bunny-f-page-night.svg");
+  --sb-scarf: url("./art/bunny-f-scarf-night.svg");
+  --sb-btn: url("./art/bunny-f-btn-night.svg");
+  --sb-fur: url("./art/bunny-f-fur-night.svg");
+  --sb-blue: url("./art/bunny-f-blue-night.svg");
+  --sb-field: url("./art/bunny-f-field-night.svg");
+  --sb-tag: url("./art/bunny-f-tag-night.svg");
+  --sb-nook: url("./art/bunny-nook-night.svg");
+  --sb-rug: url("./art/bunny-rug-night.svg");
+  --sb-clouds: url("./art/bunny-clouds-night.svg");
+  --sb-lights: url("./art/bunny-lights-lit.svg");
+  --sb-room: url("./art/bunny-room-night.svg");
+  --sb-arrow: url("./art/bunny-arrow-night.svg");
+  --sb-stamp: url("./art/bunny-stamp-night.svg");
+  --sb-line: #130e0d;
+  --sb-ink: #f1e7da;
+  --sb-white: #322925;
+  --sb-white-shade: #28201d;
+  --sb-paper: #3a2f2a;
+  --sb-paper-shade: #2c2420;
+  --sb-fur-fill: #d69a66;
+  --sb-fur-ink: #2c1708;
+  --sb-sky: #1a2133;
+  --sb-blue-fill: #2c4a61;
+  --sb-blue-ink: #e8f3fb;
+  --sb-rug-fill: #39435c;
+  --sb-coral: #ff9d94;
+  --sb-pink: #7a4a52;
+  --sb-mint: #7cc7bd;
+  --sb-yellow: #8a7a3c;
+  --sb-yellow-pale: #a39552;
+  --sb-label: #15110f;
+  --sb-label-ink: #ffffff;
+  --sb-drop: rgb(0 0 0 / 38%);
+}
+
+/* Sprites keep their squares wherever a line of text happens to put them
+   (half a pixel down, they would blur); photographs and other pictures in
+   the conversation are left as they are. */
+html[data-style="bunny"][data-theme] {
+  image-rendering: pixelated;
+}
+
+html[data-style="bunny"][data-theme] :is(img, video, canvas) {
+  image-rendering: auto;
+}
+
+/* ── Motion: in steps, as sprites move ──────────────────────────────── */
+
+/* A sprite's idle: up a pixel, down a pixel. */
+@keyframes bunny-breathe {
+  50% {
+    translate: 0 -2px;
+  }
+}
+
+@keyframes bunny-hop {
+  0%,
+  40%,
+  100% {
+    translate: 0 0;
+  }
+
+  20% {
+    translate: 0 -6px;
+  }
+}
+
+/* The rabbit turning: by eighths, as a sprite turns. */
+@keyframes bunny-turn {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* A strip of frames behind a window one frame wide, slid a frame at a
+   time: two frames, or four. */
+@keyframes bunny-strip-2 {
+  to {
+    translate: -50% 0;
+  }
+}
+
+@keyframes bunny-strip-4 {
+  to {
+    translate: -75% 0;
+  }
+}
+
+@keyframes bunny-twinkle {
+  0%,
+  100% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+    scale: 0.7;
+  }
+}
+
+@keyframes bunny-glow {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes bunny-drift {
+  to {
+    translate: -240px 0;
+  }
+}
+
+/* ── The sky, and the nook at its foot ──────────────────────────────── */
+
+html[data-style="bunny"][data-theme] .sidebar {
+  /* Positioned already: beside the page on a desktop, a drawer on a phone. */
+  isolation: isolate;
+  border-right: 0;
+  background:
+    var(--sb-nook) left bottom / 260px 88px no-repeat,
+    var(--sb-rug) left bottom 72px / 32px 16px repeat-x,
+    linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 74px no-repeat,
+    var(--sb-clouds) left top 48px / 240px 68px repeat-x,
+    var(--sb-sky);
+}
+
+html[data-style="bunny"][data-theme="dark"] .sidebar {
+  background:
+    var(--sb-nook) left bottom / 260px 88px no-repeat,
+    var(--sb-rug) left bottom 72px / 32px 16px repeat-x,
+    linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 74px no-repeat,
+    url("./art/bunny-stars.svg") 0 0 / 128px 128px repeat,
+    var(--sb-clouds) left top 48px / 240px 68px repeat-x,
+    var(--sb-sky);
+}
+
+/* Quiet text on the sky: a shade darker than the mix, so it reads. */
+html[data-style="bunny"][data-theme="light"] .sidebar {
+  --fg-dim: #4c5f6d;
+}
+
+@media (min-width: 641px) {
+  /* On a desktop the sky runs behind everything, the page set into it; the
+     rug along the whole foot of the window, the nook standing on it above
+     the foot's buttons. */
+  html[data-style="bunny"][data-theme] .app {
+    background:
+      var(--sb-nook) left var(--desktop-inset) bottom 46px / 260px 88px no-repeat,
+      var(--sb-rug) left bottom 58px / 32px 16px repeat-x,
+      linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 60px no-repeat,
+      var(--sb-clouds) left top 56px / 240px 68px repeat-x,
+      var(--sb-sky);
+  }
+
+  html[data-style="bunny"][data-theme="dark"] .app {
+    background:
+      var(--sb-nook) left var(--desktop-inset) bottom 46px / 260px 88px no-repeat,
+      var(--sb-rug) left bottom 58px / 32px 16px repeat-x,
+      linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 60px no-repeat,
+      url("./art/bunny-stars.svg") 0 0 / 128px 128px repeat,
+      var(--sb-clouds) left top 56px / 240px 68px repeat-x,
+      var(--sb-sky);
+  }
+
+  html[data-style="bunny"][data-theme] .sidebar {
+    background: none;
+  }
+
+  /* The page: a card, its corners stepped round. */
+  html[data-style="bunny"][data-theme] .main {
+    border: 10px solid transparent;
+    border-image: var(--sb-page) 5 / 10px stretch;
+    border-radius: 0;
+    background-clip: padding-box;
+    box-shadow: 0 4px 0 0 var(--sb-drop);
+  }
+}
+
+/* The list stops above the lamp, so no title is written on the nook. */
+html[data-style="bunny"][data-theme] .sidebar .session-list {
+  margin-bottom: 96px;
+}
+
+@media (max-width: 640px) {
+  /* A phone's drawer has no row of buttons at its foot: "New chat" floats
+     over the rug instead. */
+  html[data-style="bunny"][data-theme] .sidebar .session-list,
+  html[data-style="bunny"][data-theme] .drawer .sidebar .session-list {
+    margin-bottom: 190px;
+    padding-bottom: 8px;
+  }
+
+  /* The nook stands clear of it. */
+  html[data-style="bunny"][data-theme] .sidebar {
+    background-position:
+      left bottom 62px,
+      left bottom 134px,
+      left bottom,
+      left top 48px,
+      0 0;
+    background-size:
+      260px 88px,
+      32px 16px,
+      100% 136px,
+      240px 68px,
+      auto;
+  }
+
+  html[data-style="bunny"][data-theme="dark"] .sidebar {
+    background-position:
+      left bottom 62px,
+      left bottom 134px,
+      left bottom,
+      0 0,
+      left top 48px,
+      0 0;
+    background-size:
+      260px 88px,
+      32px 16px,
+      100% 136px,
+      128px 128px,
+      240px 68px,
+      auto;
+  }
+}
+
+/* The string of star lights over the nook: lit by night, and twinkling. */
+html[data-style="bunny"][data-theme] .sidebar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 106px;
+  z-index: -1;
+  height: 24px;
+  background: var(--sb-lights) 0 0 / 96px 24px repeat-x;
+  pointer-events: none;
+}
+
+html[data-style="bunny"][data-theme="dark"] .sidebar::after {
+  animation: bunny-glow 2.4s steps(3, jump-none) infinite;
+}
+
+@media (max-width: 640px) {
+  html[data-style="bunny"][data-theme] .sidebar::after {
+    bottom: 160px;
+  }
+}
+
+/* The foot's buttons stand on the rug. */
+html[data-style="bunny"][data-theme] .sidebar-foot {
+  border-top: 0;
+}
+
+html[data-style="bunny"][data-theme] .sidebar-foot .devices-btn {
+  color: var(--sb-ink);
+}
+
+html[data-style="bunny"][data-theme] .sidebar-foot .devices-btn:hover {
+  background: var(--sb-blue-fill);
+  color: var(--sb-blue-ink);
+}
+
+/* Unfolded, it is a list with words: on a plain ground, so they read. */
+html[data-style="bunny"][data-theme] .sidebar-foot:not(.folded):not(.dial) {
+  background: var(--sb-rug-fill);
+  box-shadow: 0 -2px 0 0 var(--sb-line);
+}
+
+/* ── The name: a label bar, as on every card ────────────────────────── */
+
+html[data-style="bunny"][data-theme] .sidebar .brand {
+  padding: 0 0.6em 0 1.5em;
+  background:
+    var(--sb-stripes) left 0.5em center / 0.6em 12px no-repeat,
+    var(--sb-label);
+  color: var(--sb-label-ink);
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.6;
+  box-shadow: -3px 3px 0 0 var(--sb-coral);
+}
+
+html[data-style="bunny"][data-theme] .brand-mark {
+  --brand-a: #a55824;
+  --brand-b: #ff8f8f;
+}
+
+html[data-style="bunny"][data-theme="dark"] .brand-mark {
+  --brand-a: #eba56c;
+  --brand-b: #ff9d94;
+}
+
+html[data-style="bunny"][data-theme] .sidebar-head .icon-btn {
+  color: var(--sidebar-foreground);
+}
+
+html[data-style="bunny"][data-theme] .sidebar-head .icon-btn:hover {
+  background: var(--sb-white);
+  box-shadow: inset 0 0 0 2px var(--sb-line);
+}
+
+html[data-style="bunny"][data-theme] :is(.nav-item, .list-heading, .modal-head, .text-btn, .chip, .tool-name) {
+  font-weight: 700;
+}
+
+/* What a row opens, each a thing from the photographs: the rabbit and a
+   sparkle, the books, two of the dolls, the clock, the tent. */
+html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon {
+  width: 30px;
+  height: 30px;
+  background: url("./art/bunny-nav-books.svg") center / 30px 30px no-repeat;
+}
+
+html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon > * {
+  visibility: hidden;
+}
+
+html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon:is(.lucide-square-pen, .lucide-pen-box) {
+  background-image: url("./art/bunny-nav-new.svg");
+}
+
+html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon.lucide-folder {
+  background-image: url("./art/bunny-nav-books.svg");
+}
+
+html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon.lucide-users {
+  background-image: url("./art/bunny-nav-pair.svg");
+}
+
+html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon.lucide-clock {
+  background-image: url("./art/bunny-nav-clock.svg");
+}
+
+html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon.lucide-messages-square {
+  background-image: url("./art/bunny-nav-tent.svg");
+}
+
+html[data-style="bunny"][data-theme] .nav-item:hover > svg.nav-icon {
+  animation: bunny-hop 0.6s steps(6, jump-none) 1;
+}
+
+html[data-style="bunny"][data-theme] :is(.nav-item, .project-row, .sidebar .session):hover {
+  background: color-mix(in srgb, var(--sb-white) 62%, transparent);
+}
+
+html[data-style="bunny"][data-theme] :is(.nav-item.current, .project-row.current) {
+  background: var(--sb-white);
+  box-shadow:
+    inset 0 0 0 2px var(--sb-line),
+    0 3px 0 0 var(--sb-drop);
+}
+
+/* A heading in the list: the label's three stripes before it. */
+html[data-style="bunny"][data-theme] .sidebar .list-heading {
+  color: var(--sidebar-foreground);
+  letter-spacing: 0.1em;
+}
+
+html[data-style="bunny"][data-theme] .sidebar .list-heading::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 10px;
+  height: 12px;
+  background: repeating-linear-gradient(to bottom, var(--sidebar-foreground) 0 2px, transparent 2px 5px);
+}
+
+/* ── Rows ───────────────────────────────────────────────────────────── */
+
+html[data-style="bunny"][data-theme] .sidebar .session {
+  position: relative;
+  padding-left: 24px;
+}
+
+/* "◆" before the row under the cursor, and before the open one. */
+html[data-style="bunny"][data-theme] .sidebar .session:is(:hover, .active)::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  background: url("./art/bunny-diamond.svg") center / 14px 14px no-repeat;
+  pointer-events: none;
+}
+
+/* The open row: a white tag. */
+html[data-style="bunny"][data-theme] .sidebar .session.active {
+  border: 0;
+  background: var(--sb-white);
+  box-shadow:
+    inset 0 0 0 2px var(--sb-line),
+    0 3px 0 0 var(--sb-drop);
+}
+
+html[data-style="bunny"][data-theme] .sidebar .session .dot.idle {
+  display: none;
+}
+
+/* The state of a session is the rabbit's face: dozing while it starts, an
+   ear going up and down while it works, eyes screwed shut when it was
+   stopped. */
+html[data-style="bunny"][data-theme] .dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 0;
+  background: url("./art/bunny-head.svg") center / 18px 18px no-repeat;
+  animation: none;
+}
+
+html[data-style="bunny"][data-theme] .dot.starting {
+  background-image: url("./art/bunny-head-asleep.svg");
+  animation: bunny-breathe 1.2s steps(2, jump-none) infinite;
+}
+
+html[data-style="bunny"][data-theme] .dot.running {
+  position: relative;
+  overflow: hidden;
+  background: none;
+}
+
+html[data-style="bunny"][data-theme] .dot.running::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  background: url("./art/bunny-head-work.svg") 0 0 / 100% 100% no-repeat;
+  animation: bunny-strip-2 0.8s steps(2, jump-none) infinite;
+}
+
+html[data-style="bunny"][data-theme] .dot.interrupted {
+  background-image: url("./art/bunny-head-oops.svg");
+}
+
+/* Not read yet: a sparkle. */
+html[data-style="bunny"][data-theme] .session-unread {
+  width: 18px;
+  height: 18px;
+  border-radius: 0;
+  background: url("./art/bunny-sparkle.svg") center / 18px 18px no-repeat;
+  animation: bunny-twinkle 1.4s steps(4, jump-none) infinite;
+}
+
+html[data-style="bunny"][data-theme] .sidebar .session.unread .session-when {
+  color: var(--sidebar-foreground);
+}
+
+/* Messages waiting: a count on a tag. */
+html[data-style="bunny"][data-theme] .session-queued {
+  border-radius: 4px;
+  background: var(--sb-yellow);
+  color: var(--sb-ink);
+  font-weight: 800;
+  box-shadow: inset 0 0 0 2px var(--sb-line);
+}
+
+html[data-style="bunny"][data-theme] .sidebar .session-del:hover {
+  background: var(--sb-white);
+  color: var(--sb-ink);
+  box-shadow: inset 0 0 0 2px var(--sb-line);
+}
+
+/* ── The page ───────────────────────────────────────────────────────── */
+
+html[data-style="bunny"][data-theme] .main {
+  position: relative;
+  isolation: isolate;
+}
+
+html[data-style="bunny"][data-theme] :is(.placeholder, .loading) {
+  background: transparent;
+}
+
+/* In the corner of the page, behind what is read: the round stamp of a
+   product card, a little askew, and two sparkles. A desktop only. */
+@media (min-width: 900px) {
+  html[data-style="bunny"][data-theme] .main::after {
+    content: "";
+    position: absolute;
+    right: 10px;
+    bottom: 96px;
+    z-index: -1;
+    width: 100px;
+    height: 150px;
+    background:
+      var(--sb-stamp) right bottom / 82px 82px no-repeat,
+      url("./art/bunny-sparkle.svg") left 6px top 30px / 18px 18px no-repeat,
+      url("./art/bunny-sparkle.svg") right 18px top 0 / 9px 9px no-repeat;
+    opacity: 0.5;
+    rotate: -10deg;
+    pointer-events: none;
+  }
+}
+
+@media (min-width: 641px) {
+  /* The head of the page, and a strip of checks under it. */
+  html[data-style="bunny"][data-theme] .chat-header {
+    padding-bottom: 14px;
+    border-bottom: 0;
+    background:
+      var(--sb-checks) left bottom / 8px 8px repeat-x,
+      var(--background);
+  }
+
+  /* Nothing shows through it, so nothing needs blurring behind it. */
+  html[data-style="bunny"][data-theme] .chat-top::before {
+    display: none;
+  }
+}
+
+html[data-style="bunny"][data-theme] .chat-name {
+  font-weight: 800;
+}
+
+/* Its buttons: tags. */
+html[data-style="bunny"][data-theme] :is(.chip.button.head-btn, .chat-header .icon-btn) {
+  border-radius: 6px;
+  background: var(--sb-white);
+  color: var(--sb-ink);
+  box-shadow:
+    inset 0 0 0 2px var(--sb-line),
+    0 2px 0 0 var(--sb-drop);
+}
+
+html[data-style="bunny"][data-theme] :is(.chip.button.head-btn, .chat-header .icon-btn):hover {
+  background: var(--sb-blue-fill);
+  color: var(--sb-blue-ink);
+}
+
+html[data-style="bunny"][data-theme] .chip.button.head-btn.on {
+  background: var(--sb-fur-fill);
+  color: var(--sb-fur-ink);
+}
+
+html[data-style="bunny"][data-theme] .chat-header .chat-meta {
+  gap: 5px;
+}
+
+/* ── What stands apart: cards with stepped corners ──────────────────── */
+
+/* Menus and dialogs. */
+html[data-style="bunny"][data-theme] :is(.modal, .session-menu, .backend-menu, .command-menu, .effort-pop, .plus-pop, .pane-menu, .search-panel, .unsent-menu, .which-key) {
+  border: 10px solid transparent;
+  border-image: var(--sb-pop) 5 / 10px stretch;
+  border-radius: 0;
+  background-color: var(--popover);
+  background-clip: padding-box;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: 0 5px 0 0 var(--sb-drop);
+}
+
+/* Cards and boxes. */
+html[data-style="bunny"][data-theme] :is(.composer-box, .tasks-composer-box, .replies, .task-card, .task-template, .bell-card, .work-card, .kpi-card, .emp-stat, .emp-approval, .emp-attention, .emp-report-row, .dsess-card, .switcher-card, .sleep-bar, .share-bar) {
+  border: 6px solid transparent;
+  border-image: var(--sb-card) 3 / 6px stretch;
+  border-radius: 0;
+  background-color: var(--sb-white);
+  background-clip: padding-box;
+  box-shadow: 0 3px 0 0 var(--sb-drop);
+}
+
+/* Cream ones: a run of steps, a question, what waits. */
+html[data-style="bunny"][data-theme] .tool.group,
+html[data-style="bunny"][data-theme] :is(.queue-panel, .question) {
+  border: 6px solid transparent;
+  border-image: var(--sb-cream) 3 / 6px stretch;
+  border-radius: 0;
+  background-color: var(--sb-paper);
+  background-clip: padding-box;
+  box-shadow: 0 3px 0 0 var(--sb-drop);
+}
+
+/* ── What you said: the collar — pale blue, soft, stitched ──────────── */
+
+html[data-style="bunny"][data-theme] .bubble.user {
+  padding: 0.05rem 0.45rem;
+  border: 10px solid transparent;
+  border-image: var(--sb-scarf) 5 / 10px round;
+  border-radius: 0;
+  background: var(--sb-blue-fill);
+  background-clip: padding-box;
+  color: var(--sb-blue-ink);
+  box-shadow: 0 3px 0 0 var(--sb-drop);
+}
+
+html[data-style="bunny"][data-theme] .bubble.user .clock {
+  color: color-mix(in srgb, var(--sb-blue-ink) 72%, transparent);
+}
+
+html[data-style="bunny"][data-theme] .bubble.user a {
+  color: inherit;
+}
+
+/* ── The reply ──────────────────────────────────────────────────────── */
+
+/* A heading is a label bar: black, three mint stripes, a coral shadow. */
+html[data-style="bunny"][data-theme] :is(h1, h2).md-h {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-left: 3px;
+  padding: 2px 14px 2px 28px;
+  background:
+    var(--sb-stripes) left 10px center / 10px 12px no-repeat,
+    var(--sb-label);
+  color: var(--sb-label-ink);
+  box-shadow: -3px 3px 0 0 var(--sb-coral);
+}
+
+/* A smaller one: "◆" before it, as before a version's name. */
+html[data-style="bunny"][data-theme] :is(h3, h4).md-h::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 0.4em;
+  vertical-align: -0.02em;
+  background: url("./art/bunny-diamond.svg") center / 14px 14px no-repeat;
+}
+
+/* A box ticked, a box not. */
+html[data-style="bunny"][data-theme] .md-check {
+  width: 22px;
+  height: 22px;
+  margin-right: 0.45em;
+  border-radius: 5px;
+  vertical-align: -0.3em;
+  background: var(--sb-white);
+  box-shadow: inset 0 0 0 2px var(--sb-line);
+}
+
+html[data-style="bunny"][data-theme] .md-check:has(.lucide-square-check) {
+  background: url("./art/bunny-sparkle.svg") center / 18px 18px no-repeat var(--sb-white);
+}
+
+html[data-style="bunny"][data-theme] .md-check > svg {
+  display: none;
+}
+
+/* A list's dots are rabbits. */
+html[data-style="bunny"][data-theme] ul.md-list > li:not(.md-task) {
+  position: relative;
+  list-style: none;
+}
+
+html[data-style="bunny"][data-theme] ul.md-list > li:not(.md-task)::before {
+  content: "";
+  position: absolute;
+  top: 0.18em;
+  left: -1.5em;
+  width: 18px;
+  height: 18px;
+  background: url("./art/bunny-head.svg") center / 18px 18px no-repeat;
+}
+
+/* Inside a list, a sparkle. */
+html[data-style="bunny"][data-theme] ul.md-list ul.md-list > li:not(.md-task)::before {
+  top: 0.46em;
+  left: -1.2em;
+  width: 9px;
+  height: 9px;
+  background: url("./art/bunny-sparkle.svg") center / 9px 9px no-repeat;
+}
+
+html[data-style="bunny"][data-theme] ol.md-list > li::marker {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+/* A rule: the rabbit sitting between sparkles. */
+html[data-style="bunny"][data-theme] .md-hr {
+  width: min(100%, 222px);
+  height: 32px;
+  margin: 1.1em auto;
+  border: 0;
+  background: url("./art/bunny-rule.svg") center / 222px 32px no-repeat;
+}
+
+/* A quote: a note on the checked blanket. */
+html[data-style="bunny"][data-theme] .md-quote {
+  padding: 8px 14px 8px 22px;
+  border: 2px solid var(--sb-line);
+  border-radius: 6px;
+  background:
+    repeating-conic-gradient(var(--sb-yellow) 0 25%, var(--sb-yellow-pale) 0 50%) left top / 8px 8px repeat-y,
+    var(--sb-paper);
+  color: var(--foreground);
+  box-shadow: 0 3px 0 0 var(--sb-drop);
+}
+
+/* A table: a product sheet — its head a label bar. */
+html[data-style="bunny"][data-theme] .md-table {
+  border: 2px solid var(--sb-line);
+  box-shadow: 0 3px 0 0 var(--sb-drop);
+}
+
+html[data-style="bunny"][data-theme] .md-table :is(th, td) {
+  border: 0;
+  border-bottom: 2px dashed var(--sb-white-shade);
+  border-right: 2px solid var(--sb-white-shade);
+  background: var(--sb-white);
+}
+
+html[data-style="bunny"][data-theme] .md-table th {
+  border-bottom: 2px solid var(--sb-line);
+  border-right-color: color-mix(in srgb, var(--sb-label-ink) 22%, var(--sb-label));
+  background: var(--sb-label);
+  color: var(--sb-label-ink);
+}
+
+html[data-style="bunny"][data-theme] .md-table tr:last-child td {
+  border-bottom: 0;
+}
+
+html[data-style="bunny"][data-theme] .md-table :is(th, td):last-child {
+  border-right: 0;
+}
+
+html[data-style="bunny"][data-theme] .md-table tbody tr:nth-child(even) td {
+  background: var(--sb-paper);
+}
+
+/* Code in a line: a snip of the collar. */
+html[data-style="bunny"][data-theme] :not(pre) > code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--sb-blue-fill);
+  color: var(--sb-blue-ink);
+}
+
+/* ── Code: a card with a label along its top ────────────────────────── */
+
+html[data-style="bunny"][data-theme] pre.code {
+  border: 2px solid var(--sb-line);
+  border-radius: 8px;
+  background: var(--sb-paper);
+  box-shadow: 0 3px 0 0 var(--sb-drop);
+}
+
+html[data-style="bunny"][data-theme] .code-block > pre.code {
+  padding-top: 38px;
+}
+
+html[data-style="bunny"][data-theme] .code-tools {
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  justify-content: space-between;
+  height: 26px;
+  padding: 0 4px 0 28px;
+  border-radius: 6px 6px 0 0;
+  background:
+    var(--sb-stripes) left 10px center / 10px 12px no-repeat,
+    var(--sb-label);
+}
+
+html[data-style="bunny"][data-theme] .code-lang {
+  color: var(--sb-label-ink);
+  font-weight: 700;
+}
+
+html[data-style="bunny"][data-theme] .code-copy {
+  color: var(--sb-label-ink);
+}
+
+html[data-style="bunny"][data-theme] .code-copy:hover {
+  background: rgb(255 255 255 / 18%);
+  color: var(--sb-label-ink);
+}
+
+/* A file: a tag, a hole punched in its end. */
+html[data-style="bunny"][data-theme] .file-card {
+  padding-left: 16px;
+  border: 4px solid transparent;
+  border-image: var(--sb-tag) 2 / 4px stretch;
+  border-radius: 0;
+  background:
+    radial-gradient(circle, var(--background) 0 2.5px, var(--sb-line) 2.5px 4.5px, transparent 5px) left 3px center / 10px 10px no-repeat,
+    var(--sb-paper);
+  background-clip: padding-box;
+  box-shadow: 0 2px 0 0 var(--sb-drop);
+}
+
+html[data-style="bunny"][data-theme] .file-card.image {
+  padding: 0;
+  background: var(--sb-paper);
+  background-clip: padding-box;
+}
+
+html[data-style="bunny"][data-theme] .file-ext {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+/* ── Steps: the rabbit, turning while one runs ──────────────────────── */
+
+html[data-style="bunny"][data-theme] .tool.group,
+html[data-style="bunny"][data-theme] .tool.group:is(:hover, .open) {
+  background-color: var(--sb-paper);
+}
+
+html[data-style="bunny"][data-theme] .tool.group > .tool-head {
+  padding: 3px 10px 3px 6px;
+}
+
+/* A step's mark is the rabbit itself, sitting: still when the step is done. */
+html[data-style="bunny"][data-theme] .tool-icon,
+html[data-style="bunny"][data-theme] .tool.group:is(:hover, .open) .tool-icon {
+  width: 26px;
+  height: 34px;
+  border-radius: 0;
+  background: url("./art/bunny-small.svg") center / 22px 32px no-repeat;
+  box-shadow: none;
+}
+
+html[data-style="bunny"][data-theme] .tool-icon > svg {
+  display: none;
+}
+
+/* Running, it turns — by eighths, as a sprite turns. */
+html[data-style="bunny"][data-theme] .tool.group.running .tool-icon {
+  background: url("./art/bunny-small.svg") center / 22px 32px no-repeat;
+  animation: bunny-turn 0.9s steps(8) infinite;
+}
+
+html[data-style="bunny"][data-theme] .tool-name {
+  color: var(--sb-ink);
+}
+
+/* Each kind of call, a small tag. */
+html[data-style="bunny"][data-theme] .tool-chip {
+  padding: 0 6px;
+  border: 4px solid transparent;
+  border-image: var(--sb-tag) 2 / 4px stretch;
+  border-radius: 0;
+  background: var(--sb-white);
+  background-clip: padding-box;
+  color: var(--sb-ink);
+  font-weight: 600;
+}
+
+html[data-style="bunny"][data-theme] .tool-state {
+  color: var(--sb-ink);
+}
+
+/* Done: a sparkle. Failed: its eyes screwed shut. */
+html[data-style="bunny"][data-theme] .tool-state > svg.tool-done {
+  width: 18px;
+  height: 18px;
+  background: url("./art/bunny-sparkle.svg") center / 18px 18px no-repeat;
+}
+
+html[data-style="bunny"][data-theme] .tool-state > svg.lucide-x {
+  width: 18px;
+  height: 18px;
+  background: url("./art/bunny-head-oops.svg") center / 18px 18px no-repeat;
+}
+
+html[data-style="bunny"][data-theme] .tool-state > svg:is(.tool-done, .lucide-x) > * {
+  visibility: hidden;
+}
+
+/* Still going: the rabbit, turning. */
+html[data-style="bunny"][data-theme] .tool-state > svg.spin {
+  width: 18px;
+  height: 18px;
+  background: url("./art/bunny-head.svg") center / 18px 18px no-repeat;
+  animation: bunny-turn 0.9s steps(8) infinite;
+}
+
+html[data-style="bunny"][data-theme] .tool-state > svg.spin > * {
+  visibility: hidden;
+}
+
+/* The steps, opened: tags on the card. */
+html[data-style="bunny"][data-theme] .group-steps {
+  gap: 6px;
+  border-top: 2px dashed var(--sb-paper-shade);
+}
+
+html[data-style="bunny"][data-theme] .group-steps .tool,
+html[data-style="bunny"][data-theme] .timeline-inner > .tool:not(.group) {
+  border: 2px solid var(--sb-paper-shade);
+  border-radius: 6px;
+  background: var(--sb-white);
+}
+
+html[data-style="bunny"][data-theme] .timeline-inner > .tool:not(.group) {
+  border-color: var(--sb-line);
+  box-shadow: 0 3px 0 0 var(--sb-drop);
+}
+
+html[data-style="bunny"][data-theme] .tool.failed {
+  border-color: var(--red);
+}
+
+html[data-style="bunny"][data-theme] .tool:not(.group) > .tool-head::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  background: url("./art/bunny-diamond.svg") center / 14px 14px no-repeat;
+}
+
+html[data-style="bunny"][data-theme] :is(.tool-input, .tool-output) {
+  border-top: 2px dashed var(--sb-paper-shade);
+  background: color-mix(in srgb, var(--sb-paper-shade) 28%, var(--sb-white));
+  color: var(--foreground);
+}
+
+/* ── Thinking, working, and the end of a turn ───────────────────────── */
+
+/* Thinking: the rabbit's head, bobbing. */
+html[data-style="bunny"][data-theme] .thinking > svg {
+  width: 18px;
+  height: 18px;
+  margin-top: 0;
+  background: url("./art/bunny-head-asleep.svg") center / 18px 18px no-repeat;
+  opacity: 1;
+}
+
+html[data-style="bunny"][data-theme] .thinking > svg > * {
+  visibility: hidden;
+}
+
+html[data-style="bunny"][data-theme] .thinking.live > svg {
+  background-image: url("./art/bunny-head.svg");
+  animation: bunny-breathe 0.8s steps(2, jump-none) infinite;
+}
+
+/* Three of the dolls in a row, hopping in turn. */
+html[data-style="bunny"][data-theme] .working-dots {
+  gap: 3px;
+  height: 34px;
+  padding-top: 0;
+  align-items: flex-end;
+}
+
+html[data-style="bunny"][data-theme] .working-dots i {
+  width: 22px;
+  height: 32px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/bunny-small.svg") center / 22px 32px no-repeat;
+  animation: bunny-hop 1.2s steps(6, jump-none) infinite;
+}
+
+html[data-style="bunny"][data-theme] .working-dots i:nth-child(2) {
+  background-image: url("./art/bunny-small-pink.svg");
+  animation-delay: 0.2s;
+}
+
+html[data-style="bunny"][data-theme] .working-dots i:nth-child(3) {
+  background-image: url("./art/bunny-small-grey.svg");
+  animation-delay: 0.4s;
+}
+
+html[data-style="bunny"][data-theme] .working.starting .working-dots i {
+  background-color: transparent;
+  opacity: 0.6;
+}
+
+html[data-style="bunny"][data-theme] .working[role="status"] {
+  font-weight: 700;
+}
+
+/* The end of a turn: a tag, the rabbit's head on it. */
+html[data-style="bunny"][data-theme] .turn-line {
+  padding: 0 10px 0 26px;
+  border: 4px solid transparent;
+  border-image: var(--sb-tag) 2 / 4px stretch;
+  border-radius: 0;
+  background:
+    url("./art/bunny-head.svg") left 3px center / 18px 18px no-repeat,
+    var(--sb-paper);
+  background-clip: padding-box;
+  color: var(--sb-ink);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 0 0 var(--sb-drop);
+}
+
+html[data-style="bunny"][data-theme] .turn-line .clock {
+  color: inherit;
+}
+
+/* ── The composer: the rabbit looks over its edge, and sits on it while
+      you type ─────────────────────────────────────────────────────── */
+
+/* What scrolls under it goes out of sight behind the page's own ground. */
+html[data-style="bunny"][data-theme] .dock {
+  background: linear-gradient(to bottom, transparent 0, var(--background) 30px);
+}
+
+html[data-style="bunny"][data-theme] .composer-box,
+html[data-style="bunny"][data-theme] .composer-box:has(.composer-input:not(:placeholder-shown)),
+html[data-style="bunny"][data-theme] .tasks-composer-box {
+  background-color: var(--sb-white);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-style="bunny"][data-theme] .composer-box::before {
+  content: "";
+  position: absolute;
+  right: 3.4rem;
+  bottom: calc(100% + 4px);
+  width: 46px;
+  height: 64px;
+  /* The whole rabbit, all but its ears and eyes out of sight below the
+     box's edge until the composer has the focus; then it hops up and sits
+     there. */
+  background: url("./art/bunny-half.svg") center 30px / 46px 64px no-repeat;
+  transition: background-position 0.4s cubic-bezier(0.3, 1.5, 0.5, 1);
+  pointer-events: none;
+}
+
+html[data-style="bunny"][data-theme] .composer-box:focus-within::before {
+  background-position: center 0;
+}
+
+html[data-style="bunny"][data-theme] .composer-btn {
+  color: var(--sb-ink);
+}
+
+/* How hard to think: a sparkle. */
+html[data-style="bunny"][data-theme] .composer-btn.effort-btn > svg {
+  width: 18px;
+  height: 18px;
+  background: url("./art/bunny-sparkle-gold.svg") center / 18px 18px no-repeat;
+}
+
+html[data-style="bunny"][data-theme] .composer-btn.effort-btn > svg > * {
+  visibility: hidden;
+}
+
+html[data-style="bunny"][data-theme] .composer-btn:is(.attach, .effort-btn):is(:hover, .open, .set) {
+  border-radius: 6px;
+  background-color: var(--sb-blue-fill);
+  color: var(--sb-blue-ink);
+  box-shadow: inset 0 0 0 2px var(--sb-line);
+}
+
+/* Send is the rabbit's own face, its "ʌ" pointing up; stop is the one with
+   its eyes screwed shut. (The whole background each time: themes.css sets
+   it whole for hover and for disabled, which would take the picture away.) */
+html[data-style="bunny"][data-theme] :is(.composer-btn.send, .composer-btn.stop),
+html[data-style="bunny"][data-theme] :is(.composer-btn.send:hover:not(:disabled), .composer-btn.stop:hover),
+html[data-style="bunny"][data-theme] .composer-btn.send:disabled {
+  border: 6px solid transparent;
+  border-image: var(--sb-btn-frame, var(--sb-fur)) 3 / 6px stretch;
+  border-radius: 0;
+  background: var(--sb-btn-pic, url("./art/bunny-face.svg")) center / 18px 8px no-repeat var(--sb-btn-ground, var(--sb-fur-fill));
+  background-clip: padding-box;
+  box-shadow: 0 3px 0 0 var(--sb-drop);
+  transition: none;
+}
+
+html[data-style="bunny"][data-theme] .composer-btn.stop {
+  --sb-btn-frame: url("./art/bunny-f-pink.svg");
+  --sb-btn-pic: url("./art/bunny-face-stop.svg");
+  --sb-btn-ground: #f6c3cd;
+}
+
+html[data-style="bunny"][data-theme] :is(.composer-btn.send, .composer-btn.stop) > svg {
+  display: none;
+}
+
+html[data-style="bunny"][data-theme] :is(.composer-btn.send:hover:not(:disabled), .composer-btn.stop:hover) {
+  translate: 0 -2px;
+  box-shadow: 0 5px 0 0 var(--sb-drop);
+}
+
+html[data-style="bunny"][data-theme] :is(.composer-btn.send, .composer-btn.stop):active:not(:disabled) {
+  translate: 0 3px;
+  box-shadow: none;
+}
+
+/* Nothing to send yet: it dozes. */
+html[data-style="bunny"][data-theme] .composer-btn.send:disabled {
+  --sb-btn-pic: url("./art/bunny-face-off.svg");
+  filter: saturate(0.45);
+  opacity: 0.7;
+  box-shadow: none;
+}
+
+/* ── Buttons: plush ─────────────────────────────────────────────────── */
+
+html[data-style="bunny"][data-theme] :is(.text-btn, .option, .bell-btn, .new-chat, .new-chat-more, .replies-send, .queue-steer, .emp-new),
+html[data-style="bunny"][data-theme] .chip.button:not(.head-btn) {
+  border: 6px solid transparent;
+  border-image: var(--sb-btn) 3 / 6px stretch;
+  border-radius: 0;
+  background-color: var(--sb-white);
+  background-clip: padding-box;
+  color: var(--sb-ink);
+  font-weight: 700;
+  box-shadow: 0 3px 0 0 var(--sb-drop);
+  transition: none;
+}
+
+html[data-style="bunny"][data-theme="dark"] :is(.text-btn, .option, .bell-btn, .new-chat, .new-chat-more, .replies-send, .queue-steer, .emp-new),
+html[data-style="bunny"][data-theme="dark"] .chip.button:not(.head-btn) {
+  background-color: #4a3c35;
+}
+
+html[data-style="bunny"][data-theme] :is(.text-btn, .option, .bell-btn, .new-chat, .new-chat-more, .replies-send, .queue-steer, .emp-new):hover:not(:disabled),
+html[data-style="bunny"][data-theme] .chip.button:not(.head-btn):hover {
+  border-image-source: var(--sb-blue);
+  background-color: #c4e1f6;
+  color: #1d3442;
+}
+
+html[data-style="bunny"][data-theme="dark"] :is(.text-btn, .option, .bell-btn, .new-chat, .new-chat-more, .replies-send, .queue-steer, .emp-new):hover:not(:disabled),
+html[data-style="bunny"][data-theme="dark"] .chip.button:not(.head-btn):hover {
+  background-color: #35576f;
+  color: #e8f3fb;
+}
+
+html[data-style="bunny"][data-theme] :is(.text-btn, .option, .bell-btn, .new-chat, .new-chat-more, .replies-send, .queue-steer, .emp-new):active:not(:disabled),
+html[data-style="bunny"][data-theme] .chip.button:not(.head-btn):active {
+  translate: 0 3px;
+  box-shadow: none;
+}
+
+/* The one that says yes: fur. */
+html[data-style="bunny"][data-theme] :is(.text-btn.primary, .replies-send, .bell-btn.pri, .emp-pill.strong),
+html[data-style="bunny"][data-theme] :is(.text-btn.primary, .replies-send, .bell-btn.pri, .emp-pill.strong):hover:not(:disabled) {
+  border-image-source: var(--sb-fur);
+  background-color: var(--sb-fur-fill);
+  color: var(--sb-fur-ink);
+}
+
+html[data-style="bunny"][data-theme] :is(.text-btn.primary, .replies-send, .bell-btn.pri):hover:not(:disabled) {
+  translate: 0 -1px;
+}
+
+html[data-style="bunny"][data-theme] :is(.text-btn, .replies-send):disabled {
+  filter: saturate(0.3);
+  opacity: 0.6;
+}
+
+html[data-style="bunny"][data-theme] .text-btn.danger {
+  color: #b3262c;
+}
+
+html[data-style="bunny"][data-theme="dark"] .text-btn.danger {
+  color: #ffb0a6;
+}
+
+/* A choice of several: tags, the chosen one fur. */
+html[data-style="bunny"][data-theme] .segmented {
+  gap: 4px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+html[data-style="bunny"][data-theme] .segmented button {
+  border-radius: 6px;
+  background: var(--sb-white);
+  color: var(--sb-ink);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--sb-line);
+}
+
+html[data-style="bunny"][data-theme] .segmented button.on {
+  background: var(--sb-fur-fill);
+  color: var(--sb-fur-ink);
+  box-shadow:
+    inset 0 0 0 2px var(--sb-line),
+    inset 0 -5px 0 0 rgb(90 52 24 / 22%);
+}
+
+/* Fields: white, set in. */
+html[data-style="bunny"][data-theme] :is(.modal, .tasks-page, .proj-page, .login, .search-panel, .emp-page, .emp-settings, .emp-modal, .sleep-page) :is(input, textarea, select):not(.composer-input):not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="search"]):not([type="file"]):not(.tasks-composer-box *) {
+  border: 4px solid transparent;
+  border-image: var(--sb-field) 2 / 4px stretch;
+  border-radius: 0;
+  background-color: var(--sb-field-fill, #ffffff);
+  background-clip: padding-box;
+  color: var(--sb-ink);
+}
+
+html[data-style="bunny"][data-theme="dark"] {
+  --sb-field-fill: #1d1716;
+}
+
+/* A box to tick: a sparkle in it. */
+html[data-style="bunny"][data-theme] input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  border: 2px solid var(--sb-line);
+  border-radius: 5px;
+  background: var(--sb-white);
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+html[data-style="bunny"][data-theme] input[type="checkbox"]:checked {
+  background: url("./art/bunny-sparkle.svg") center / 18px 18px no-repeat var(--sb-white);
+}
+
+/* A slider: the collar for a track, the rabbit's head for its knob. */
+html[data-style="bunny"][data-theme] .slider::before {
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 4px;
+  background: var(--sb-white);
+  box-shadow: 0 0 0 2px var(--sb-line);
+}
+
+html[data-style="bunny"][data-theme] .slider::after {
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 4px;
+  background: #9dcdee;
+}
+
+html[data-style="bunny"][data-theme] .slider-ticks span {
+  width: 2px;
+  height: 8px;
+  border-radius: 0;
+  background: var(--sb-line);
+  opacity: 0.45;
+}
+
+html[data-style="bunny"][data-theme] .slider-thumb,
+html[data-style="bunny"][data-theme] .slider.armed .slider-thumb {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 0;
+  box-sizing: border-box;
+  background: url("./art/bunny-head.svg") center / 18px 18px no-repeat;
+  box-shadow: none;
+}
+
+html[data-style="bunny"][data-theme] .slider input::-webkit-slider-thumb {
+  opacity: 0;
+}
+
+html[data-style="bunny"][data-theme] .slider input::-moz-range-thumb {
+  opacity: 0;
+}
+
+html[data-style="bunny"][data-theme] input[type="range"]:not(.slider input) {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 24px;
+  background: transparent;
+}
+
+html[data-style="bunny"][data-theme] input[type="range"]:not(.slider input)::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #9dcdee;
+  box-shadow: 0 0 0 2px var(--sb-line);
+}
+
+html[data-style="bunny"][data-theme] input[type="range"]:not(.slider input)::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -5px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/bunny-head.svg") center / 18px 18px no-repeat;
+}
+
+html[data-style="bunny"][data-theme] input[type="range"]:not(.slider input)::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #9dcdee;
+  box-shadow: 0 0 0 2px var(--sb-line);
+}
+
+html[data-style="bunny"][data-theme] input[type="range"]:not(.slider input)::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/bunny-head.svg") center / 18px 18px no-repeat;
+}
+
+html[data-style="bunny"][data-theme] .effort-stops button {
+  border-radius: 6px;
+  color: var(--sb-ink);
+  opacity: 0.75;
+}
+
+html[data-style="bunny"][data-theme] .effort-stops button.on {
+  opacity: 1;
+}
+
+/* ── Menus ──────────────────────────────────────────────────────────── */
+
+html[data-style="bunny"][data-theme] :is(.session-menu, .backend-menu, .plus-pop, .pane-menu) button,
+html[data-style="bunny"][data-theme] .command-menu li {
+  border-radius: 6px;
+  color: var(--sb-ink);
+  font-weight: 600;
+}
+
+/* The line under the cursor: the collar's blue, "◆" at its end. */
+html[data-style="bunny"][data-theme] :is(.session-menu, .backend-menu, .plus-pop, .pane-menu) button:hover:not(:disabled),
+html[data-style="bunny"][data-theme] .command-menu li:is(.on, :hover),
+html[data-style="bunny"][data-theme] .search-row:hover {
+  background: url("./art/bunny-diamond.svg") right 8px center / 14px 14px no-repeat var(--sb-blue-fill);
+  color: var(--sb-blue-ink);
+}
+
+html[data-style="bunny"][data-theme] :is(.session-menu, .backend-menu, .plus-pop, .pane-menu) button:hover:not(:disabled) svg {
+  color: var(--sb-blue-ink);
+}
+
+html[data-style="bunny"][data-theme] .session-menu button.danger,
+html[data-style="bunny"][data-theme] .session-menu button.danger svg {
+  color: #b3262c;
+}
+
+html[data-style="bunny"][data-theme="dark"] .session-menu button.danger,
+html[data-style="bunny"][data-theme="dark"] .session-menu button.danger svg {
+  color: #ff9a8e;
+}
+
+html[data-style="bunny"][data-theme] .session-menu .menu-sep {
+  height: 0;
+  border-top: 2px dashed var(--sb-white-shade);
+  background: none;
+}
+
+html[data-style="bunny"][data-theme] .command-menu .name {
+  color: inherit;
+  font-weight: 800;
+}
+
+/* ── Dialogs: a product card — a label bar across its top ───────────── */
+
+html[data-style="bunny"][data-theme] .modal {
+  background-color: var(--card);
+}
+
+html[data-style="bunny"][data-theme] .modal-head {
+  padding-left: 30px;
+  border-bottom: 0;
+  background:
+    var(--sb-stripes) left 12px center / 10px 12px no-repeat,
+    var(--sb-label);
+  color: var(--sb-label-ink);
+  box-shadow: 0 4px 0 0 var(--sb-coral);
+}
+
+html[data-style="bunny"][data-theme] .modal-head :is(.icon-btn, .settings-back) {
+  color: var(--sb-label-ink);
+}
+
+html[data-style="bunny"][data-theme] .modal-head .icon-btn:hover {
+  background: rgb(255 255 255 / 18%);
+}
+
+html[data-style="bunny"][data-theme] .settings-row {
+  border-bottom: 2px dashed var(--sb-white-shade);
+}
+
+html[data-style="bunny"][data-theme] .settings-row:last-child {
+  border-bottom: 0;
+}
+
+/* The themes to choose from: each on a card. */
+html[data-style="bunny"][data-theme] .settings-body .tw.grid > button {
+  border: 6px solid transparent;
+  border-image: var(--sb-card) 3 / 6px stretch;
+  border-radius: 0;
+  background-color: var(--sb-white);
+  background-clip: padding-box;
+  color: var(--sb-ink);
+}
+
+html[data-style="bunny"][data-theme] .settings-body .tw.grid > button:hover {
+  border-image-source: var(--sb-cream);
+  background-color: var(--sb-paper);
+}
+
+/* Search. */
+html[data-style="bunny"][data-theme] .search-panel {
+  background-color: var(--card);
+}
+
+html[data-style="bunny"][data-theme] .search-field {
+  border-radius: 6px;
+  background: var(--sb-white);
+  color: var(--sb-ink);
+  box-shadow: inset 0 0 0 2px var(--sb-line);
+}
+
+html[data-style="bunny"][data-theme] .search-row {
+  border-radius: 6px;
+}
+
+html[data-style="bunny"][data-theme] .search-heading {
+  font-weight: 800;
+}
+
+/* ── Questions: the rabbit asks ─────────────────────────────────────── */
+
+html[data-style="bunny"][data-theme] .question {
+  padding: 10px 44px 10px 14px;
+  background:
+    url("./art/bunny-small.svg") right 8px top 6px / 22px 32px no-repeat,
+    var(--sb-paper);
+  background-clip: padding-box;
+}
+
+html[data-style="bunny"][data-theme] .replies {
+  gap: 4px;
+  padding: 8px;
+}
+
+html[data-style="bunny"][data-theme] .reply {
+  padding: 8px 14px 8px 30px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-weight: 700;
+}
+
+/* The answer under the cursor. */
+html[data-style="bunny"][data-theme] .reply:is(:hover, .on) {
+  background: url("./art/bunny-diamond.svg") left 8px center / 14px 14px no-repeat var(--sb-blue-fill);
+  color: var(--sb-blue-ink);
+}
+
+/* What waits to be sent. */
+html[data-style="bunny"][data-theme] .queue-head {
+  font-weight: 800;
+}
+
+html[data-style="bunny"][data-theme] .queue-steer {
+  padding: 0 8px;
+}
+
+html[data-style="bunny"][data-theme] .queue-item {
+  border-top: 2px dashed var(--sb-paper-shade);
+}
+
+/* Something went wrong. */
+html[data-style="bunny"][data-theme] .error {
+  padding: 8px 12px 8px 36px;
+  border: 2px solid var(--red);
+  border-radius: 6px;
+  background: url("./art/bunny-head-oops.svg") left 9px center / 18px 18px no-repeat var(--sb-white);
+  color: var(--red);
+  font-weight: 600;
+}
+
+/* ── Pages and cards ────────────────────────────────────────────────── */
+
+/* A notice: a card, a sparkle in its corner (the lower one: its rank sits
+   in the upper) when it matters. */
+html[data-style="bunny"][data-theme] .bell-card.important {
+  background: url("./art/bunny-sparkle.svg") right 10px bottom 12px / 18px 18px no-repeat var(--sb-white);
+  background-clip: padding-box;
+}
+
+html[data-style="bunny"][data-theme] .bell-band {
+  font-weight: 800;
+}
+
+html[data-style="bunny"][data-theme] .bell-band::before {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/bunny-diamond.svg") center / 14px 14px no-repeat;
+}
+
+html[data-style="bunny"][data-theme] .bell-p {
+  border-radius: 4px;
+  background: var(--sb-yellow);
+  color: var(--sb-ink);
+  box-shadow: inset 0 0 0 2px var(--sb-line);
+}
+
+/* The tasks page: its name on a label, the clock beside what is planned. */
+html[data-style="bunny"][data-theme] .tasks-head h1 {
+  padding: 0 0.7em 0 1.7em;
+  background:
+    var(--sb-stripes) left 0.55em center / 0.6em 12px no-repeat,
+    var(--sb-label);
+  color: var(--sb-label-ink);
+  font-weight: 800;
+  line-height: 1.7;
+  box-shadow: -3px 3px 0 0 var(--sb-coral);
+}
+
+html[data-style="bunny"][data-theme] .tasks-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+}
+
+html[data-style="bunny"][data-theme] .tasks-section::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: url("./art/bunny-diamond.svg") center / 14px 14px no-repeat;
+}
+
+html[data-style="bunny"][data-theme] .tasks-column::after {
+  content: "";
+  display: block;
+  width: 80px;
+  height: 44px;
+  margin: 14px 12px 0 auto;
+  background:
+    url("./art/bunny-clock.svg") right bottom / 32px 32px no-repeat,
+    url("./art/bunny-lamp.svg") left bottom / 32px 44px no-repeat;
+}
+
+html[data-style="bunny"][data-theme] .tasks-round {
+  border-radius: 6px;
+  background: var(--sb-white);
+  color: var(--sb-ink);
+  box-shadow: inset 0 0 0 2px var(--sb-line);
+}
+
+html[data-style="bunny"][data-theme] .tasks-composer-btn {
+  color: var(--sb-ink);
+}
+
+html[data-style="bunny"][data-theme] .tasks-composer-btn.send,
+html[data-style="bunny"][data-theme] .tasks-composer-btn.send:disabled {
+  border: 6px solid transparent;
+  border-image: var(--sb-fur) 3 / 6px stretch;
+  border-radius: 0;
+  background: url("./art/bunny-face.svg") center / 18px 8px no-repeat var(--sb-fur-fill);
+  background-clip: padding-box;
+  box-shadow: 0 3px 0 0 var(--sb-drop);
+}
+
+html[data-style="bunny"][data-theme] .tasks-composer-btn.send:disabled {
+  background-image: url("./art/bunny-face-off.svg");
+  filter: saturate(0.45);
+  opacity: 0.7;
+  box-shadow: none;
+}
+
+html[data-style="bunny"][data-theme] .tasks-composer-btn.send > svg {
+  display: none;
+}
+
+/* Nothing here yet: it dozes. */
+html[data-style="bunny"][data-theme] .emp-empty::before {
+  content: "";
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  vertical-align: -3px;
+  background: url("./art/bunny-head-asleep.svg") center / 18px 18px no-repeat;
+}
+
+/* Tabs: tags, the chosen one fur. */
+html[data-style="bunny"][data-theme] :is(.emp-tab, .proj-tab, .bell-tabs button, .emp-pill) {
+  border: 0;
+  border-radius: 6px;
+  background: var(--sb-white);
+  color: var(--sb-ink);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--sb-line);
+}
+
+html[data-style="bunny"][data-theme] :is(.emp-tab, .proj-tab, .bell-tabs button, .emp-pill):hover {
+  background: var(--sb-blue-fill);
+  color: var(--sb-blue-ink);
+}
+
+html[data-style="bunny"][data-theme] :is(.emp-tab, .proj-tab, .bell-tabs button).on {
+  background: var(--sb-fur-fill);
+  color: var(--sb-fur-ink);
+  box-shadow:
+    inset 0 0 0 2px var(--sb-line),
+    inset 0 -5px 0 0 rgb(90 52 24 / 22%);
+}
+
+html[data-style="bunny"][data-theme] .emp-bar {
+  padding-top: 8px;
+  border-bottom: 2px dashed var(--sb-white-shade);
+  background: var(--background);
+}
+
+/* An employee is one of the dolls: five of them, in turn. */
+html[data-style="bunny"][data-theme] .emp-avatar {
+  border-radius: 6px;
+  background: url("./art/bunny-head.svg") center / 18px 18px no-repeat var(--sb-blue-fill);
+  color: transparent;
+  box-shadow: inset 0 0 0 2px var(--sb-line);
+}
+
+html[data-style="bunny"][data-theme] .emp-row:nth-child(5n + 2) .emp-avatar {
+  background-image: url("./art/bunny-head-pink.svg");
+}
+
+html[data-style="bunny"][data-theme] .emp-row:nth-child(5n + 3) .emp-avatar {
+  background-image: url("./art/bunny-head-grey.svg");
+}
+
+html[data-style="bunny"][data-theme] .emp-row:nth-child(5n + 4) .emp-avatar {
+  background-image: url("./art/bunny-head-slate.svg");
+}
+
+html[data-style="bunny"][data-theme] .emp-row:nth-child(5n) .emp-avatar {
+  background-image: url("./art/bunny-head-king.svg");
+}
+
+/* How a KPI stands: sparkles, ten of them. */
+html[data-style="bunny"][data-theme] .kpi-progress .kpi-track {
+  flex: 0 0 180px;
+  height: 18px;
+  border-radius: 0;
+  background: url("./art/bunny-sparkle-off.svg") 0 0 / 18px 18px repeat-x;
+}
+
+html[data-style="bunny"][data-theme] .kpi-progress .kpi-fill {
+  border-radius: 0;
+  background: url("./art/bunny-sparkle.svg") 0 0 / 18px 18px repeat-x;
+}
+
+/* What was spent: a length of the collar. */
+html[data-style="bunny"][data-theme] .emp-spend-row .kpi-track {
+  height: 10px;
+  border: 2px solid var(--sb-line);
+  border-radius: 5px;
+  background: var(--sb-white);
+}
+
+html[data-style="bunny"][data-theme] .emp-spend-row .kpi-fill {
+  border-radius: 3px;
+  background: #9dcdee;
+}
+
+html[data-style="bunny"][data-theme] .emp-spend-row .kpi-fill.over {
+  background: #ff8f8f;
+}
+
+html[data-style="bunny"][data-theme] .emp-stat-value {
+  font-weight: 800;
+}
+
+/* Device sessions, the phone's switcher. */
+html[data-style="bunny"][data-theme] .dsess-card.on {
+  border-image-source: var(--sb-blue);
+  background-color: var(--sb-blue-fill);
+  color: var(--sb-blue-ink);
+}
+
+html[data-style="bunny"][data-theme] .switcher-card.active {
+  box-shadow:
+    0 0 0 2px var(--sb-coral),
+    0 3px 0 0 var(--sb-drop);
+}
+
+/* ── No session open: the photograph — the doll in its tent ─────────── */
+
+html[data-style="bunny"][data-theme] .placeholder::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 360px;
+  max-width: 92%;
+  height: 224px;
+  border: 2px solid var(--sb-line);
+  border-radius: 8px;
+  /* The rabbit sits on the rug in the middle of the photograph, and
+     breathes. (Both pictures are painted with the box, on whole pixels;
+     moved as a layer of its own the doll would land between them and
+     blur. A narrower screen crops the photograph's sides.) */
+  background:
+    url("./art/bunny-sit.svg") center top 77px / 92px 126px no-repeat,
+    var(--sb-room) center top / 360px 224px no-repeat;
+  box-shadow: 0 4px 0 0 var(--sb-drop);
+  animation: bunny-sit 1.8s steps(2, jump-none) infinite;
+}
+
+@keyframes bunny-sit {
+  50% {
+    background-position:
+      center top 75px,
+      center top;
+  }
+}
+
+/* The line under it: a label bar, as under every product. */
+html[data-style="bunny"][data-theme] .placeholder > p {
+  margin: 0;
+  padding: 2px 14px 2px 28px;
+  background:
+    var(--sb-stripes) left 10px center / 10px 12px no-repeat,
+    var(--sb-label);
+  color: var(--sb-label-ink);
+  font-family: var(--ui);
+  font-weight: 800;
+  box-shadow: -3px 3px 0 0 var(--sb-coral);
+}
+
+/* Connecting: the doll on a turntable. */
+html[data-style="bunny"][data-theme] .loading::before {
+  content: "";
+  width: 44px;
+  height: 64px;
+  background: url("./art/bunny-turn.svg") 0 0 / 176px 64px no-repeat;
+  animation: bunny-turntable 1.2s steps(4) infinite;
+}
+
+@keyframes bunny-turntable {
+  to {
+    background-position: -176px 0;
+  }
+}
+
+/* ── Signing in: five of them in a row, under the sky ───────────────── */
+
+html[data-style="bunny"][data-theme] .login {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    url("./art/bunny-sit.svg") left 50% bottom 34px / 92px 126px no-repeat,
+    url("./art/bunny-sit-pink.svg") left calc(50% - 112px) bottom 34px / 92px 126px no-repeat,
+    url("./art/bunny-sit-grey.svg") left calc(50% + 112px) bottom 34px / 92px 126px no-repeat,
+    url("./art/bunny-sit-king.svg") left calc(50% - 224px) bottom 34px / 92px 126px no-repeat,
+    url("./art/bunny-sit-slate.svg") left calc(50% + 224px) bottom 34px / 92px 126px no-repeat,
+    var(--sb-rug) left bottom 62px / 32px 16px repeat-x,
+    linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 64px no-repeat,
+    url("./art/bunny-sparkle-white.svg") 12% 30% / 18px 18px no-repeat,
+    url("./art/bunny-sparkle.svg") 86% 22% / 18px 18px no-repeat,
+    url("./art/bunny-sparkle-white.svg") 78% 58% / 9px 9px no-repeat,
+    url("./art/bunny-sparkle.svg") 20% 62% / 9px 9px no-repeat,
+    linear-gradient(to bottom, #a9dcf5 0%, #d6eefb 55%, #f4fbff 100%);
+}
+
+html[data-style="bunny"][data-theme="dark"] .login {
+  background:
+    url("./art/bunny-sit.svg") left 50% bottom 34px / 92px 126px no-repeat,
+    url("./art/bunny-sit-pink.svg") left calc(50% - 112px) bottom 34px / 92px 126px no-repeat,
+    url("./art/bunny-sit-grey.svg") left calc(50% + 112px) bottom 34px / 92px 126px no-repeat,
+    url("./art/bunny-sit-king.svg") left calc(50% - 224px) bottom 34px / 92px 126px no-repeat,
+    url("./art/bunny-sit-slate.svg") left calc(50% + 224px) bottom 34px / 92px 126px no-repeat,
+    var(--sb-rug) left bottom 62px / 32px 16px repeat-x,
+    linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 64px no-repeat,
+    url("./art/bunny-lights-lit.svg") left top 18px / 96px 24px repeat-x,
+    url("./art/bunny-stars.svg") 0 0 / 128px 128px repeat,
+    linear-gradient(to bottom, #0f1424 0%, #1a2133 60%, #2a3550 100%);
+}
+
+@media (max-width: 640px) {
+  /* A phone has room for three. */
+  html[data-style="bunny"][data-theme] .login {
+    background:
+      url("./art/bunny-sit.svg") left 50% bottom 34px / 92px 126px no-repeat,
+      url("./art/bunny-sit-pink.svg") left calc(50% - 112px) bottom 34px / 92px 126px no-repeat,
+      url("./art/bunny-sit-grey.svg") left calc(50% + 112px) bottom 34px / 92px 126px no-repeat,
+      var(--sb-rug) left bottom 62px / 32px 16px repeat-x,
+      linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 64px no-repeat,
+      linear-gradient(to bottom, #a9dcf5 0%, #d6eefb 55%, #f4fbff 100%);
+  }
+
+  html[data-style="bunny"][data-theme="dark"] .login {
+    background:
+      url("./art/bunny-sit.svg") left 50% bottom 34px / 92px 126px no-repeat,
+      url("./art/bunny-sit-pink.svg") left calc(50% - 112px) bottom 34px / 92px 126px no-repeat,
+      url("./art/bunny-sit-grey.svg") left calc(50% + 112px) bottom 34px / 92px 126px no-repeat,
+      var(--sb-rug) left bottom 62px / 32px 16px repeat-x,
+      linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 64px no-repeat,
+      url("./art/bunny-lights-lit.svg") left top 18px / 96px 24px repeat-x,
+      url("./art/bunny-stars.svg") 0 0 / 128px 128px repeat,
+      linear-gradient(to bottom, #0f1424 0%, #1a2133 60%, #2a3550 100%);
+  }
+}
+
+/* Clouds, drifting. */
+html[data-style="bunny"][data-theme] .login::before {
+  content: "";
+  position: absolute;
+  top: 9%;
+  left: 0;
+  right: -240px;
+  z-index: -1;
+  height: 68px;
+  background: var(--sb-clouds) 0 0 / 240px 68px repeat-x;
+  animation: bunny-drift 80s linear infinite;
+  pointer-events: none;
+}
+
+html[data-style="bunny"][data-theme] .login-box {
+  border: 10px solid transparent;
+  border-image: var(--sb-pop) 5 / 10px stretch;
+  border-radius: 0;
+  background: var(--card);
+  background-clip: padding-box;
+  box-shadow: 0 6px 0 0 var(--sb-drop);
+}
+
+/* The title, on a label. */
+html[data-style="bunny"][data-theme] .login-title {
+  align-self: center;
+  padding: 0 0.7em 0 1.7em;
+  background:
+    var(--sb-stripes) left 0.55em center / 0.6em 12px no-repeat,
+    var(--sb-label);
+  color: var(--sb-label-ink);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow: -3px 3px 0 0 var(--sb-coral);
+}
+
+html[data-style="bunny"][data-theme] .login-input {
+  border: 4px solid transparent;
+  border-image: var(--sb-field) 2 / 4px stretch;
+  border-radius: 0;
+  background: var(--sb-field-fill, #ffffff);
+  background-clip: padding-box;
+  color: var(--sb-ink);
+}
+
+html[data-style="bunny"][data-theme] .login-btn {
+  border: 6px solid transparent;
+  border-image: var(--sb-fur) 3 / 6px stretch;
+  border-radius: 0;
+  background: var(--sb-fur-fill);
+  background-clip: padding-box;
+  color: var(--sb-fur-ink);
+  font-weight: 800;
+  box-shadow: 0 3px 0 0 var(--sb-drop);
+}
+
+html[data-style="bunny"][data-theme] .login-btn:active:not(:disabled) {
+  translate: 0 3px;
+  box-shadow: none;
+}
+
+/* ── Going down to the latest ───────────────────────────────────────── */
+
+html[data-style="bunny"][data-theme] .to-bottom {
+  width: 38px;
+  height: 38px;
+  border: 6px solid transparent;
+  border-image: var(--sb-btn) 3 / 6px stretch;
+  border-radius: 0;
+  background: var(--sb-arrow) center / 18px 12px no-repeat var(--sb-white);
+  background-clip: padding-box;
+  box-shadow: 0 3px 0 0 var(--sb-drop);
+  animation: bunny-breathe 1s steps(2, jump-none) infinite;
+}
+
+html[data-style="bunny"][data-theme="dark"] .to-bottom {
+  background-color: #4a3c35;
+}
+
+html[data-style="bunny"][data-theme] .to-bottom > * {
+  visibility: hidden;
+}
+
+/* ── A phone ────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  /* The head floats over the page: its pieces are tags. */
+  html[data-style="bunny"][data-theme] .chat-header .chat-title,
+  html[data-style="bunny"][data-theme] .chat-header .keep-chip {
+    border: 6px solid transparent;
+    border-image: var(--sb-card) 3 / 6px stretch;
+    border-radius: 0;
+    background: var(--sb-white);
+    background-clip: padding-box;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: 0 3px 0 0 var(--sb-drop);
+  }
+
+  html[data-style="bunny"][data-theme] .chat-header .icon-btn.glass,
+  html[data-style="bunny"][data-theme] .chat-header .chip.button.pane-more,
+  html[data-style="bunny"][data-theme] .sidebar .sidebar-head .bell-btn,
+  html[data-style="bunny"][data-theme] .sidebar .search-btn,
+  html[data-style="bunny"][data-theme] .dial-btn,
+  html[data-style="bunny"][data-theme] .sidebar-foot.dial .devices-btn svg {
+    border: 6px solid transparent;
+    border-image: var(--sb-btn) 3 / 6px stretch;
+    border-radius: 0;
+    background: var(--sb-white);
+    background-clip: padding-box;
+    color: var(--sb-ink);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: 0 3px 0 0 var(--sb-drop);
+  }
+
+  html[data-style="bunny"][data-theme="dark"] .chat-header .icon-btn.glass,
+  html[data-style="bunny"][data-theme="dark"] .chat-header .chip.button.pane-more,
+  html[data-style="bunny"][data-theme="dark"] .sidebar .sidebar-head .bell-btn,
+  html[data-style="bunny"][data-theme="dark"] .sidebar .search-btn,
+  html[data-style="bunny"][data-theme="dark"] .dial-btn,
+  html[data-style="bunny"][data-theme="dark"] .sidebar-foot.dial .devices-btn svg {
+    background-color: #4a3c35;
+  }
+
+  /* Their frame is six pixels of what was padding. */
+  html[data-style="bunny"][data-theme] .sidebar-foot.dial .devices-btn svg {
+    padding: 6px;
+  }
+
+  html[data-style="bunny"][data-theme] .chat-header .chat-title {
+    padding: 0 8px 0 2px;
+  }
+
+  html[data-style="bunny"][data-theme] .sidebar-foot.dial .devices-btn {
+    color: var(--sidebar-foreground);
+  }
+
+  html[data-style="bunny"][data-theme] .new-chat-more::before {
+    background: var(--sb-line);
+    box-shadow: none;
+  }
+}
+
+/* ── Small things ───────────────────────────────────────────────────── */
+
+/* A message from the app: the orange tab of a photograph. */
+html[data-style="bunny"][data-theme] .app-oops {
+  padding: 4px 14px 4px 44px;
+  border: 4px solid transparent;
+  border-image: url("./art/bunny-f-tab.svg") 2 / 4px stretch;
+  border-radius: 0;
+  background:
+    linear-gradient(45deg, transparent 46%, #fff 46% 54%, transparent 54%) left 8px top / 8px 50% no-repeat,
+    linear-gradient(-45deg, transparent 46%, #fff 46% 54%, transparent 54%) left 8px bottom / 8px 50% no-repeat,
+    linear-gradient(45deg, transparent 46%, #fff 46% 54%, transparent 54%) left 18px top / 8px 50% no-repeat,
+    linear-gradient(-45deg, transparent 46%, #fff 46% 54%, transparent 54%) left 18px bottom / 8px 50% no-repeat,
+    #f0934c;
+  background-clip: padding-box;
+  color: #33190a;
+  font-weight: 800;
+  box-shadow: 0 3px 0 0 var(--sb-drop);
+}
+
+html[data-style="bunny"][data-theme] .bell-count {
+  border-radius: 4px;
+  background: var(--sb-coral);
+  color: #33190a;
+  font-weight: 800;
+  box-shadow: 0 0 0 2px var(--sb-line);
+}
+
+html[data-style="bunny"][data-theme] .bell-dot {
+  top: -4px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 0;
+  background: url("./art/bunny-sparkle.svg") center / 9px 9px no-repeat;
+}
+
+html[data-style="bunny"][data-theme] ::selection {
+  background: color-mix(in srgb, #9dcdee 55%, transparent);
+}
+
+html[data-style="bunny"][data-theme] :is(button, [role="button"], a, input, textarea, select):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+html[data-style="bunny"][data-theme] .composer-input:focus-visible {
+  outline: 0;
+}
+
+html[data-style="bunny"][data-theme] .spin {
+  animation-timing-function: steps(8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-style="bunny"][data-theme] .sidebar::after,
+  html[data-style="bunny"][data-theme] .nav-item:hover > svg.nav-icon,
+  html[data-style="bunny"][data-theme] .dot,
+  html[data-style="bunny"][data-theme] .dot.running::before,
+  html[data-style="bunny"][data-theme] .session-unread,
+  html[data-style="bunny"][data-theme] .tool.group.running .tool-icon,
+  html[data-style="bunny"][data-theme] .tool-state > svg.spin,
+  html[data-style="bunny"][data-theme] .thinking.live > svg,
+  html[data-style="bunny"][data-theme] .working-dots i,
+  html[data-style="bunny"][data-theme] .placeholder::before,
+  html[data-style="bunny"][data-theme] .loading::before,
+  html[data-style="bunny"][data-theme] .login::before,
+  html[data-style="bunny"][data-theme] .to-bottom {
+    animation: none;
+  }
+
+  html[data-style="bunny"][data-theme] .composer-box::before {
+    transition: none;
+  }
+}

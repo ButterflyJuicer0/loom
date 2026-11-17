@@ -1,0 +1,31 @@
+{
+  "id": "terraria",
+  "order": 80,
+  "name": {
+    "en": "Terraria",
+    "zh": "泰拉瑞亚"
+  },
+  "blurb": {
+    "en": "The surface by day and by night: inventory slots, life hearts and mana stars, a gold-framed map, the Guide by his house",
+    "zh": "白天与夜晚的地表：物品栏格子、生命心与魔力星、金框小地图，还有站在木屋旁的向导"
+  },
+  "radius": "0.5rem",
+  "light": {
+    "background": "#e9eeff",
+    "foreground": "#1a2050",
+    "sidebar": "#4d5ae6",
+    "card": "#f6f8ff",
+    "bubble": "#4852ac",
+    "primary": "#fde521",
+    "border": "#1d2b6b"
+  },
+  "dark": {
+    "background": "#1c2348",
+    "foreground": "#f2f4ff",
+    "sidebar": "#0c1030",
+    "card": "#2f3b6e",
+    "bubble": "#4852ac",
+    "primary": "#fde521",
+    "border": "#4a5493"
+  }
+}

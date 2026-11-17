@@ -1,0 +1,31 @@
+{
+  "id": "minecraft",
+  "order": 60,
+  "name": {
+    "en": "Minecraft",
+    "zh": "我的世界"
+  },
+  "blurb": {
+    "en": "The game's own menus: dirt behind, stone buttons, inventory slots, hearts and an experience bar",
+    "zh": "原版界面：泥土背景、石头按钮、物品栏格子、红心和经验条"
+  },
+  "radius": "0px",
+  "light": {
+    "background": "#c6c6c6",
+    "foreground": "#262626",
+    "sidebar": "#1e150f",
+    "card": "#c6c6c6",
+    "bubble": "#b7985f",
+    "primary": "#2f6b1c",
+    "border": "#8b8b8b"
+  },
+  "dark": {
+    "background": "#212121",
+    "foreground": "#e6e6e6",
+    "sidebar": "#0f0b07",
+    "card": "#212121",
+    "bubble": "#9d824c",
+    "primary": "#55ff55",
+    "border": "#555555"
+  }
+}

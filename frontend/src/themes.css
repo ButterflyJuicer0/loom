@@ -1,0 +1,257 @@
+/* ── Themes ───────────────────────────────────────────────────────────────
+   Loaded after theme.css (see App.tsx). A theme is a set of shadcn/ui tokens
+   — --background, --foreground, --primary, --border, --radius … — for a light
+   and a dark appearance, chosen in Settings: settings.ts puts its id in
+   `data-style` on <html>, beside `data-theme` (light or dark).
+
+   There are two kinds:
+
+   - "default" is Loom's own look. Its colours are theme.css's variables
+     (--bg, --fg, --line …) and nothing here changes how it is drawn; the
+     shadcn/ui tokens are derived from those variables (1), so that anything
+     built with shadcn/ui components and Tailwind matches it.
+   - Every other theme comes from a shadcn/ui preset (themes.gen.css, written
+     by tools/themes.mjs). There it goes the other way: Loom's variables are
+     derived from the tokens (2), which recolours the whole interface, and the
+     shapes that are part of a look — corners, outlines, raised shadows, the
+     font — follow the tokens too (3). What a theme is beyond tokens, its
+     pictures and motion, is in a file of its own (themes/<id>.css).
+
+   Colour that carries meaning stays Loom's in every theme: green for
+   working, red for failed, blue for links. */
+
+:root {
+  /* What a theme's `--ui` picks from. No web fonts: each is what the device
+     has, Chinese included. */
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Songti SC", "STSong",
+    "Noto Serif CJK SC", "Source Han Serif SC", SimSun, serif;
+  --font-rounded: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Yuanti SC", "Nunito", "Varela Round",
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  /* Written by hand, as near as a device's own fonts come: Kai for Chinese. */
+  --font-hand: "Chalkboard SE", "Comic Sans MS", "Marker Felt", "Bradley Hand", "Kaiti SC", "STKaiti", "KaiTi", "楷体",
+    "PingFang SC", "Microsoft YaHei", cursive, sans-serif;
+  /* In pixels: the bundled pixel font when it is there (fonts.css), a
+     monospace otherwise. */
+  --font-pixel: "Fusion Pixel", "MesloLGL Nerd Font Mono", ui-monospace, Menlo, Monaco, Consolas, "PingFang SC",
+    "Microsoft YaHei", monospace;
+  --font-mono: "MesloLGL Nerd Font Mono", ui-monospace, Menlo, Monaco, Consolas, "PingFang SC", "Microsoft YaHei",
+    monospace;
+}
+
+/* ── 1. Default: shadcn/ui's tokens, from Loom's variables ─────────────── */
+
+:root {
+  --background: var(--bg);
+  --foreground: var(--fg);
+  --card: var(--surface-modal);
+  --card-foreground: var(--fg);
+  --popover: var(--surface-menu);
+  --popover-foreground: var(--fg);
+  --primary: var(--fg);
+  --primary-foreground: var(--bg);
+  --secondary: var(--bg-card);
+  --secondary-foreground: var(--fg);
+  --muted: var(--bg-card);
+  --muted-foreground: var(--fg-dim);
+  --accent: color-mix(in srgb, var(--fg) 9%, var(--surface-modal));
+  --accent-foreground: var(--fg);
+  --destructive: var(--red);
+  --border: color-mix(in srgb, var(--fg) 14%, transparent);
+  --input: color-mix(in srgb, var(--fg) 18%, transparent);
+  --ring: var(--fg-dim);
+  --sidebar: var(--bg-raised);
+  --sidebar-foreground: var(--fg);
+  --sidebar-primary: var(--fg);
+  --sidebar-primary-foreground: var(--bg);
+  --sidebar-accent: color-mix(in srgb, var(--fg) 9%, var(--bg-raised));
+  --sidebar-accent-foreground: var(--fg);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--fg-dim);
+  --radius: 0.75rem;
+  --raised: 0 1px 3px var(--shadow);
+}
+
+/* ── 2. Any other theme: Loom's variables, from the tokens ──────────────
+   Only the tokens every preset can be trusted on: its page, text, sidebar,
+   card, popover, border and primary. `--muted` and `--muted-foreground` are
+   not among them (some presets make them a mid grey, or the text colour
+   itself), so Loom's quiet surface and quiet text are mixed from the page and
+   the text instead (`--dim`, worked out per theme by tools/themes.mjs so that
+   it reads). */
+
+:root[data-style]:not([data-style="default"]) {
+  --bg: var(--background);
+  --bg-raised: var(--sidebar);
+  --bg-card: color-mix(in srgb, var(--foreground) 8%, var(--background));
+  --line: var(--border);
+  --fg: var(--foreground);
+  --fg-dim: var(--dim, color-mix(in srgb, var(--foreground) 66%, var(--background)));
+  --loom-accent: var(--foreground);
+  --unread: var(--primary);
+  --surface-code: color-mix(in srgb, var(--foreground) 5%, var(--background));
+  --surface-menu: var(--popover);
+  --surface-modal: var(--card);
+  --surface-field: var(--background);
+  --composer: var(--card);
+  --send-off-bg: color-mix(in srgb, var(--foreground) 16%, var(--background));
+  --send-off-fg: var(--background);
+
+  /* The scale the shapes below are cut to. A square theme (--radius: 0) is
+     square all the way, pills included. */
+  --r-xs: max(0px, calc(var(--radius) - 4px));
+  --r-sm: var(--radius);
+  --r-md: min(calc(var(--radius) * 1.5), 1.25rem);
+  --r-lg: min(calc(var(--radius) * 2), 1.5rem);
+  --r-xl: min(calc(var(--radius) * 3.5), 1.75rem);
+  --pill: calc(var(--radius) * 999);
+}
+
+/* An outline's width: 1px, unless the theme says otherwise (themes.gen.css),
+   which outranks this. */
+:root {
+  --bw: 1px;
+}
+
+:root[data-style]:not([data-style="default"])[data-theme="light"] {
+  --blue: #2964aa;
+  --red: #d03b3b;
+  --green: #0e8f6f;
+  --shadow: rgb(0 0 0 / 12%);
+  --scrim: rgb(0 0 0 / 32%);
+}
+
+:root[data-style]:not([data-style="default"])[data-theme="dark"] {
+  --blue: #66b5ff;
+  --red: #f87171;
+  --green: #10a37f;
+  --shadow: rgb(0 0 0 / 45%);
+  --scrim: rgb(0 0 0 / 60%);
+}
+
+/* The sidebar is read in its own text colour, which a theme with a dark
+   wall beside a light page makes a different one. */
+:root[data-style]:not([data-style="default"]) .sidebar {
+  --bg: var(--sidebar);
+  --fg: var(--sidebar-foreground);
+  --fg-dim: color-mix(in srgb, var(--sidebar-foreground) 68%, var(--sidebar));
+  --bg-card: color-mix(in srgb, var(--sidebar-foreground) 10%, var(--sidebar));
+  color: var(--sidebar-foreground);
+}
+
+:root[data-style]:not([data-style="default"]) .tasks-page {
+  --task-card: color-mix(in srgb, var(--foreground) 5%, var(--background));
+  --task-card-hover: color-mix(in srgb, var(--foreground) 9%, var(--background));
+  --task-kind: var(--blue);
+  --task-prompt: color-mix(in srgb, var(--foreground) 82%, var(--background));
+  --task-dim: var(--fg-dim);
+  --task-rule: var(--border);
+  --task-dash: var(--border);
+  --task-round: var(--bg-card);
+  --task-error: color-mix(in srgb, var(--red) 16%, var(--background));
+}
+
+/* ── 3. Shapes, fonts and the primary colour ────────────────────────────
+   `html[data-style]:not(…)` in front of each selector, so these win over the
+   look theme.css gives the same classes. */
+
+html[data-style]:not([data-style="default"]) {
+  letter-spacing: var(--tracking, normal);
+}
+
+html[data-style]:not([data-style="default"]) ::selection {
+  background: color-mix(in srgb, var(--primary) 32%, transparent);
+}
+
+/* The page's frame on a desktop, and what floats over it. */
+html[data-style]:not([data-style="default"]) .main {
+  border-radius: var(--r-lg);
+}
+
+html[data-style]:not([data-style="default"]) :is(.modal, .session-menu, .backend-menu, .command-menu, .effort-pop, .plus-pop, .pane-menu, .search-panel, .unsent-menu, .which-key) {
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow:
+    var(--raised),
+    0 12px 32px var(--shadow);
+}
+
+/* Rows and buttons. */
+html[data-style]:not([data-style="default"]) :is(.nav-item, .sidebar .session, .project-row, .proj-session, .session-menu button, .backend-menu button, .command-menu li, .pane-menu button, .plus-pop button, .search-row, .text-btn, .chip, .option, .emp-row, .settings-back) {
+  border-radius: var(--r-sm);
+}
+
+html[data-style]:not([data-style="default"]) :is(.icon-btn, .session-del, .pane-btn, .code-copy, .msg-copy, :not(pre) > code) {
+  border-radius: var(--r-xs);
+}
+
+html[data-style]:not([data-style="default"]) :is(.segmented, .segmented button, .composer-btn, .new-chat, .new-chat-more, .jump-btn, .tag) {
+  border-radius: var(--pill);
+}
+
+html[data-style]:not([data-style="default"]) :is(input, textarea, select):not(.composer-input):not([type="range"]):not([type="checkbox"]):not([type="radio"]) {
+  border-radius: var(--r-sm);
+}
+
+/* The conversation. A user's bubble is the theme's secondary colour. */
+html[data-style]:not([data-style="default"]) .bubble.user {
+  border: var(--bw) solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: var(--r-xl);
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+html[data-style]:not([data-style="default"]) :is(pre.code, .tool, .file-card, .question, .error, .queue-panel, .install-box, .focus-mark + *) {
+  border-radius: var(--r-md);
+}
+
+html[data-style]:not([data-style="default"]) :is(.composer-box, .tasks-composer-box, .replies, .share-bar) {
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--raised);
+}
+
+/* Send, and stop: the primary colour. */
+html[data-style]:not([data-style="default"]) :is(.composer-btn.send, .composer-btn.stop) {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+html[data-style]:not([data-style="default"]) :is(.composer-btn.send:hover:not(:disabled), .composer-btn.stop:hover) {
+  background: color-mix(in srgb, var(--primary) 86%, var(--foreground));
+  color: var(--primary-foreground);
+}
+
+html[data-style]:not([data-style="default"]) .composer-btn.send:disabled {
+  background: var(--send-off-bg);
+  color: var(--send-off-fg);
+}
+
+/* Cards: tasks, notices, employees, device sessions, the phone's switcher. */
+html[data-style]:not([data-style="default"]) :is(.task-card, .task-template, .bell-card, .work-card, .kpi-card, .emp-stat, .emp-approval, .emp-attention, .emp-report-row, .dsess-card, .switcher-card, .sleep-bar) {
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--raised);
+}
+
+/* What is chosen, in the primary colour. */
+html[data-style]:not([data-style="default"]) .segmented button.on {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+html[data-style]:not([data-style="default"]) :is(input, textarea, select):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ring) 60%, transparent);
+  outline-offset: 1px;
+}
+
+html[data-style]:not([data-style="default"]) .composer-input:focus-visible {
+  outline: 0;
+}
+
+html[data-style]:not([data-style="default"]) input[type="range"],
+html[data-style]:not([data-style="default"]) input[type="checkbox"],
+html[data-style]:not([data-style="default"]) input[type="radio"] {
+  accent-color: var(--primary);
+}

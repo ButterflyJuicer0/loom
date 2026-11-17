@@ -1,0 +1,31 @@
+{
+  "id": "isaac",
+  "order": 30,
+  "name": {
+    "en": "Isaac",
+    "zh": "以撒"
+  },
+  "blurb": {
+    "en": "A basement room in pixels: hearts and pickups in the corner, paper menus, flies",
+    "zh": "像素的地下室房间：角落的红心和拾取物、纸片菜单、黑色道具横幅和苍蝇"
+  },
+  "radius": "0px",
+  "light": {
+    "background": "#ece5e3",
+    "foreground": "#352c2d",
+    "sidebar": "#c6bbb7",
+    "card": "#e8d8c8",
+    "bubble": "#e8d8c8",
+    "primary": "#c80000",
+    "border": "#352c2d"
+  },
+  "dark": {
+    "background": "#3a231e",
+    "foreground": "#efe6da",
+    "sidebar": "#0e0908",
+    "card": "#26150f",
+    "bubble": "#d8c8b0",
+    "primary": "#d41414",
+    "border": "#140b09"
+  }
+}

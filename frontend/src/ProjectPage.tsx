@@ -32,6 +32,7 @@ import { unread, when } from "./Sidebar"
 import { MoonButton } from "./Sleep"
 import { NewMenu } from "./NewMenu"
 import { lastActive } from "./useLobby"
+import { t } from "./i18n"
 import "./ProjectPage.css"
 
 export type ProjectTab = "files" | "sessions"
@@ -97,7 +98,7 @@ export function ProjectPage({
     <div className="proj-page">
       <header className="proj-head">
         {showSidebarButton && (
-          <button className="proj-round" onClick={onToggleSidebar} title="Show sidebar">
+          <button className="proj-round" onClick={onToggleSidebar} title={t("Show sidebar")}>
             <PanelLeft />
           </button>
         )}
@@ -112,7 +113,7 @@ export function ProjectPage({
           />
           <button
             className="proj-round proj-new"
-            title={`New session in ${project.name}`}
+            title={t("New session in {name}", { name: project.name })}
             onClick={(e) => {
               const anchor = e.currentTarget.getBoundingClientRect()
               setNewMenu((m) => (m ? null : anchor))
@@ -120,19 +121,19 @@ export function ProjectPage({
           >
             <Plus />
           </button>
-          <button className="proj-round" title="Project settings" onClick={onEdit}>
+          <button className="proj-round" title={t("Project settings")} onClick={onEdit}>
             <Settings />
           </button>
         </span>
       </header>
 
       <div className="proj-tabs" role="tablist">
-        <Tab on={tab === "files"} onClick={() => onTab("files")} icon={<Folder />} label="Files" />
+        <Tab on={tab === "files"} onClick={() => onTab("files")} icon={<Folder />} label={t("Files")} />
         <Tab
           on={tab === "sessions"}
           onClick={() => onTab("sessions")}
           icon={<MessageSquare />}
-          label="Sessions"
+          label={t("Sessions")}
           count={sessions.length}
           dot={sessions.some(unread)}
         />
@@ -230,7 +231,7 @@ function FileView({ project, path, onClose }: { project: Project; path: string; 
   return (
     <div className="proj-viewer">
       <div className="proj-viewer-head">
-        <button className="proj-round" onClick={onClose} title="Back to the files">
+        <button className="proj-round" onClick={onClose} title={t("Back to the files")}>
           <ChevronLeft />
         </button>
         <span className="proj-viewer-title" title={path}>
@@ -239,7 +240,7 @@ function FileView({ project, path, onClose }: { project: Project; path: string; 
         <button
           className="proj-round"
           onClick={() => downloadProjectFile(project.id, path).catch((e: Error) => setError(e.message))}
-          title={`Download ${name}`}
+          title={t("Download {name}", { name })}
         >
           <Download />
         </button>
@@ -251,7 +252,7 @@ function FileView({ project, path, onClose }: { project: Project; path: string; 
           ) : src ? (
             <View src={src} item={{ path, title: name }} />
           ) : (
-            <div className="canvas-note">loading…</div>
+            <div className="canvas-note">{t("loading…")}</div>
           )}
         </div>
       </div>
@@ -314,7 +315,7 @@ function Files({ project, onView }: { project: Project; onView: (path: string) =
           <span className="proj-file-when">{formatTime(node.mtime)}</span>
           <span
             className="proj-file-dl"
-            title={isDir ? undefined : `Download ${node.name}`}
+            title={isDir ? undefined : t("Download {name}", { name: node.name })}
             onClick={
               isDir
                 ? undefined
@@ -332,11 +333,11 @@ function Files({ project, onView }: { project: Project; onView: (path: string) =
     })
 
   if (error) return <div className="proj-note failed">{error}</div>
-  if (!list) return <div className="proj-note">loading…</div>
+  if (!list) return <div className="proj-note">{t("loading…")}</div>
   return (
     <div className="proj-files">
-      {tree.length ? rows(tree, 0) : <div className="proj-note">The workspace is empty.</div>}
-      {list.truncated && <div className="proj-note">Only the first {list.files.length} files are listed.</div>}
+      {tree.length ? rows(tree, 0) : <div className="proj-note">{t("The workspace is empty.")}</div>}
+      {list.truncated && <div className="proj-note">{t("Only the first {n} files are listed.", { n: list.files.length })}</div>}
     </div>
   )
 }
@@ -371,7 +372,7 @@ function Sessions({
   const [menu, setMenu] = useState<{ id: string; anchor: DOMRect } | null>(null)
   const menuFor = menu && sessions.find((s) => s.id === menu.id)
 
-  if (!sessions.length) return <div className="proj-note">No sessions yet. + starts one.</div>
+  if (!sessions.length) return <div className="proj-note">{t("No sessions yet. + starts one.")}</div>
   return (
     <div className="proj-sessions">
       {sessions.map((s) => (
@@ -382,20 +383,20 @@ function Sessions({
           }
           onClick={() => onOpen(s.id)}
         >
-          <span className={"dot " + s.status} title={s.status} />
+          <span className={"dot " + s.status} title={t(s.status)} />
           {s.id === renamingId ? (
             <RenameInput value={s.title ?? s.id} stem={false} onDone={(title) => onRenamed(s.id, title)} />
           ) : (
             <span className="session-label">{s.title ?? s.id}</span>
           )}
           {s.pinned && <Pin className="session-pin" />}
-          {unread(s) && <span className="session-unread" title="Unread: a reply not yet read on any device" />}
-          <span className="proj-session-when" title={"last active " + new Date(lastActive(s)).toLocaleString()}>
+          {unread(s) && <span className="session-unread" title={t("Unread: a reply not yet read on any device")} />}
+          <span className="proj-session-when" title={t("last active {time}", { time: new Date(lastActive(s)).toLocaleString() })}>
             {when(lastActive(s))}
           </span>
           <button
             className="proj-session-more session-more"
-            title="Rename, pin, move to a project, delete"
+            title={t("Rename, pin, move to a project, delete")}
             onClick={(e) => {
               e.stopPropagation()
               const anchor = e.currentTarget.getBoundingClientRect()

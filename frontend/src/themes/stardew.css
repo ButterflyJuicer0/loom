@@ -1,0 +1,2275 @@
+/* ── 星露谷物语 (Stardew Valley) ──────────────────────────────────────────
+   A tribute to the game, drawn after its own screens. The page is the menu:
+   a frame of orange wood with a post and a nail at each corner, parchment
+   inside. The sidebar is the boards behind a portrait, and at its foot the
+   corner of a farm — the house, a fence, a scarecrow in a plot of parsnips
+   (by night the same under blue, the window lit, fireflies). What you say is
+   a dialogue box with your portrait beside it; tools lie in the toolbar's
+   slots; a step that is done earns a gold star, one that failed wilts; three
+   Junimos hop while the agent works; the end of a turn is the clock.
+   Colours and corners are tokens (tools/themes/stardew.json); the pictures
+   are Loom's own, drawn by tools/art/stardew.mjs.
+
+   Each selector starts `html[data-style="stardew"][data-theme]`: as specific
+   as themes.css's shapes, and after them, so these win. */
+
+html[data-style="stardew"] {
+  --sv-frame: url("./art/stardew-frame.svg");
+  --sv-box: url("./art/stardew-box.svg");
+  --sv-plank: url("./art/stardew-plank.svg");
+  --sv-plate: url("./art/stardew-plate.svg");
+  --sv-planks: url("./art/stardew-planks.svg");
+  --sv-fence: url("./art/stardew-fence.svg");
+  --sv-house: url("./art/stardew-farm-house.svg");
+  --sv-plot: url("./art/stardew-farm-plot.svg");
+  --sv-grass: url("./art/stardew-grass.svg");
+  --sv-pour: url("./art/stardew-can-pour.svg");
+  /* The game's own: the maroon line, the boards, parchment and its shade,
+     the ink of a line of dialogue. */
+  --sv-line: #5b2b2a;
+  --sv-wood: #d88239;
+  --sv-wood-lit: #f6a450;
+  --sv-wood-dark: #b25f33;
+  --sv-paper: #ffc677;
+  --sv-paper-lit: #ffe3a6;
+  --sv-shade: #d68f54;
+  --sv-ink: #56160c;
+  --sv-letter: #fffae4;
+  --sv-chest: #4a2a17;
+  --sv-chest-lid: #7a4a22;
+  --sv-chest-ink: #ffe9bf;
+  --sv-drop: rgb(44 19 16 / 26%);
+  /* A slot of the inventory: shaded along the top and right, lit along the
+     left and foot. */
+  --sv-slot: inset 2px -2px 0 0 #ffe9b0, inset -2px 2px 0 0 #d68f54;
+  --sv-inner: inset 2px 2px 0 0 rgb(181 112 78 / 55%);
+}
+
+html[data-style="stardew"][data-theme="dark"] {
+  --sv-frame: url("./art/stardew-frame-night.svg");
+  --sv-box: url("./art/stardew-box-night.svg");
+  --sv-plank: url("./art/stardew-plank-night.svg");
+  --sv-plate: url("./art/stardew-plate-night.svg");
+  --sv-planks: url("./art/stardew-planks-night.svg");
+  --sv-fence: url("./art/stardew-fence-night.svg");
+  --sv-house: url("./art/stardew-farm-house-night.svg");
+  --sv-plot: url("./art/stardew-farm-plot-night.svg");
+  --sv-grass: url("./art/stardew-grass-night.svg");
+  --sv-pour: url("./art/stardew-can-pour-night.svg");
+  --sv-line: #170e2b;
+  --sv-wood: #3b2742;
+  --sv-wood-lit: #5a3a56;
+  --sv-wood-dark: #2a1a34;
+  --sv-paper: #2b2652;
+  --sv-paper-lit: #403a7a;
+  --sv-shade: #171530;
+  --sv-ink: #ffe9bf;
+  --sv-letter: #2f2a5e;
+  --sv-chest: #120f28;
+  --sv-chest-lid: #2a1a34;
+  --sv-chest-ink: #ffe9bf;
+  --sv-drop: rgb(0 0 0 / 45%);
+  --sv-slot: inset 2px -2px 0 0 #4d4180, inset -2px 2px 0 0 #171530;
+  --sv-inner: inset 2px 2px 0 0 rgb(0 0 0 / 35%);
+}
+
+/* ── Motion: in steps, as sprites move ──────────────────────────────── */
+
+@keyframes stardew-hop {
+  0%,
+  40%,
+  100% {
+    translate: 0 0;
+  }
+
+  20% {
+    translate: 0 -7px;
+  }
+}
+
+@keyframes stardew-bob {
+  50% {
+    translate: 2px 0;
+  }
+}
+
+@keyframes stardew-breathe {
+  50% {
+    translate: 0 -2px;
+  }
+}
+
+/* A strip of frames behind a window one frame wide, slid a frame at a
+   time: two frames, or three. */
+@keyframes stardew-strip-2 {
+  to {
+    translate: -50% 0;
+  }
+}
+
+@keyframes stardew-strip-3 {
+  to {
+    translate: -66.667% 0;
+  }
+}
+
+/* The can, tipped and righted. */
+@keyframes stardew-tip {
+  50% {
+    rotate: -16deg;
+  }
+}
+
+@keyframes stardew-glow {
+  0%,
+  100% {
+    opacity: 0.25;
+    translate: 0 0;
+  }
+
+  50% {
+    opacity: 1;
+    translate: 3px -4px;
+  }
+}
+
+@keyframes stardew-drift {
+  to {
+    translate: -420px 0;
+  }
+}
+
+/* ── Lettering ──────────────────────────────────────────────────────────
+   What the game writes on wood and on its menus is in pixels: the name, the
+   tabs, signs, a tool's label, the clock. What is read at length — a reply,
+   what you type, a title in the list — stays in the plain rounded hand. */
+
+html[data-style="stardew"][data-theme] :is(.sidebar .brand, .login-title, .nav-label, .sidebar .list-heading, .tool-chip, .turn-line, .modal-head, .tasks-head h1, .tasks-section, .bell-band, .search-heading),
+html[data-style="stardew"][data-theme] :is(h1, h2).md-h {
+  font-family: var(--font-pixel);
+  font-weight: 400;
+}
+
+/* Cut for 12 pixels: at 12 and 24 every square of it is whole. */
+html[data-style="stardew"][data-theme] :is(.tool-chip, .turn-line) {
+  font-size: 12px;
+}
+
+html[data-style="stardew"][data-theme] h1.md-h {
+  font-size: 24px;
+}
+
+html[data-style="stardew"][data-theme] h2.md-h {
+  font-size: 18px;
+}
+
+/* ── The boards, and the farm at their foot ─────────────────────────── */
+
+html[data-style="stardew"][data-theme] .sidebar {
+  /* Positioned already: beside the page on a desktop, a drawer on a phone. */
+  isolation: isolate;
+  --fg-dim: #4a1c08;
+  border-right: 0;
+  background:
+    var(--sv-planks) 0 0 / 96px 128px repeat,
+    var(--sidebar);
+}
+
+html[data-style="stardew"][data-theme="dark"] .sidebar {
+  --fg-dim: #d9bfa6;
+}
+
+/* The farm at its foot, in pieces that keep their size and their pixels
+   whatever the sidebar's width: the house against the right edge with the
+   scarecrow beside it, the plot of parsnips against the left, grass along
+   the foot and the fence along the back between them. */
+html[data-style="stardew"][data-theme] .sidebar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(-1 * var(--desktop-inset, 0px));
+  z-index: -1;
+  height: 148px;
+  background:
+    var(--sv-house) right bottom / 132px 148px no-repeat,
+    var(--sv-plot) left bottom / 108px 148px no-repeat,
+    var(--sv-grass) left bottom / 80px 94px repeat-x,
+    var(--sv-fence) left -4px bottom 84px / 24px 28px repeat-x;
+  pointer-events: none;
+}
+
+@media (min-width: 641px) {
+  /* On a desktop the boards run behind everything, the page set into them,
+     and the grass along the whole foot of the window. */
+  html[data-style="stardew"][data-theme] .app {
+    background:
+      var(--sv-grass) left bottom / 80px 94px repeat-x,
+      var(--sv-planks) 0 0 / 96px 128px repeat,
+      var(--sidebar);
+  }
+
+  html[data-style="stardew"][data-theme] .sidebar {
+    background: none;
+  }
+
+  /* The page: the menu's frame, three pixels to the square. */
+  html[data-style="stardew"][data-theme] .main {
+    border: 15px solid transparent;
+    border-image: var(--sv-frame) 5 / 15px stretch;
+    border-radius: 0;
+    background-clip: padding-box;
+    box-shadow: -4px 4px 0 0 var(--sv-drop);
+  }
+}
+
+/* The list stops above the roof, so no title is written on the farm. */
+html[data-style="stardew"][data-theme] .sidebar .session-list {
+  margin-bottom: 84px;
+}
+
+@media (max-width: 640px) {
+  /* A phone's drawer has no row of buttons at its foot: "New chat" floats
+     over the grass instead. */
+  html[data-style="stardew"][data-theme] .sidebar .session-list,
+  html[data-style="stardew"][data-theme] .drawer .sidebar .session-list {
+    margin-bottom: 142px;
+    padding-bottom: 8px;
+  }
+}
+
+/* Fireflies over the grass, at night. */
+html[data-style="stardew"][data-theme="dark"] .sidebar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 56px;
+  z-index: -1;
+  height: 80px;
+  background: url("./art/stardew-fireflies.svg") 0 0 / 128px 80px repeat-x;
+  animation: stardew-glow 3.2s steps(4, jump-none) infinite;
+  pointer-events: none;
+}
+
+/* The foot's buttons stand on the grass. */
+html[data-style="stardew"][data-theme] .sidebar-foot {
+  border-top: 0;
+}
+
+html[data-style="stardew"][data-theme] .sidebar-foot .devices-btn {
+  color: #17320a;
+}
+
+html[data-style="stardew"][data-theme="dark"] .sidebar-foot .devices-btn {
+  color: #e6f0c8;
+}
+
+html[data-style="stardew"][data-theme] .sidebar-foot .devices-btn:hover {
+  background: rgb(255 255 255 / 22%);
+}
+
+/* Unfolded, it is a list with words: on boards again, so they read. */
+html[data-style="stardew"][data-theme] .sidebar-foot:not(.folded):not(.dial) {
+  background: var(--sv-planks) 0 0 / 96px 128px repeat, var(--sidebar);
+  box-shadow: 0 -2px 0 0 var(--sv-line);
+}
+
+html[data-style="stardew"][data-theme] .sidebar-foot:not(.folded):not(.dial) .devices-btn {
+  color: var(--sidebar-foreground);
+}
+
+/* ── The name, on its plate; the tabs ───────────────────────────────── */
+
+html[data-style="stardew"][data-theme] .sidebar .brand {
+  padding: 0 0.5em 0 0.4em;
+  border: 4px solid transparent;
+  border-image: var(--sv-plate) 2 / 4px stretch;
+  background: var(--sv-paper-lit);
+  background-clip: padding-box;
+  color: var(--sv-ink);
+  font-size: 24px;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  box-shadow: -2px 2px 0 0 var(--sv-drop);
+}
+
+html[data-style="stardew"][data-theme] .brand-mark {
+  --brand-a: #853605;
+  --brand-b: #dc7b05;
+}
+
+html[data-style="stardew"][data-theme="dark"] .brand-mark {
+  --brand-a: #f0900a;
+  --brand-b: #ffd84a;
+}
+
+html[data-style="stardew"][data-theme] .sidebar-head .icon-btn {
+  border-radius: 0;
+  color: var(--sidebar-foreground);
+}
+
+html[data-style="stardew"][data-theme] .sidebar-head .icon-btn:hover {
+  background: var(--sv-wood-lit);
+  box-shadow: inset 0 0 0 2px var(--sv-line);
+}
+
+html[data-style="stardew"][data-theme] :is(.nav-item, .list-heading, .modal-head, .text-btn, .chip, .session-label) {
+  font-weight: 700;
+}
+
+html[data-style="stardew"][data-theme] .sidebar .session-label {
+  font-weight: 600;
+}
+
+/* What a row opens, drawn on a tab as along the top of the menu. */
+html[data-style="stardew"][data-theme] .nav-item > svg.nav-icon {
+  width: 28px;
+  height: 28px;
+  background: url("./art/stardew-tab-pack.svg") center / 28px 28px no-repeat;
+}
+
+html[data-style="stardew"][data-theme] .nav-item > svg.nav-icon > * {
+  visibility: hidden;
+}
+
+html[data-style="stardew"][data-theme] .nav-item > svg.nav-icon:is(.lucide-square-pen, .lucide-pen-box) {
+  background-image: url("./art/stardew-tab-hammer.svg");
+}
+
+html[data-style="stardew"][data-theme] .nav-item > svg.nav-icon.lucide-folder {
+  background-image: url("./art/stardew-tab-map.svg");
+}
+
+html[data-style="stardew"][data-theme] .nav-item > svg.nav-icon.lucide-users {
+  background-image: url("./art/stardew-tab-heart.svg");
+}
+
+html[data-style="stardew"][data-theme] .nav-item > svg.nav-icon.lucide-clock {
+  background-image: url("./art/stardew-tab-calendar.svg");
+}
+
+html[data-style="stardew"][data-theme] .nav-item > svg.nav-icon.lucide-messages-square {
+  background-image: url("./art/stardew-tab-pad.svg");
+}
+
+html[data-style="stardew"][data-theme] .nav-item:hover > svg.nav-icon {
+  translate: 0 -2px;
+}
+
+html[data-style="stardew"][data-theme] :is(.nav-item, .project-row, .sidebar .session):hover {
+  background: color-mix(in srgb, var(--sv-wood-lit) 70%, transparent);
+}
+
+html[data-style="stardew"][data-theme] :is(.nav-item.current, .project-row.current) {
+  background: var(--sv-wood-lit);
+  box-shadow: inset 0 0 0 2px var(--sv-line);
+}
+
+/* A heading in the list: a gold star before it. */
+html[data-style="stardew"][data-theme] .sidebar .list-heading {
+  color: var(--sidebar-foreground);
+  letter-spacing: 0.08em;
+}
+
+html[data-style="stardew"][data-theme] .sidebar .list-heading::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  background: url("./art/stardew-star.svg") center / contain no-repeat;
+}
+
+/* ── Rows: entries in the journal ───────────────────────────────────── */
+
+html[data-style="stardew"][data-theme] .sidebar .session {
+  position: relative;
+  padding-left: 28px;
+}
+
+/* The game's cursor, over the row the mouse is on and over the open one. */
+html[data-style="stardew"][data-theme] .sidebar .session:is(:hover, .active)::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  width: 18px;
+  height: 26px;
+  margin-top: -11px;
+  background: url("./art/stardew-cursor.svg") center / contain no-repeat;
+  pointer-events: none;
+}
+
+html[data-style="stardew"][data-theme] .sidebar .session.active::before {
+  animation: stardew-bob 0.9s steps(2, jump-none) infinite;
+}
+
+html[data-style="stardew"][data-theme] .sidebar .session.active {
+  border: 0;
+  background: var(--sv-wood-lit);
+  box-shadow:
+    inset 0 0 0 2px var(--sv-line),
+    inset 0 4px 0 0 rgb(255 255 255 / 22%);
+}
+
+html[data-style="stardew"][data-theme] .sidebar .session .dot.idle {
+  display: none;
+}
+
+/* The state of a session is a crop: seeds going in, a parsnip growing,
+   one that wilted. */
+html[data-style="stardew"][data-theme] .dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 0;
+  background: url("./art/stardew-crop-seeds.svg") center / 16px 16px no-repeat;
+  animation: none;
+}
+
+html[data-style="stardew"][data-theme] .dot.starting {
+  background-image: url("./art/stardew-crop-seeds.svg");
+  animation: stardew-breathe 1.2s steps(2, jump-none) infinite;
+}
+
+/* A device that is there: in leaf. */
+html[data-style="stardew"][data-theme] .dot.online {
+  background-image: url("./art/stardew-crop-leafy.svg");
+}
+
+/* Running: it grows, a frame at a time. */
+html[data-style="stardew"][data-theme] .dot.running {
+  position: relative;
+  overflow: hidden;
+  background: none;
+}
+
+html[data-style="stardew"][data-theme] .dot.running::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 300%;
+  height: 100%;
+  background: url("./art/stardew-crop-grow.svg") 0 0 / 100% 100% no-repeat;
+  animation: stardew-strip-3 1.8s steps(3, jump-none) infinite;
+}
+
+html[data-style="stardew"][data-theme] .dot.interrupted {
+  background-image: url("./art/stardew-crop-wilted.svg");
+}
+
+/* Not read yet: "!" */
+html[data-style="stardew"][data-theme] .session-unread {
+  width: 10px;
+  height: 22px;
+  border-radius: 0;
+  background: url("./art/stardew-bang.svg") center / contain no-repeat;
+  animation: stardew-breathe 1s steps(2, jump-none) infinite;
+}
+
+html[data-style="stardew"][data-theme] .sidebar .session.unread .session-when {
+  color: var(--sidebar-foreground);
+}
+
+/* Messages waiting: a count, as on a stack in a slot. */
+html[data-style="stardew"][data-theme] .session-queued {
+  border-radius: 0;
+  background: var(--sv-paper-lit);
+  color: var(--sv-ink);
+  font-weight: 800;
+  box-shadow: inset 0 0 0 2px var(--sv-line);
+}
+
+html[data-style="stardew"][data-theme] .session-pin {
+  color: var(--sidebar-foreground);
+}
+
+html[data-style="stardew"][data-theme] .session-del {
+  border-radius: 0;
+}
+
+/* The engine's mark, in ink: its own orange is the colour of the boards. */
+html[data-style="stardew"][data-theme="light"] .sidebar .session-backend {
+  color: #56160c;
+}
+
+html[data-style="stardew"][data-theme] .sidebar .session-del:hover {
+  background: var(--sv-paper-lit);
+  color: var(--sv-ink);
+  box-shadow: inset 0 0 0 2px var(--sv-line);
+}
+
+html[data-style="stardew"][data-theme="dark"] .sidebar .session-del:hover {
+  color: var(--foreground);
+}
+
+/* ── The page ───────────────────────────────────────────────────────── */
+
+html[data-style="stardew"][data-theme] .main {
+  position: relative;
+  isolation: isolate;
+}
+
+html[data-style="stardew"][data-theme] :is(.placeholder, .loading) {
+  background: transparent;
+}
+
+@media (min-width: 641px) {
+  /* The head of the page: the menu's parchment, and a rail under it like
+     the one across the inventory. */
+  html[data-style="stardew"][data-theme] .chat-header {
+    padding: 4px 14px 14px;
+    border-bottom: 0;
+    background:
+      linear-gradient(
+          to bottom,
+          transparent calc(100% - 10px),
+          #853605 0,
+          #853605 calc(100% - 8px),
+          #fa9405 0,
+          #fa9405 calc(100% - 6px),
+          #b14e05 0,
+          #b14e05 calc(100% - 4px),
+          #853605 0,
+          #853605 calc(100% - 2px),
+          #5b2b2a 0
+        ),
+      var(--card);
+  }
+
+  /* Nothing shows through it, so nothing needs blurring behind it. */
+  html[data-style="stardew"][data-theme] .chat-top::before {
+    display: none;
+  }
+
+  html[data-style="stardew"][data-theme="dark"] .chat-header {
+    background:
+      linear-gradient(
+          to bottom,
+          transparent calc(100% - 10px),
+          #472033 0,
+          #472033 calc(100% - 8px),
+          #bd7a1e 0,
+          #bd7a1e calc(100% - 6px),
+          #6e3320 0,
+          #6e3320 calc(100% - 4px),
+          #472033 0,
+          #472033 calc(100% - 2px),
+          #170e2b 0
+        ),
+      var(--card);
+  }
+}
+
+html[data-style="stardew"][data-theme] .chat-name {
+  color: var(--sv-ink);
+  font-weight: 700;
+}
+
+/* Its buttons: slots. */
+html[data-style="stardew"][data-theme] :is(.chip.button.head-btn, .chat-header .icon-btn) {
+  border-radius: 0;
+  background: var(--sv-paper-lit);
+  color: var(--sv-ink);
+  box-shadow: var(--sv-slot);
+}
+
+html[data-style="stardew"][data-theme] :is(.chip.button.head-btn, .chat-header .icon-btn):hover {
+  background: var(--sv-paper-lit);
+  color: var(--sv-ink);
+  box-shadow:
+    var(--sv-slot),
+    0 0 0 2px var(--sv-line);
+}
+
+html[data-style="stardew"][data-theme] .chip.button.head-btn.on {
+  background: var(--sv-wood-lit);
+  box-shadow:
+    inset 0 0 0 2px var(--sv-line),
+    inset 0 4px 0 0 rgb(255 255 255 / 25%);
+}
+
+html[data-style="stardew"][data-theme] .chat-header .chat-meta {
+  gap: 4px;
+}
+
+/* ── What stands apart wears wood ───────────────────────────────────── */
+
+/* Menus and dialogs: the menu's own frame. */
+html[data-style="stardew"][data-theme] :is(.modal, .session-menu, .backend-menu, .command-menu, .effort-pop, .plus-pop, .pane-menu, .search-panel, .unsent-menu, .which-key) {
+  border: 10px solid transparent;
+  border-image: var(--sv-frame) 5 / 10px stretch;
+  border-radius: 0;
+  background-color: var(--popover);
+  background-clip: padding-box;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: -4px 4px 0 0 var(--sv-drop);
+}
+
+/* Cards and boxes: the thinner one. */
+html[data-style="stardew"][data-theme] .tool.group,
+html[data-style="stardew"][data-theme] :is(.composer-box, .tasks-composer-box, .queue-panel, .question, .replies, .task-card, .task-template, .bell-card, .work-card, .kpi-card, .emp-stat, .emp-approval, .emp-attention, .dsess-card, .switcher-card, .sleep-bar, .share-bar, .turn-line, .app-oops) {
+  border: 6px solid transparent;
+  border-image: var(--sv-box) 3 / 6px stretch;
+  border-radius: 0;
+  background-color: var(--sv-paper);
+  background-clip: padding-box;
+  box-shadow: -3px 3px 0 0 var(--sv-drop);
+}
+
+/* ── What you said: a dialogue box, your portrait beside it ─────────── */
+
+html[data-style="stardew"][data-theme] .bubble.user {
+  position: relative;
+  padding: 0.45rem calc(0.9rem + 50px) 0.45rem 0.9rem;
+  border: 10px solid transparent;
+  border-image: var(--sv-frame) 5 / 10px stretch;
+  border-radius: 0;
+  background:
+    linear-gradient(to right, #5b2b2a 0 2px, #dc7b05 2px 4px, #853605 4px 6px, transparent 6px) right 44px top / 6px 100% no-repeat,
+    url("./art/stardew-farmer.svg") right 6px center / 32px 32px no-repeat,
+    var(--sv-planks) right top / 96px 128px repeat-y,
+    linear-gradient(to bottom, #fcc572, #eca660);
+  background-clip: padding-box;
+  color: var(--secondary-foreground);
+  box-shadow:
+    var(--sv-inner),
+    -4px 4px 0 0 var(--sv-drop);
+}
+
+html[data-style="stardew"][data-theme] .bubble.user {
+  /* The boards behind the portrait: only as wide as the portrait's panel. */
+  background:
+    linear-gradient(to right, #5b2b2a 0 2px, #dc7b05 2px 4px, #853605 4px 6px, transparent 6px) right 44px top / 6px 100% no-repeat,
+    url("./art/stardew-farmer.svg") right 6px center / 32px 32px no-repeat,
+    linear-gradient(#d88239, #d88239) right top / 44px 100% no-repeat,
+    linear-gradient(to bottom, #fcc572, #eca660);
+  background-clip: padding-box;
+}
+
+html[data-style="stardew"][data-theme="dark"] .bubble.user {
+  background:
+    linear-gradient(to right, #170e2b 0 2px, #96561b 2px 4px, #472033 4px 6px, transparent 6px) right 44px top / 6px 100% no-repeat,
+    url("./art/stardew-farmer.svg") right 6px center / 32px 32px no-repeat,
+    linear-gradient(#8a5a3c, #8a5a3c) right top / 44px 100% no-repeat,
+    linear-gradient(to bottom, #e3ae72, #c98f58);
+  background-clip: padding-box;
+}
+
+html[data-style="stardew"][data-theme] .bubble.user .clock {
+  color: color-mix(in srgb, var(--secondary-foreground) 72%, transparent);
+}
+
+/* What goes with it lies on the same parchment, day or night. */
+html[data-style="stardew"][data-theme] .bubble.user .file-card {
+  border-image-source: url("./art/stardew-plate.svg");
+  background-color: #ffe3a6;
+}
+
+html[data-style="stardew"][data-theme] .bubble.user :is(.file-ext, .file-name, .file-card.more) {
+  color: #56160c;
+}
+
+html[data-style="stardew"][data-theme] .bubble.user a {
+  color: inherit;
+}
+
+/* ── The reply ──────────────────────────────────────────────────────── */
+
+/* A heading is a sign: a board with a nail at each end. */
+html[data-style="stardew"][data-theme] :is(h1, h2).md-h {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 1px 20px 2px;
+  border: 4px solid transparent;
+  border-image: var(--sv-plank) 2 / 4px stretch;
+  background:
+    radial-gradient(circle, #9fb3ad 0 1.5px, #5b2b2a 1.5px 2.6px, transparent 2.6px) left 5px center / 6px 6px no-repeat,
+    radial-gradient(circle, #9fb3ad 0 1.5px, #5b2b2a 1.5px 2.6px, transparent 2.6px) right 5px center / 6px 6px no-repeat,
+    var(--sv-wood);
+  background-clip: padding-box;
+  color: #36120a;
+  box-shadow: -2px 2px 0 0 var(--sv-drop);
+}
+
+html[data-style="stardew"][data-theme="dark"] :is(h1, h2).md-h {
+  color: #ffe9bf;
+}
+
+html[data-style="stardew"][data-theme] h3.md-h::before,
+html[data-style="stardew"][data-theme] h4.md-h::before {
+  content: "";
+  display: inline-block;
+  width: 0.8em;
+  height: 0.8em;
+  margin-right: 0.4em;
+  vertical-align: -0.04em;
+  background: url("./art/stardew-star.svg") center / contain no-repeat;
+}
+
+html[data-style="stardew"][data-theme] .md-h {
+  color: var(--sv-ink);
+}
+
+/* A box ticked, a box not: as in the options. */
+html[data-style="stardew"][data-theme] .md-check {
+  width: 18px;
+  height: 18px;
+  margin-right: 0.45em;
+  vertical-align: -0.2em;
+  background: var(--sv-paper-lit);
+  box-shadow: inset 0 0 0 2px var(--sv-line);
+}
+
+html[data-style="stardew"][data-theme] .md-check:has(.lucide-square-check) {
+  background: url("./art/stardew-ok.svg") center / 13px 11px no-repeat var(--sv-paper-lit);
+}
+
+html[data-style="stardew"][data-theme] .md-check > svg {
+  display: none;
+}
+
+/* A list's dots are parsnips. */
+html[data-style="stardew"][data-theme] ul.md-list > li:not(.md-task) {
+  position: relative;
+  list-style: none;
+}
+
+html[data-style="stardew"][data-theme] ul.md-list > li:not(.md-task)::before {
+  content: "";
+  position: absolute;
+  top: 0.3em;
+  left: -1.4em;
+  width: 0.84em;
+  height: 1em;
+  background: url("./art/stardew-parsnip.svg") center / contain no-repeat;
+}
+
+html[data-style="stardew"][data-theme] ol.md-list > li::marker {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* A rule: a length of fence. */
+html[data-style="stardew"][data-theme] .md-hr {
+  height: 28px;
+  margin: 1.1em auto;
+  border: 0;
+  width: min(100%, 264px);
+  background: var(--sv-fence) left center / 24px 28px repeat-x;
+}
+
+html[data-style="stardew"][data-theme="dark"] .md-hr {
+  background-image: url("./art/stardew-fence.svg");
+  opacity: 0.8;
+}
+
+/* A quote: a letter. */
+html[data-style="stardew"][data-theme] .md-quote {
+  position: relative;
+  padding: 8px 40px 8px 14px;
+  border: 2px solid #c4a993;
+  border-left: 2px solid #c4a993;
+  background:
+    url("./art/stardew-mail.svg") right 8px top 8px / 21px 15px no-repeat,
+    var(--sv-letter);
+  color: var(--foreground);
+  box-shadow: -2px 2px 0 0 var(--sv-drop);
+}
+
+html[data-style="stardew"][data-theme="dark"] .md-quote {
+  border-color: #4d4180;
+}
+
+/* A table: a shop's list. */
+html[data-style="stardew"][data-theme] .md-table {
+  border: 2px solid var(--sv-line);
+  box-shadow: -2px 2px 0 0 var(--sv-drop);
+}
+
+html[data-style="stardew"][data-theme] .md-table :is(th, td) {
+  border: 0;
+  border-bottom: 2px solid var(--sv-shade);
+  border-right: 2px solid color-mix(in srgb, var(--sv-shade) 55%, transparent);
+  background: var(--sv-paper-lit);
+}
+
+html[data-style="stardew"][data-theme] .md-table th {
+  border-bottom: 2px solid var(--sv-line);
+  background: var(--sv-wood);
+  color: #36120a;
+}
+
+html[data-style="stardew"][data-theme="dark"] .md-table th {
+  color: #ffe9bf;
+}
+
+html[data-style="stardew"][data-theme] .md-table tr:last-child td {
+  border-bottom: 0;
+}
+
+html[data-style="stardew"][data-theme] .md-table :is(th, td):last-child {
+  border-right: 0;
+}
+
+html[data-style="stardew"][data-theme] .md-table tbody tr:hover td {
+  background: var(--sv-paper);
+}
+
+/* Code in a line: a slot. */
+html[data-style="stardew"][data-theme] :not(pre) > code {
+  padding: 1px 5px;
+  border-radius: 0;
+  background: var(--sv-paper-lit);
+  color: var(--sv-ink);
+  box-shadow: var(--sv-slot);
+}
+
+/* ── Code: a chest ──────────────────────────────────────────────────── */
+
+html[data-style="stardew"][data-theme] pre.code {
+  border: 4px solid transparent;
+  border-image: var(--sv-plank) 2 / 4px stretch;
+  border-radius: 0;
+  background: var(--sv-chest);
+  background-clip: padding-box;
+  color: var(--sv-chest-ink);
+  box-shadow: -3px 3px 0 0 var(--sv-drop);
+}
+
+/* Its lid, with a latch, and what is in it written there. */
+html[data-style="stardew"][data-theme] .code-block > pre.code {
+  padding-top: 38px;
+}
+
+html[data-style="stardew"][data-theme] .code-tools {
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  justify-content: space-between;
+  height: 26px;
+  padding: 0 4px 0 10px;
+  border-radius: 0;
+  background:
+    linear-gradient(#9fb3ad, #9fb3ad) center bottom -1px / 8px 7px no-repeat,
+    linear-gradient(#5b2b2a, #5b2b2a) center bottom -3px / 12px 11px no-repeat,
+    linear-gradient(to bottom, rgb(255 255 255 / 18%) 0 2px, transparent 2px calc(100% - 2px), rgb(0 0 0 / 35%) calc(100% - 2px)),
+    var(--sv-chest-lid);
+}
+
+html[data-style="stardew"][data-theme] .code-lang {
+  color: var(--sv-chest-ink);
+  font-weight: 700;
+}
+
+html[data-style="stardew"][data-theme] .code-copy {
+  border-radius: 0;
+  color: var(--sv-chest-ink);
+}
+
+html[data-style="stardew"][data-theme] .code-copy:hover {
+  background: rgb(255 255 255 / 18%);
+  color: var(--sv-chest-ink);
+}
+
+/* A file: something in a slot, with its star. */
+html[data-style="stardew"][data-theme] .file-card {
+  padding: 3px 4px;
+  border: 4px solid transparent;
+  border-image: var(--sv-plate) 2 / 4px stretch;
+  background-color: var(--sv-paper-lit);
+  box-shadow: -2px 2px 0 0 var(--sv-drop);
+}
+
+html[data-style="stardew"][data-theme] .file-card.image {
+  padding: 0;
+}
+
+html[data-style="stardew"][data-theme] .file-ext {
+  color: var(--sv-ink);
+  font-weight: 800;
+}
+
+html[data-style="stardew"][data-theme] .file-name {
+  color: color-mix(in srgb, var(--sv-ink) 80%, transparent);
+}
+
+html[data-style="stardew"][data-theme] .file-card:not(.image):not(.more)::after {
+  content: "";
+  position: absolute;
+  right: 1px;
+  top: 1px;
+  width: 9px;
+  height: 9px;
+  background: url("./art/stardew-star.svg") center / contain no-repeat;
+}
+
+/* ── Tools: the toolbar ─────────────────────────────────────────────── */
+
+html[data-style="stardew"][data-theme] .tool.group,
+html[data-style="stardew"][data-theme] .tool.group:is(:hover, .open) {
+  background-color: var(--sv-paper);
+}
+
+html[data-style="stardew"][data-theme] .tool.group > .tool-head {
+  padding: 5px 10px 5px 6px;
+}
+
+/* Each kind of call has its tool, as each job on a farm has: the pickaxe
+   for the shell, the magnifying glass for reading, the scythe for searching
+   through, the hoe for an edit, the axe for writing something new, the
+   fishing rod for what is fetched from the web, a Junimo for an agent sent
+   off to help, the calendar for a to-do list, the backpack for what an MCP
+   server brings; the watering can for anything else. `data-tool` says which
+   (on a call, on a chip, and on a folded card for its first). */
+html[data-style="stardew"][data-theme] :is(.tool, .tool-chip) {
+  --sv-tool: url("./art/stardew-can.svg");
+}
+
+html[data-style="stardew"][data-theme] [data-tool="Bash"] {
+  --sv-tool: url("./art/stardew-pick.svg");
+}
+
+html[data-style="stardew"][data-theme] [data-tool="Read"] {
+  --sv-tool: url("./art/stardew-lens.svg");
+}
+
+html[data-style="stardew"][data-theme] [data-tool="Grep"],
+html[data-style="stardew"][data-theme] [data-tool="Glob"] {
+  --sv-tool: url("./art/stardew-scythe.svg");
+}
+
+html[data-style="stardew"][data-theme] [data-tool="Edit"],
+html[data-style="stardew"][data-theme] [data-tool="MultiEdit"],
+html[data-style="stardew"][data-theme] [data-tool="NotebookEdit"] {
+  --sv-tool: url("./art/stardew-hoe.svg");
+}
+
+html[data-style="stardew"][data-theme] [data-tool="Write"] {
+  --sv-tool: url("./art/stardew-axe.svg");
+}
+
+html[data-style="stardew"][data-theme] [data-tool="WebSearch"],
+html[data-style="stardew"][data-theme] [data-tool="WebFetch"] {
+  --sv-tool: url("./art/stardew-rod.svg");
+}
+
+html[data-style="stardew"][data-theme] :is([data-tool="Agent"], [data-tool="Task"]) {
+  --sv-tool: url("./art/stardew-junimo.svg");
+}
+
+html[data-style="stardew"][data-theme] [data-tool^="Todo"] {
+  --sv-tool: url("./art/stardew-icon-calendar.svg");
+}
+
+html[data-style="stardew"][data-theme] [data-tool^="mcp__"] {
+  --sv-tool: url("./art/stardew-icon-pack.svg");
+}
+
+/* By night, the same with lighter wood, so a handle shows in a dark slot. */
+html[data-style="stardew"][data-theme="dark"] :is(.tool, .tool-chip) {
+  --sv-tool: url("./art/stardew-can-night.svg");
+}
+
+html[data-style="stardew"][data-theme="dark"] [data-tool="Bash"] {
+  --sv-tool: url("./art/stardew-pick-night.svg");
+}
+
+html[data-style="stardew"][data-theme="dark"] [data-tool="Read"] {
+  --sv-tool: url("./art/stardew-lens-night.svg");
+}
+
+html[data-style="stardew"][data-theme="dark"] [data-tool="Grep"],
+html[data-style="stardew"][data-theme="dark"] [data-tool="Glob"] {
+  --sv-tool: url("./art/stardew-scythe-night.svg");
+}
+
+html[data-style="stardew"][data-theme="dark"] [data-tool="Edit"],
+html[data-style="stardew"][data-theme="dark"] [data-tool="MultiEdit"],
+html[data-style="stardew"][data-theme="dark"] [data-tool="NotebookEdit"] {
+  --sv-tool: url("./art/stardew-hoe-night.svg");
+}
+
+html[data-style="stardew"][data-theme="dark"] [data-tool="Write"] {
+  --sv-tool: url("./art/stardew-axe-night.svg");
+}
+
+html[data-style="stardew"][data-theme="dark"] [data-tool="WebSearch"],
+html[data-style="stardew"][data-theme="dark"] [data-tool="WebFetch"] {
+  --sv-tool: url("./art/stardew-rod-night.svg");
+}
+
+html[data-style="stardew"][data-theme="dark"] :is([data-tool="Agent"], [data-tool="Task"]) {
+  --sv-tool: url("./art/stardew-junimo.svg");
+}
+
+html[data-style="stardew"][data-theme="dark"] [data-tool^="Todo"] {
+  --sv-tool: url("./art/stardew-icon-calendar.svg");
+}
+
+html[data-style="stardew"][data-theme="dark"] [data-tool^="mcp__"] {
+  --sv-tool: url("./art/stardew-icon-pack.svg");
+}
+
+/* The slot at the head of a folded card holds its first tool; the watering
+   can, pouring, while it runs. */
+html[data-style="stardew"][data-theme] .tool-icon,
+html[data-style="stardew"][data-theme] .tool.group:is(:hover, .open) .tool-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 0;
+  background:
+    var(--sv-tool) center / 28px 28px no-repeat,
+    var(--sv-paper-lit);
+  box-shadow: var(--sv-slot);
+}
+
+html[data-style="stardew"][data-theme] .tool-icon > svg {
+  display: none;
+}
+
+/* Running: the slot in use (its red outline), the can pouring. */
+html[data-style="stardew"][data-theme] .tool.group.running .tool-icon {
+  position: relative;
+  overflow: hidden;
+  background: var(--sv-paper-lit);
+  box-shadow:
+    var(--sv-slot),
+    0 0 0 2px #d8281e;
+}
+
+html[data-style="stardew"][data-theme] .tool.group.running .tool-icon::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  background: var(--sv-pour) 0 0 / 100% 100% no-repeat;
+  animation: stardew-strip-2 0.5s steps(2, jump-none) infinite;
+}
+
+html[data-style="stardew"][data-theme] .tool-name {
+  color: var(--sv-ink);
+  font-weight: 700;
+}
+
+/* Each kind of call on the card, a slot with its tool in it. */
+html[data-style="stardew"][data-theme] .tool-chip {
+  padding: 2px 7px 2px 22px;
+  border-radius: 0;
+  background: var(--sv-tool) left 4px center / 14px 14px no-repeat var(--sv-paper-lit);
+  color: var(--sv-ink);
+  font-weight: 600;
+  box-shadow: var(--sv-slot);
+}
+
+html[data-style="stardew"][data-theme] .tool-state {
+  color: var(--sv-ink);
+}
+
+/* Quiet text on parchment: the ink, thinned, so it still reads. */
+html[data-style="stardew"][data-theme] :is(.tool-summary, .settings-hint, .effort-hint, .effort-value, .command-menu .hint, .bell-age, .bell-source, .bell-detail, .emp-dim) {
+  color: color-mix(in srgb, var(--sv-ink) 76%, transparent);
+}
+
+html[data-style="stardew"][data-theme] .tasks-page {
+  --task-dim: color-mix(in srgb, var(--sv-ink) 76%, transparent);
+  --task-prompt: var(--sv-ink);
+  --task-kind: var(--sv-ink);
+}
+
+/* Done: a gold star. Failed: it wilted. */
+html[data-style="stardew"][data-theme] .tool-state > svg.tool-done {
+  width: 18px;
+  height: 18px;
+  background: url("./art/stardew-star.svg") center / contain no-repeat;
+}
+
+html[data-style="stardew"][data-theme] .tool-state > svg.lucide-x {
+  width: 18px;
+  height: 18px;
+  background: url("./art/stardew-crop-wilted.svg") center / contain no-repeat;
+}
+
+html[data-style="stardew"][data-theme] .tool-state > svg:is(.tool-done, .lucide-x) > * {
+  visibility: hidden;
+}
+
+/* Still going: the can. */
+html[data-style="stardew"][data-theme] .tool-state > svg.spin {
+  width: 20px;
+  height: 20px;
+  background: url("./art/stardew-can.svg") center / contain no-repeat;
+  animation: stardew-tip 0.7s steps(2, jump-none) infinite;
+}
+
+html[data-style="stardew"][data-theme] .tool-state > svg.spin > * {
+  visibility: hidden;
+}
+
+/* The steps, opened: a list on the parchment. */
+html[data-style="stardew"][data-theme] .group-steps {
+  gap: 6px;
+  border-top: 2px solid var(--sv-shade);
+}
+
+html[data-style="stardew"][data-theme] .group-steps .tool,
+html[data-style="stardew"][data-theme] .timeline-inner > .tool:not(.group) {
+  border: 2px solid var(--sv-shade);
+  border-radius: 0;
+  background: var(--sv-paper-lit);
+}
+
+html[data-style="stardew"][data-theme] .tool.failed {
+  border-color: var(--red);
+}
+
+html[data-style="stardew"][data-theme] .tool:not(.group) > .tool-head::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  background: var(--sv-tool) center / contain no-repeat;
+}
+
+html[data-style="stardew"][data-theme] :is(.tool-input, .tool-output) {
+  border-top: 2px solid var(--sv-shade);
+  background: color-mix(in srgb, var(--sv-shade) 22%, var(--sv-paper-lit));
+  color: var(--foreground);
+}
+
+/* ── Thinking, working, and the end of a turn ───────────────────────── */
+
+/* "…" over a head. */
+html[data-style="stardew"][data-theme] .thinking > svg {
+  width: 30px;
+  height: 22px;
+  margin-top: 0;
+  background: url("./art/stardew-dots.svg") center / contain no-repeat;
+  opacity: 1;
+}
+
+html[data-style="stardew"][data-theme] .thinking > svg > * {
+  visibility: hidden;
+}
+
+html[data-style="stardew"][data-theme] .thinking.live > svg {
+  animation: stardew-breathe 0.8s steps(2, jump-none) infinite;
+}
+
+/* Three Junimos, hopping in turn. */
+html[data-style="stardew"][data-theme] .working-dots {
+  gap: 2px;
+  height: 32px;
+  padding-top: 0;
+}
+
+html[data-style="stardew"][data-theme] .working-dots i {
+  width: 32px;
+  height: 32px;
+  border-radius: 0;
+  background: url("./art/stardew-junimo.svg") center / contain no-repeat;
+  animation: stardew-hop 1.2s steps(6, jump-none) infinite;
+}
+
+html[data-style="stardew"][data-theme] .working-dots i:nth-child(2) {
+  background-image: url("./art/stardew-junimo-gold.svg");
+  animation-delay: 0.2s;
+}
+
+html[data-style="stardew"][data-theme] .working-dots i:nth-child(3) {
+  background-image: url("./art/stardew-junimo-blue.svg");
+  animation-delay: 0.4s;
+}
+
+html[data-style="stardew"][data-theme] .working.starting .working-dots i {
+  background-color: transparent;
+  opacity: 0.6;
+}
+
+html[data-style="stardew"][data-theme] .working[role="status"] {
+  font-weight: 700;
+}
+
+/* The end of a turn: the clock — its dial, the time on parchment — and,
+   after what the turn used, the energy bar on its side: as long as what is
+   left of the context (1 − `--usage`), green while there is plenty, through
+   yellow to red as it runs out, the way the game's own bar goes. */
+html[data-style="stardew"][data-theme] .turn-line {
+  padding: 1px 10px 1px 30px;
+  background:
+    url("./art/stardew-dial.svg") left 4px center / 18px 18px no-repeat,
+    var(--sv-paper-lit);
+  background-clip: padding-box;
+  color: var(--sv-ink);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  box-shadow: -2px 2px 0 0 var(--sv-drop);
+}
+
+html[data-style="stardew"][data-theme] .turn-line[data-usage]::after {
+  --left: clamp(0, 1 - var(--usage), 1);
+  --fill: color-mix(
+    in srgb,
+    color-mix(in srgb, #3dff00 calc(clamp(0, var(--left) * 2 - 1, 1) * 100%), #fbf900) calc(clamp(0, var(--left) * 2, 1) * 100%),
+    #ff2a00
+  );
+  content: "";
+  display: inline-block;
+  box-sizing: border-box;
+  width: 66px;
+  height: 14px;
+  margin-left: 8px;
+  vertical-align: -2px;
+  border: 2px solid #5b2b2a;
+  background:
+    url("./art/stardew-energy-cap.svg") right center / 12px 10px no-repeat,
+    linear-gradient(to bottom, rgb(255 255 255 / 45%) 0 2px, transparent 2px) left top / calc((100% - 12px) * var(--left)) 100% no-repeat,
+    linear-gradient(var(--fill), var(--fill)) left top / calc((100% - 12px) * var(--left)) 100% no-repeat,
+    #ffd789;
+}
+
+html[data-style="stardew"][data-theme] .turn-line .clock {
+  color: inherit;
+}
+
+/* ── The composer ───────────────────────────────────────────────────── */
+
+/* What scrolls under it goes out of sight behind the page's own ground. */
+html[data-style="stardew"][data-theme] .dock {
+  background: linear-gradient(to bottom, transparent 0, var(--background) 26px);
+}
+
+html[data-style="stardew"][data-theme] .composer-box,
+html[data-style="stardew"][data-theme] .composer-box:has(.composer-input:not(:placeholder-shown)),
+html[data-style="stardew"][data-theme] .tasks-composer-box {
+  padding: 4px 6px;
+  background-color: var(--sv-paper-lit);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow:
+    var(--sv-inner),
+    -3px 3px 0 0 var(--sv-drop);
+}
+
+html[data-style="stardew"][data-theme] .composer-input {
+  color: var(--sv-ink);
+}
+
+html[data-style="stardew"][data-theme] .composer-input::placeholder {
+  color: color-mix(in srgb, var(--sv-ink) 62%, transparent);
+}
+
+html[data-style="stardew"][data-theme] .composer-btn {
+  border-radius: 0;
+  color: var(--sv-ink);
+}
+
+/* "+" opens the backpack. */
+html[data-style="stardew"][data-theme] .composer-btn.attach {
+  background: url("./art/stardew-icon-pack.svg") center / 20px 20px no-repeat;
+}
+
+html[data-style="stardew"][data-theme] .composer-btn.attach > svg {
+  display: none;
+}
+
+/* How hard to think: a stardrop. */
+html[data-style="stardew"][data-theme] .composer-btn.effort-btn > svg {
+  width: 22px;
+  height: 22px;
+  background: url("./art/stardew-stardrop.svg") center / contain no-repeat;
+}
+
+html[data-style="stardew"][data-theme] .composer-btn.effort-btn > svg > * {
+  visibility: hidden;
+}
+
+html[data-style="stardew"][data-theme] .composer-btn:is(.attach, .effort-btn):is(:hover, .open, .set) {
+  background-color: var(--sv-paper);
+  box-shadow: var(--sv-slot);
+}
+
+/* Send is "yes", stop is "no": the two buttons of every dialog in the game.
+   (The whole background each time: themes.css sets it whole for hover and
+   for disabled, which would take the picture away.) */
+html[data-style="stardew"][data-theme] :is(.composer-btn.send, .composer-btn.stop),
+html[data-style="stardew"][data-theme] :is(.composer-btn.send:hover:not(:disabled), .composer-btn.stop:hover),
+html[data-style="stardew"][data-theme] .composer-btn.send:disabled {
+  border: 4px solid transparent;
+  border-image: var(--sv-plank) 2 / 4px stretch;
+  background: var(--sv-btn-pic, url("./art/stardew-ok.svg")) center / var(--sv-btn-size, 22px 18px) no-repeat var(--sv-btn-ground, var(--sv-wood-lit));
+  background-clip: padding-box;
+  box-shadow: 0 3px 0 0 var(--sv-drop);
+  transition: none;
+}
+
+html[data-style="stardew"][data-theme] .composer-btn.stop {
+  --sv-btn-pic: url("./art/stardew-no.svg");
+  --sv-btn-size: 18px 18px;
+}
+
+html[data-style="stardew"][data-theme] :is(.composer-btn.send, .composer-btn.stop) > svg {
+  display: none;
+}
+
+html[data-style="stardew"][data-theme] :is(.composer-btn.send:hover:not(:disabled), .composer-btn.stop:hover) {
+  --sv-btn-ground: #ffc067;
+}
+
+html[data-style="stardew"][data-theme="dark"] :is(.composer-btn.send:hover:not(:disabled), .composer-btn.stop:hover) {
+  --sv-btn-ground: #7a5272;
+}
+
+/* Nothing to send yet: the same button, faded. */
+html[data-style="stardew"][data-theme] .composer-btn.send:disabled {
+  --sv-btn-ground: var(--sv-paper);
+  filter: saturate(0.3);
+  opacity: 0.65;
+  box-shadow: none;
+}
+
+/* ── Buttons: boards; pressed, they go down ─────────────────────────── */
+
+html[data-style="stardew"][data-theme] :is(.text-btn, .option, .bell-btn, .new-chat, .new-chat-more, .replies-send, .queue-steer, .emp-new),
+html[data-style="stardew"][data-theme] .chip.button:not(.head-btn) {
+  border: 4px solid transparent;
+  border-image: var(--sv-plank) 2 / 4px stretch;
+  border-radius: 0;
+  background-color: var(--sv-wood-lit);
+  background-clip: padding-box;
+  color: #36120a;
+  font-weight: 700;
+  box-shadow: 0 3px 0 0 var(--sv-drop);
+  transition: none;
+}
+
+html[data-style="stardew"][data-theme="dark"] :is(.text-btn, .option, .bell-btn, .new-chat, .new-chat-more, .replies-send, .queue-steer, .emp-new),
+html[data-style="stardew"][data-theme="dark"] .chip.button:not(.head-btn) {
+  color: #ffe9bf;
+}
+
+html[data-style="stardew"][data-theme] :is(.text-btn, .option, .bell-btn, .new-chat, .new-chat-more, .replies-send, .queue-steer, .emp-new):hover:not(:disabled),
+html[data-style="stardew"][data-theme] .chip.button:not(.head-btn):hover {
+  background-color: #ffc067;
+  color: #36120a;
+}
+
+html[data-style="stardew"][data-theme="dark"] :is(.text-btn, .option, .bell-btn, .new-chat, .new-chat-more, .replies-send, .queue-steer, .emp-new):hover:not(:disabled),
+html[data-style="stardew"][data-theme="dark"] .chip.button:not(.head-btn):hover {
+  background-color: #7a5272;
+  color: #ffe9bf;
+}
+
+html[data-style="stardew"][data-theme] :is(.text-btn, .option, .bell-btn, .new-chat, .new-chat-more, .replies-send, .queue-steer, .emp-new):active:not(:disabled),
+html[data-style="stardew"][data-theme] .chip.button:not(.head-btn):active,
+html[data-style="stardew"][data-theme] :is(.composer-btn.send, .composer-btn.stop):active:not(:disabled) {
+  translate: 0 3px;
+  box-shadow: none;
+}
+
+/* The one that says yes: green, as the tick is. */
+html[data-style="stardew"][data-theme] :is(.text-btn.primary, .replies-send, .bell-btn.pri, .emp-pill.strong),
+html[data-style="stardew"][data-theme="dark"] :is(.text-btn.primary, .replies-send, .bell-btn.pri, .emp-pill.strong) {
+  background-color: #7fd04a;
+  color: #0b3a12;
+}
+
+html[data-style="stardew"][data-theme] :is(.text-btn.primary, .replies-send, .bell-btn.pri, .emp-pill.strong):hover:not(:disabled),
+html[data-style="stardew"][data-theme="dark"] :is(.text-btn.primary, .replies-send, .bell-btn.pri, .emp-pill.strong):hover:not(:disabled) {
+  background-color: #9be46a;
+  color: #0b3a12;
+}
+
+html[data-style="stardew"][data-theme] :is(.text-btn, .replies-send):disabled {
+  filter: saturate(0.3);
+  opacity: 0.6;
+}
+
+html[data-style="stardew"][data-theme] .text-btn.danger {
+  color: #a01212;
+}
+
+html[data-style="stardew"][data-theme="dark"] .text-btn.danger {
+  color: #ffb0a6;
+}
+
+
+/* A choice of several: tabs, the chosen one lit and standing forward. */
+html[data-style="stardew"][data-theme] .segmented {
+  gap: 2px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+html[data-style="stardew"][data-theme] .segmented button {
+  border-radius: 0;
+  background: var(--sv-shade);
+  color: var(--sv-ink);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--sv-line);
+}
+
+html[data-style="stardew"][data-theme] .segmented button.on {
+  background: var(--sv-paper-lit);
+  color: var(--sv-ink);
+  box-shadow:
+    inset 0 0 0 2px var(--sv-line),
+    inset 0 -4px 0 0 var(--primary);
+}
+
+/* Fields: lighter parchment, set in. */
+html[data-style="stardew"][data-theme] :is(.modal, .tasks-page, .proj-page, .login, .search-panel, .emp-page, .sleep-page) :is(input, textarea, select):not(.composer-input):not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="search"]):not([type="file"]):not(.tasks-composer-box *) {
+  border: 2px solid var(--sv-line);
+  border-radius: 0;
+  background-color: var(--sv-paper-lit);
+  color: var(--sv-ink);
+  box-shadow: var(--sv-inner);
+}
+
+/* A box to tick: the options' own, with the green check. */
+html[data-style="stardew"][data-theme] input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  border: 2px solid var(--sv-line);
+  border-radius: 0;
+  background: var(--sv-paper-lit);
+  box-shadow: var(--sv-inner);
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+html[data-style="stardew"][data-theme] input[type="checkbox"]:checked {
+  background: url("./art/stardew-ok.svg") center / 14px 12px no-repeat var(--sv-paper-lit);
+}
+
+/* A slider: the options' bar, and its knob. */
+html[data-style="stardew"][data-theme] .slider::before {
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 0;
+  background: var(--sv-shade);
+  box-shadow: 0 0 0 2px var(--sv-line);
+}
+
+html[data-style="stardew"][data-theme] .slider::after {
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 0;
+  background: #3dcf2a;
+}
+
+html[data-style="stardew"][data-theme] .slider-ticks span {
+  width: 2px;
+  height: 8px;
+  border-radius: 0;
+  background: var(--sv-line);
+  opacity: 0.55;
+}
+
+html[data-style="stardew"][data-theme] .slider-thumb,
+html[data-style="stardew"][data-theme] .slider.armed .slider-thumb {
+  width: 14px;
+  height: 24px;
+  border: 2px solid var(--sv-line);
+  border-radius: 0;
+  box-sizing: border-box;
+  background: #f6a450;
+  box-shadow: inset 2px 2px 0 0 #ffd28a;
+}
+
+html[data-style="stardew"][data-theme] .slider input::-webkit-slider-thumb {
+  opacity: 0;
+}
+
+html[data-style="stardew"][data-theme] .slider input::-moz-range-thumb {
+  opacity: 0;
+}
+
+html[data-style="stardew"][data-theme] input[type="range"]:not(.slider input) {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 24px;
+  background: transparent;
+}
+
+html[data-style="stardew"][data-theme] input[type="range"]:not(.slider input)::-webkit-slider-runnable-track {
+  height: 8px;
+  background: var(--sv-shade);
+  box-shadow: 0 0 0 2px var(--sv-line);
+}
+
+html[data-style="stardew"][data-theme] input[type="range"]:not(.slider input)::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 24px;
+  margin-top: -8px;
+  border: 2px solid var(--sv-line);
+  border-radius: 0;
+  background: #f6a450;
+  box-shadow: inset 2px 2px 0 0 #ffd28a;
+}
+
+html[data-style="stardew"][data-theme] input[type="range"]:not(.slider input)::-moz-range-track {
+  height: 8px;
+  background: var(--sv-shade);
+  box-shadow: 0 0 0 2px var(--sv-line);
+}
+
+html[data-style="stardew"][data-theme] input[type="range"]:not(.slider input)::-moz-range-thumb {
+  width: 10px;
+  height: 20px;
+  border: 2px solid var(--sv-line);
+  border-radius: 0;
+  background: #f6a450;
+}
+
+html[data-style="stardew"][data-theme] .effort-stops button {
+  border-radius: 0;
+  color: var(--sv-ink);
+  opacity: 0.75;
+}
+
+html[data-style="stardew"][data-theme] .effort-stops button.on {
+  opacity: 1;
+}
+
+/* ── Menus ──────────────────────────────────────────────────────────── */
+
+html[data-style="stardew"][data-theme] :is(.session-menu, .backend-menu, .plus-pop, .pane-menu) button,
+html[data-style="stardew"][data-theme] .command-menu li {
+  border-radius: 0;
+  color: var(--sv-ink);
+  font-weight: 600;
+}
+
+html[data-style="stardew"][data-theme] :is(.session-menu, .backend-menu, .plus-pop, .pane-menu) button svg {
+  color: var(--sv-ink);
+}
+
+/* The line under the cursor: a darker band, as an answer is chosen. */
+html[data-style="stardew"][data-theme] :is(.session-menu, .backend-menu, .plus-pop, .pane-menu) button:hover:not(:disabled),
+html[data-style="stardew"][data-theme] .command-menu li:is(.on, :hover),
+html[data-style="stardew"][data-theme] .search-row:hover {
+  background: color-mix(in srgb, var(--sv-shade) 55%, transparent);
+  box-shadow: inset 0 0 0 2px var(--sv-line);
+}
+
+html[data-style="stardew"][data-theme] .session-menu button.danger,
+html[data-style="stardew"][data-theme] .session-menu button.danger svg {
+  color: #a01212;
+}
+
+html[data-style="stardew"][data-theme="dark"] .session-menu button.danger,
+html[data-style="stardew"][data-theme="dark"] .session-menu button.danger svg {
+  color: #ff9a8e;
+}
+
+html[data-style="stardew"][data-theme] .session-menu .menu-sep {
+  height: 2px;
+  background: var(--sv-shade);
+}
+
+html[data-style="stardew"][data-theme] .command-menu .name {
+  color: var(--sv-ink);
+  font-weight: 700;
+}
+
+/* ── Dialogs ────────────────────────────────────────────────────────── */
+
+html[data-style="stardew"][data-theme] .modal {
+  background-color: var(--card);
+  box-shadow:
+    var(--sv-inner),
+    -6px 6px 0 0 var(--sv-drop);
+}
+
+/* Its head: a board across the top. */
+html[data-style="stardew"][data-theme] .modal-head {
+  border-bottom: 2px solid var(--sv-line);
+  background:
+    linear-gradient(to bottom, rgb(255 255 255 / 22%) 0 2px, transparent 2px),
+    var(--sv-planks) 0 0 / 96px 128px repeat,
+    var(--sv-wood);
+  color: #36120a;
+}
+
+html[data-style="stardew"][data-theme="dark"] .modal-head {
+  color: #ffe9bf;
+}
+
+/* Closing it: the red cross in the corner of every menu. */
+html[data-style="stardew"][data-theme] .modal-head .icon-btn:has(> .lucide-x) {
+  border-radius: 0;
+  background: url("./art/stardew-no.svg") center / 14px 14px no-repeat var(--sv-wood-lit);
+  box-shadow: inset 0 0 0 2px var(--sv-line);
+}
+
+html[data-style="stardew"][data-theme] .modal-head .icon-btn:has(> .lucide-x) > svg {
+  visibility: hidden;
+}
+
+html[data-style="stardew"][data-theme] .settings-row {
+  border-bottom: 2px dashed color-mix(in srgb, var(--sv-shade) 80%, transparent);
+}
+
+html[data-style="stardew"][data-theme] .settings-row:last-child {
+  border-bottom: 0;
+}
+
+/* Search: the collection. */
+html[data-style="stardew"][data-theme] .search-panel {
+  background-color: var(--card);
+}
+
+html[data-style="stardew"][data-theme] .search-field {
+  border-radius: 0;
+  background: var(--sv-paper-lit);
+  color: var(--sv-ink);
+  box-shadow:
+    inset 0 0 0 2px var(--sv-line),
+    var(--sv-inner);
+}
+
+html[data-style="stardew"][data-theme] .search-row {
+  border-radius: 0;
+  border-bottom: 2px solid color-mix(in srgb, var(--sv-shade) 60%, transparent);
+}
+
+html[data-style="stardew"][data-theme] .search-heading {
+  color: var(--sv-ink);
+  font-weight: 700;
+}
+
+/* ── Questions: what a villager asks, and the answers under it ──────── */
+
+html[data-style="stardew"][data-theme] .question {
+  padding: 10px 14px;
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  box-shadow:
+    var(--sv-inner),
+    -3px 3px 0 0 var(--sv-drop);
+}
+
+html[data-style="stardew"][data-theme] .replies {
+  gap: 4px;
+  padding: 8px;
+  background-color: var(--secondary);
+}
+
+html[data-style="stardew"][data-theme] .reply {
+  padding: 8px 14px 8px 36px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--secondary-foreground);
+  font-weight: 700;
+}
+
+/* The answer under the hand. */
+html[data-style="stardew"][data-theme] .reply:is(:hover, .on) {
+  background: url("./art/stardew-cursor.svg") left 9px center / 14px 20px no-repeat color-mix(in srgb, #b5704e 40%, transparent);
+  color: var(--secondary-foreground);
+  box-shadow: inset 0 0 0 2px #5b2b2a;
+}
+
+html[data-style="stardew"][data-theme] :is(.qpage-title, .questions-head) {
+  color: var(--secondary-foreground);
+}
+
+/* What waits to be sent: notes on the board. */
+html[data-style="stardew"][data-theme] .queue-panel {
+  background-color: var(--sv-paper-lit);
+}
+
+html[data-style="stardew"][data-theme] .queue-head {
+  color: var(--sv-ink);
+  font-weight: 700;
+}
+
+html[data-style="stardew"][data-theme] .queue-steer {
+  padding: 0 8px;
+}
+
+html[data-style="stardew"][data-theme] .queue-item {
+  border-top: 2px dashed color-mix(in srgb, var(--sv-shade) 80%, transparent);
+}
+
+html[data-style="stardew"][data-theme] .queue-text {
+  color: var(--sv-ink);
+}
+
+html[data-style="stardew"][data-theme] .queue-drop {
+  color: var(--sv-ink);
+}
+
+/* Something went wrong: it wilted. */
+html[data-style="stardew"][data-theme] .error {
+  padding: 8px 12px 8px 36px;
+  border: 2px solid var(--red);
+  border-radius: 0;
+  background: url("./art/stardew-crop-wilted.svg") left 9px center / 18px 18px no-repeat var(--sv-letter);
+  color: var(--red);
+  font-weight: 600;
+}
+
+/* ── Pages and cards ────────────────────────────────────────────────── */
+
+/* A notice is a letter. */
+html[data-style="stardew"][data-theme] .bell-card {
+  background:
+    url("./art/stardew-mail.svg") right 10px top 10px / 28px 20px no-repeat,
+    var(--sv-letter);
+  background-clip: padding-box;
+}
+
+html[data-style="stardew"][data-theme] .bell-card.important {
+  background:
+    url("./art/stardew-bang.svg") right 44px top 8px / 10px 22px no-repeat,
+    url("./art/stardew-mail.svg") right 10px top 10px / 28px 20px no-repeat,
+    var(--sv-letter);
+  background-clip: padding-box;
+}
+
+html[data-style="stardew"][data-theme] .bell-tabs button {
+  border-radius: 0;
+}
+
+/* Cards on parchment. */
+html[data-style="stardew"][data-theme] :is(.task-card, .task-template, .work-card, .kpi-card, .emp-stat, .dsess-card, .switcher-card) {
+  background-color: var(--sv-paper-lit);
+}
+
+/* The tasks page: a calendar on the wall, and a hen about the yard. */
+html[data-style="stardew"][data-theme] .tasks-head h1 {
+  padding: 0 0.7em 0 2.1em;
+  border: 4px solid transparent;
+  border-image: var(--sv-plate) 2 / 4px stretch;
+  background: url("./art/stardew-icon-calendar.svg") left 0.45em center / 20px 20px no-repeat var(--sv-paper-lit);
+  background-clip: padding-box;
+  color: var(--sv-ink);
+  font-weight: 800;
+  line-height: 1.7;
+  box-shadow: -2px 2px 0 0 var(--sv-drop);
+}
+
+html[data-style="stardew"][data-theme] .tasks-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--sv-ink);
+  font-weight: 700;
+}
+
+html[data-style="stardew"][data-theme] .tasks-section::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: url("./art/stardew-star.svg") center / contain no-repeat;
+}
+
+html[data-style="stardew"][data-theme] .tasks-column::after {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 52px;
+  margin: 14px 12px 0 auto;
+  background: url("./art/stardew-chicken.svg") center / contain no-repeat;
+  animation: stardew-breathe 1.1s steps(2, jump-none) infinite;
+}
+
+html[data-style="stardew"][data-theme] .tasks-round {
+  border-radius: 0;
+  background: var(--sv-paper-lit);
+  color: var(--sv-ink);
+  box-shadow: var(--sv-slot);
+}
+
+html[data-style="stardew"][data-theme] .tasks-composer-btn {
+  border-radius: 0;
+  color: var(--sv-ink);
+}
+
+html[data-style="stardew"][data-theme] .tasks-composer-btn.send,
+html[data-style="stardew"][data-theme] .tasks-composer-btn.send:disabled {
+  border: 4px solid transparent;
+  border-image: var(--sv-plank) 2 / 4px stretch;
+  background: url("./art/stardew-ok.svg") center / 22px 18px no-repeat var(--sv-wood-lit);
+  background-clip: padding-box;
+  box-shadow: 0 3px 0 0 var(--sv-drop);
+}
+
+html[data-style="stardew"][data-theme] .tasks-composer-btn.send:disabled {
+  background-color: var(--sv-paper);
+  filter: saturate(0.3);
+  opacity: 0.65;
+  box-shadow: none;
+}
+
+html[data-style="stardew"][data-theme] .tasks-composer-btn.send > svg {
+  display: none;
+}
+
+/* Nothing here yet: a sprout. */
+html[data-style="stardew"][data-theme] .emp-empty::before {
+  content: "";
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  vertical-align: -2px;
+  background: url("./art/stardew-crop-sprout.svg") center / contain no-repeat;
+}
+
+/* ── No session open: the scarecrow and its row of parsnips ─────────── */
+
+html[data-style="stardew"][data-theme] .placeholder::before {
+  content: "";
+  width: 288px;
+  height: 160px;
+  margin-bottom: 0.25rem;
+  background: url("./art/stardew-plot.svg") center / contain no-repeat;
+}
+
+html[data-style="stardew"][data-theme] .placeholder {
+  /* In the middle of the page, not against its left edge. */
+  flex: 1 1 auto;
+  color: var(--sv-ink);
+  font-weight: 700;
+}
+
+html[data-style="stardew"][data-theme] :is(.proj-round, .tasks-round) {
+  border-radius: 0;
+  background: var(--sv-paper-lit);
+  color: var(--sv-ink);
+  box-shadow: var(--sv-slot);
+}
+
+html[data-style="stardew"][data-theme] .dsess-group {
+  color: var(--sv-ink);
+  font-weight: 700;
+}
+
+/* Connecting: a Junimo, hopping. */
+html[data-style="stardew"][data-theme] .loading::before {
+  content: "";
+  width: 64px;
+  height: 64px;
+  background: url("./art/stardew-junimo.svg") center / contain no-repeat;
+  animation: stardew-hop 0.9s steps(6, jump-none) infinite;
+}
+
+/* ── Signing in: the title screen ───────────────────────────────────── */
+
+html[data-style="stardew"][data-theme] .login {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    url("./art/stardew-hills.svg") left bottom / 480px 168px repeat-x,
+    linear-gradient(to bottom, #3aa0f0 0%, #6cc4f8 45%, #bfeaff 100%);
+}
+
+html[data-style="stardew"][data-theme="dark"] .login {
+  background:
+    url("./art/stardew-hills-night.svg") left bottom / 480px 168px repeat-x,
+    url("./art/stardew-stars.svg") 0 0 / 288px 288px repeat,
+    linear-gradient(to bottom, #050a2e 0%, #15184f 55%, #2a2a6a 100%);
+}
+
+html[data-style="stardew"][data-theme] .login::before {
+  content: "";
+  position: absolute;
+  top: 8%;
+  left: 0;
+  right: 0;
+  z-index: -1;
+  height: 132px;
+  right: -420px;
+  background: url("./art/stardew-clouds.svg") 0 0 / 420px 132px repeat-x;
+  animation: stardew-drift 90s linear infinite;
+  pointer-events: none;
+}
+
+html[data-style="stardew"][data-theme="dark"] .login::before {
+  background-image: url("./art/stardew-clouds-night.svg");
+}
+
+html[data-style="stardew"][data-theme] .login-box {
+  border: 15px solid transparent;
+  border-image: var(--sv-frame) 5 / 15px stretch;
+  border-radius: 0;
+  background: var(--card);
+  background-clip: padding-box;
+  box-shadow:
+    var(--sv-inner),
+    -6px 6px 0 0 rgb(0 0 0 / 30%);
+}
+
+/* The title, on its plate; the way in is a board. */
+html[data-style="stardew"][data-theme] .login-title {
+  align-self: center;
+  padding: 0 0.7em;
+  border: 4px solid transparent;
+  border-image: var(--sv-plate) 2 / 4px stretch;
+  background: var(--sv-paper-lit);
+  background-clip: padding-box;
+  color: var(--sv-ink);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+html[data-style="stardew"][data-theme] .login-input {
+  border: 2px solid var(--sv-line);
+  border-radius: 0;
+  background: var(--sv-paper-lit);
+  color: var(--sv-ink);
+  box-shadow: var(--sv-inner);
+}
+
+html[data-style="stardew"][data-theme] .login-input::placeholder {
+  color: color-mix(in srgb, var(--sv-ink) 60%, transparent);
+}
+
+html[data-style="stardew"][data-theme] .login-btn {
+  border: 4px solid transparent;
+  border-image: var(--sv-plank) 2 / 4px stretch;
+  border-radius: 0;
+  background: #7fd04a;
+  background-clip: padding-box;
+  color: #0b3a12;
+  font-weight: 800;
+  box-shadow: 0 3px 0 0 rgb(0 0 0 / 30%);
+}
+
+html[data-style="stardew"][data-theme] .login-btn:active:not(:disabled) {
+  translate: 0 3px;
+  box-shadow: none;
+}
+
+/* A Junimo on the grass, beside the door. */
+html[data-style="stardew"][data-theme] .login::after {
+  content: "";
+  position: absolute;
+  left: calc(50% + 190px);
+  bottom: 12px;
+  width: 64px;
+  height: 64px;
+  background: url("./art/stardew-junimo.svg") center / contain no-repeat;
+  animation: stardew-hop 1.4s steps(6, jump-none) infinite;
+  pointer-events: none;
+}
+
+/* ── Tabs: across the top, the chosen one lit ───────────────────────── */
+
+html[data-style="stardew"][data-theme] :is(.emp-tab, .proj-tab, .bell-tabs button, .emp-pill, .dsess-filter) {
+  border: 0;
+  border-radius: 0;
+  background: var(--sv-paper);
+  color: var(--sv-ink);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--sv-line);
+}
+
+html[data-style="stardew"][data-theme] :is(.emp-tab, .proj-tab, .bell-tabs button, .emp-pill, .dsess-filter):hover {
+  background: var(--sv-paper-lit);
+  color: var(--sv-ink);
+}
+
+html[data-style="stardew"][data-theme] :is(.emp-tab, .proj-tab, .bell-tabs button, .dsess-filter).on {
+  background: var(--sv-paper-lit);
+  color: var(--sv-ink);
+  box-shadow:
+    inset 0 0 0 2px var(--sv-line),
+    inset 0 -5px 0 0 var(--primary);
+}
+
+html[data-style="stardew"][data-theme] .emp-bar {
+  padding-top: 8px;
+  border-bottom: 2px solid var(--sv-shade);
+  background: var(--background);
+}
+
+/* A villager's face, in a portrait's frame. */
+html[data-style="stardew"][data-theme] .emp-avatar {
+  border-radius: 0;
+  background: #daad72;
+  color: #56160c;
+  font-weight: 800;
+  box-shadow:
+    inset 0 0 0 2px #dc7b05,
+    0 0 0 2px #5b2b2a;
+}
+
+/* How a KPI stands: hearts, ten of them, as friendship is counted. */
+html[data-style="stardew"][data-theme] .kpi-progress .kpi-track {
+  flex: 0 0 180px;
+  height: 16px;
+  border-radius: 0;
+  background: url("./art/stardew-heart-empty.svg") 0 0 / 18px 16px repeat-x;
+}
+
+html[data-style="stardew"][data-theme] .kpi-progress .kpi-fill {
+  border-radius: 0;
+  background: url("./art/stardew-heart.svg") 0 0 / 18px 16px repeat-x;
+}
+
+html[data-style="stardew"][data-theme] :is(.kpi-status, .kpi-prio) {
+  padding: 0 6px;
+  border-radius: 0;
+  background: var(--sv-paper);
+  color: var(--sv-ink);
+  font-weight: 700;
+  box-shadow: var(--sv-slot);
+}
+
+html[data-style="stardew"][data-theme] .kpi-prio.high {
+  color: #a01212;
+}
+
+html[data-style="stardew"][data-theme="dark"] .kpi-prio.high {
+  color: #ff9a8e;
+}
+
+/* What was spent: a bar like the energy one, on its side. */
+html[data-style="stardew"][data-theme] .emp-spend-row .kpi-track {
+  height: 10px;
+  border: 2px solid var(--sv-line);
+  border-radius: 0;
+  background: #ffd789;
+}
+
+html[data-style="stardew"][data-theme] .emp-spend-row .kpi-fill {
+  border-radius: 0;
+  background: #3dcf2a;
+  box-shadow: inset 0 2px 0 0 #9af07a;
+}
+
+html[data-style="stardew"][data-theme] .emp-spend-row .kpi-fill.over {
+  background: #e0392b;
+  box-shadow: inset 0 2px 0 0 #ff8a7a;
+}
+
+html[data-style="stardew"][data-theme] .emp-stat-value {
+  color: var(--sv-ink);
+  font-weight: 800;
+}
+
+/* The bands of the letter box: a star for what matters. */
+html[data-style="stardew"][data-theme] .bell-band {
+  color: var(--sv-ink);
+  font-weight: 700;
+}
+
+html[data-style="stardew"][data-theme] .bell-band::before {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/stardew-star.svg") center / contain no-repeat;
+}
+
+html[data-style="stardew"][data-theme] .bell-band:is(.other, .later)::before {
+  background: url("./art/stardew-mail.svg") center / contain no-repeat;
+}
+
+html[data-style="stardew"][data-theme] .bell-p {
+  margin-right: 56px;
+  border-radius: 0;
+  background: var(--sv-paper);
+  color: var(--sv-ink);
+  box-shadow: var(--sv-slot);
+}
+
+/* The themes to choose from: each in a slot. */
+html[data-style="stardew"][data-theme] .settings-body .tw.grid > button {
+  border: 6px solid transparent;
+  border-image: var(--sv-box) 3 / 6px stretch;
+  border-radius: 0;
+  background-color: var(--sv-paper-lit);
+  background-clip: padding-box;
+  color: var(--sv-ink);
+}
+
+html[data-style="stardew"][data-theme] .settings-body .tw.grid > button:hover {
+  background-color: var(--sv-paper);
+  color: var(--sv-ink);
+}
+
+html[data-style="stardew"][data-theme] .settings-body .tw.grid > button :is(.text-muted-foreground, [class*="text-accent-foreground"]) {
+  color: color-mix(in srgb, var(--sv-ink) 78%, transparent);
+}
+
+html[data-style="stardew"][data-theme] .settings-back {
+  color: inherit;
+  font-weight: 700;
+}
+
+/* Device sessions, the phone's switcher. */
+html[data-style="stardew"][data-theme] .dsess-card.on {
+  background-color: var(--sv-wood-lit);
+}
+
+html[data-style="stardew"][data-theme] .switcher-card.active {
+  box-shadow:
+    0 0 0 2px #d8281e,
+    -3px 3px 0 0 var(--sv-drop);
+}
+
+/* ── Going down to the latest: an arrow of wood ─────────────────────── */
+
+html[data-style="stardew"][data-theme] .to-bottom {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/stardew-arrow.svg") center / 33px 30px no-repeat;
+  box-shadow: none;
+  animation: stardew-breathe 1s steps(2, jump-none) infinite;
+}
+
+html[data-style="stardew"][data-theme] .to-bottom > * {
+  visibility: hidden;
+}
+
+/* ── A phone ────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  /* The head floats over the page: its pieces are plates and slots. */
+  html[data-style="stardew"][data-theme] .chat-header .chat-title,
+  html[data-style="stardew"][data-theme] .chat-header .keep-chip {
+    border: 4px solid transparent;
+    border-image: var(--sv-plate) 2 / 4px stretch;
+    border-radius: 0;
+    background: var(--sv-paper-lit);
+    background-clip: padding-box;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: -2px 2px 0 0 var(--sv-drop);
+  }
+
+  html[data-style="stardew"][data-theme] .chat-header .icon-btn.glass,
+  html[data-style="stardew"][data-theme] .chat-header .chip.button.pane-more,
+  html[data-style="stardew"][data-theme] .sidebar .sidebar-head .bell-btn,
+  html[data-style="stardew"][data-theme] .sidebar .search-btn {
+    border: 4px solid transparent;
+    border-image: var(--sv-plank) 2 / 4px stretch;
+    border-radius: 0;
+    background: var(--sv-wood-lit);
+    background-clip: padding-box;
+    color: #36120a;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: 0 3px 0 0 var(--sv-drop);
+  }
+
+  html[data-style="stardew"][data-theme="dark"] .chat-header .icon-btn.glass,
+  html[data-style="stardew"][data-theme="dark"] .chat-header .chip.button.pane-more,
+  html[data-style="stardew"][data-theme="dark"] .sidebar .sidebar-head .bell-btn,
+  html[data-style="stardew"][data-theme="dark"] .sidebar .search-btn {
+    color: #ffe9bf;
+  }
+
+  /* "New chat", and what opens beside it: boards over the grass. */
+  html[data-style="stardew"][data-theme] .dial-btn,
+  html[data-style="stardew"][data-theme] .sidebar-foot.dial .devices-btn svg {
+    border: 4px solid transparent;
+    border-image: var(--sv-plank) 2 / 4px stretch;
+    border-radius: 0;
+    background: var(--sv-wood-lit);
+    background-clip: padding-box;
+    color: #36120a;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: 0 3px 0 0 var(--sv-drop);
+  }
+
+  html[data-style="stardew"][data-theme="dark"] .dial-btn,
+  html[data-style="stardew"][data-theme="dark"] .sidebar-foot.dial .devices-btn svg {
+    color: #ffe9bf;
+  }
+
+  html[data-style="stardew"][data-theme] .sidebar-foot.dial .devices-btn {
+    color: var(--sidebar-foreground);
+    text-shadow: 0 0 6px var(--sidebar), 0 0 6px var(--sidebar);
+  }
+
+  html[data-style="stardew"][data-theme] .new-chat-more::before {
+    background: var(--sv-line);
+    box-shadow: none;
+  }
+}
+
+/* ── Small things ───────────────────────────────────────────────────── */
+
+/* A message from the game, in its box at the foot of the screen. */
+html[data-style="stardew"][data-theme] .app-oops {
+  padding: 6px 12px 6px 34px;
+  background:
+    url("./art/stardew-bang.svg") left 10px center / 10px 22px no-repeat,
+    var(--sv-paper-lit);
+  background-clip: padding-box;
+  color: var(--sv-ink);
+  font-weight: 700;
+}
+
+html[data-style="stardew"][data-theme] .bell-count {
+  border-radius: 0;
+  background: #ffd21a;
+  color: #56160c;
+  box-shadow: 0 0 0 2px #7a3b00;
+}
+
+html[data-style="stardew"][data-theme] .bell-dot {
+  top: -4px;
+  right: 0;
+  width: 8px;
+  height: 18px;
+  border-radius: 0;
+  background: url("./art/stardew-bang.svg") center / contain no-repeat;
+}
+
+html[data-style="stardew"][data-theme] ::selection {
+  background: color-mix(in srgb, #3dcf2a 38%, transparent);
+}
+
+html[data-style="stardew"][data-theme] :is(button, [role="button"], a, input, textarea, select):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+html[data-style="stardew"][data-theme] .composer-input:focus-visible {
+  outline: 0;
+}
+
+html[data-style="stardew"][data-theme] .spin {
+  animation-timing-function: steps(8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-style="stardew"][data-theme] .sidebar::after,
+  html[data-style="stardew"][data-theme] .sidebar .session.active::before,
+  html[data-style="stardew"][data-theme] .dot,
+  html[data-style="stardew"][data-theme] .session-unread,
+  html[data-style="stardew"][data-theme] .dot.running::before,
+  html[data-style="stardew"][data-theme] .tool.group.running .tool-icon::before,
+  html[data-style="stardew"][data-theme] .tool-state > svg.spin,
+  html[data-style="stardew"][data-theme] .thinking.live > svg,
+  html[data-style="stardew"][data-theme] .working-dots i,
+  html[data-style="stardew"][data-theme] .loading::before,
+  html[data-style="stardew"][data-theme] .login::before,
+  html[data-style="stardew"][data-theme] .login::after,
+  html[data-style="stardew"][data-theme] .tasks-column::after,
+  html[data-style="stardew"][data-theme] .to-bottom {
+    animation: none;
+  }
+}
