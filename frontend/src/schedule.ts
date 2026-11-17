@@ -7,6 +7,7 @@
  * Times are the task's own wall clock (see `Task.utc_offset`), so nothing
  * here converts anything.
  */
+import { t } from "./i18n"
 
 export type Frequency = "daily" | "weekdays" | "weekly" | "monthly" | "custom"
 
@@ -22,7 +23,7 @@ export type Schedule = {
   cron: string
 }
 
-export const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+export const DAY_NAMES = [t("Sunday"), t("Monday"), t("Tuesday"), t("Wednesday"), t("Thursday"), t("Friday"), t("Saturday")]
 const SHORT = DAY_NAMES.map((d) => d.slice(0, 3))
 
 const num = (s: string) => (/^\d+$/.test(s) ? Number(s) : null)
@@ -68,27 +69,33 @@ export function buildCron(s: Schedule): string {
 }
 
 const ORDINAL = (n: number) =>
-  n + (n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th")
+  n % 10 === 1 && n !== 11
+    ? t("{n}st", { n })
+    : n % 10 === 2 && n !== 12
+      ? t("{n}nd", { n })
+      : n % 10 === 3 && n !== 13
+        ? t("{n}rd", { n })
+        : t("{n}th", { n })
 
 /** The card's blue word, and its last line. */
 export function describeCron(cron: string): { kind: string; when: string } {
   const s = readCron(cron)
   switch (s.frequency) {
     case "daily":
-      return { kind: "Daily", when: `Every day · ${s.time}` }
+      return { kind: t("Daily"), when: t("Every day · {time}", { time: s.time }) }
     case "weekdays":
-      return { kind: "Weekdays", when: `Monday to Friday · ${s.time}` }
+      return { kind: t("Weekdays"), when: t("Monday to Friday · {time}", { time: s.time }) }
     case "weekly":
       return {
-        kind: "Weekly",
+        kind: t("Weekly"),
         when:
           s.days.length === 1
-            ? `Every ${DAY_NAMES[s.days[0]]} · ${s.time}`
-            : `Every ${s.days.map((d) => SHORT[d]).join(", ")} · ${s.time}`,
+            ? t("Every {day} · {time}", { day: DAY_NAMES[s.days[0]], time: s.time })
+            : t("Every {days} · {time}", { days: s.days.map((d) => SHORT[d]).join(t(", ")), time: s.time }),
       }
     case "monthly":
-      return { kind: "Monthly", when: `Monthly on the ${ORDINAL(s.dom)} · ${s.time}` }
+      return { kind: t("Monthly"), when: t("Monthly on the {day} · {time}", { day: ORDINAL(s.dom), time: s.time }) }
     case "custom":
-      return { kind: "Custom", when: cron }
+      return { kind: t("Custom"), when: cron }
   }
 }

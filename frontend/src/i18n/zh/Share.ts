@@ -1,0 +1,17 @@
+export default {
+  "Pick what to share": "选择要分享的内容",
+  "Select none": "取消全选",
+  "Select all": "全选",
+  "Nothing to share yet.": "还没有可分享的内容。",
+  "Leave out": "不分享这段",
+  Include: "分享这段",
+  "{n} of {total}": "已选 {n} / {total}",
+  "Drawing…": "生成中…",
+  "Share image": "分享图片",
+  Saved: "已保存",
+  "Could not copy": "复制失败",
+  Share: "分享",
+  "The conversation as an image": "会话图片",
+  "Save image": "保存图片",
+  "Copy image": "复制图片",
+} satisfies Record<string, string>

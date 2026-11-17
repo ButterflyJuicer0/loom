@@ -12,6 +12,7 @@ import {
   type Dream,
   type Memory,
 } from "./api"
+import { t } from "./i18n"
 import "./Sleep.css"
 
 /**
@@ -51,7 +52,7 @@ export function MoonButton({
 }) {
   const asleep = dream !== undefined && busy(dream)
   const news = dream !== undefined && unread(dream)
-  const title = (asleep ? "Dreaming now" : news ? "Dream: a new report" : "Dream: memory and reports") + what
+  const title = (asleep ? t("Dreaming now") : news ? t("Dream: a new report") : t("Dream: memory and reports")) + what
   return (
     <button
       className={
@@ -65,7 +66,7 @@ export function MoonButton({
     >
       <Moon />
       {label && <span>{label}</span>}
-      {label && <span className="devices-count">{asleep ? "asleep" : news ? "new" : ""}</span>}
+      {label && <span className="devices-count">{asleep ? t("asleep") : news ? t("new") : ""}</span>}
     </button>
   )
 }
@@ -97,9 +98,9 @@ export function Sleep({
 
   const tabs = (
     <div className="sleep-tabs" role="tablist">
-      {(["report", "memory", "settings"] as const).map((t) => (
-        <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => onTab(t)}>
-          {{ report: "Report", memory: "Memory", settings: "Settings" }[t]}
+      {(["report", "memory", "settings"] as const).map((name) => (
+        <button key={name} role="tab" aria-selected={tab === name} className={tab === name ? "on" : ""} onClick={() => onTab(name)}>
+          {{ report: t("Report"), memory: t("Memory"), settings: t("Settings") }[name]}
         </button>
       ))}
     </div>
@@ -112,7 +113,7 @@ export function Sleep({
     <div className="chat">
       <header className="chat-header">
         {!chat.sidebarOpen && (
-          <button className="icon-btn" onClick={chat.onToggleSidebar} title="Show sidebar">
+          <button className="icon-btn" onClick={chat.onToggleSidebar} title={t("Show sidebar")}>
             <PanelLeft />
           </button>
         )}
@@ -175,34 +176,37 @@ function MemoryPane({ scope, session, onReport }: { scope: string; session: Agen
         <div className="sleep-bar-text">
           <div>
             {asleep
-              ? "Dreaming now…"
+              ? t("Dreaming now…")
               : dream?.last_run_at
-                ? `Last dreamed ${when(dream.last_run_at)}`
-                : "Has not dreamed yet"}
+                ? t("Last dreamed {when}", { when: when(dream.last_run_at) })
+                : t("Has not dreamed yet")}
           </div>
           {dream && !asleep && (
             <div className="sleep-dim">
               {dream.pending_sessions === 0
-                ? "Nothing new since then"
-                : `${dream.pending_sessions} session${dream.pending_sessions === 1 ? "" : "s"} to go over`}
-              {dream.enabled ? ` · dreams on its own ${hours(dream.window)}` : " · only when asked"}
+                ? t("Nothing new since then")
+                : dream.pending_sessions === 1
+                  ? t("{n} session to go over", { n: dream.pending_sessions })
+                  : t("{n} sessions to go over", { n: dream.pending_sessions })}
+              {" · "}
+              {dream.enabled ? t("dreams on its own {hours}", { hours: hours(dream.window) }) : t("only when asked")}
             </div>
           )}
         </div>
         {dream?.can_undo && !asleep && (
-          <button className="text-btn sleep-undo" onClick={() => setUndoing(true)} title="Put the memory back as it was before the last sleep">
-            <Undo2 /> Undo last dream
+          <button className="text-btn sleep-undo" onClick={() => setUndoing(true)} title={t("Put the memory back as it was before the last sleep")}>
+            <Undo2 /> {t("Undo last dream")}
           </button>
         )}
         <button className="sleep-now" disabled={asleep || !dream} onClick={sleepNow}>
-          Dream now
+          {t("Dream now")}
         </button>
       </div>
 
-      {memories === null && !error && <div className="sleep-dim">loading…</div>}
+      {memories === null && !error && <div className="sleep-dim">{t("loading…")}</div>}
       {memories?.length === 0 && (
         <div className="sleep-empty">
-          No memories yet. Claude Code saves them as you work here, and Dream tidies them by night.
+          {t("No memories yet. Claude Code saves them as you work here, and Dream tidies them by night.")}
         </div>
       )}
       {kept.map((m) => (
@@ -210,8 +214,8 @@ function MemoryPane({ scope, session, onReport }: { scope: string; session: Agen
       ))}
       {archived.length > 0 && (
         <>
-          <h2 className="sleep-section">Archived</h2>
-          <div className="sleep-dim sleep-note">Set aside by Dream for going unused. Still there, out of the index.</div>
+          <h2 className="sleep-section">{t("Archived")}</h2>
+          <div className="sleep-dim sleep-note">{t("Set aside by Dream for going unused. Still there, out of the index.")}</div>
           {archived.map((m) => (
             <MemoryRow key={m.file} m={m} />
           ))}
@@ -221,9 +225,9 @@ function MemoryPane({ scope, session, onReport }: { scope: string; session: Agen
 
       {undoing && (
         <Confirm
-          title="Undo the last dream?"
-          detail="The memory goes back to how it was before it. The report stays."
-          action="Undo"
+          title={t("Undo the last dream?")}
+          detail={t("The memory goes back to how it was before it. The report stays.")}
+          action={t("Undo")}
           onYes={async () => setDream(await undoDream(scope))}
           onClose={() => setUndoing(false)}
         />
@@ -250,7 +254,7 @@ function MemoryRow({ m }: { m: Memory }) {
 
 function SettingsPane({ scope, scopeName, session }: { scope: string; scopeName: string; session: AgentInfo }) {
   const { dream, setDream, error, setError } = useDream(scope, session)
-  if (!dream) return error ? <div className="sleep-error">{error}</div> : <div className="sleep-dim">loading…</div>
+  if (!dream) return error ? <div className="sleep-error">{error}</div> : <div className="sleep-dim">{t("loading…")}</div>
 
   // The box or the hour moves on the tap; back, with why, if the server says no.
   const save = async (attrs: Parameters<typeof updateDream>[1]) => {
@@ -273,13 +277,13 @@ function SettingsPane({ scope, scopeName, session }: { scope: string; scopeName:
       <label className="sleep-setting sleep-check">
         <input type="checkbox" checked={dream.enabled} onChange={(e) => save({ enabled: e.target.checked })} />
         <span>
-          Dream on its own at night
-          <span className="sleep-dim"> — for {scopeName}. Off, it dreams only when asked.</span>
+          {t("Dream on its own at night")}
+          <span className="sleep-dim">{t(" — for {scope}. Off, it dreams only when asked.", { scope: scopeName })}</span>
         </span>
       </label>
 
       <div className="sleep-setting">
-        <span>Night</span>
+        <span>{t("Night")}</span>
         <select value={from} onChange={(e) => save({ window: [Number(e.target.value), to] })}>
           {HOURS.map((h) => (
             <option key={h} value={h} disabled={h === to}>
@@ -287,7 +291,7 @@ function SettingsPane({ scope, scopeName, session }: { scope: string; scopeName:
             </option>
           ))}
         </select>
-        <span>to</span>
+        <span>{t("to")}</span>
         <select value={to} onChange={(e) => save({ window: [from, Number(e.target.value)] })}>
           {HOURS.map((h) => (
             <option key={h} value={h} disabled={h === from}>
@@ -296,30 +300,33 @@ function SettingsPane({ scope, scopeName, session }: { scope: string; scopeName:
           ))}
         </select>
         <span className="sleep-dim">
-          {utc(dream.utc_offset)}, for every project
+          {t("{utc}, for every project", { utc: utc(dream.utc_offset) })}
           {dream.utc_offset !== here && (
             <>
               {" · "}
               <button className="link-btn" onClick={() => save({ utc_offset: here })}>
-                use this device's ({utc(here)})
+                {t("use this device's ({utc})", { utc: utc(here) })}
               </button>
             </>
           )}
         </span>
       </div>
       <div className="sleep-dim sleep-note">
-        A night's dream waits until nothing here has been touched for half an hour, and goes over only what changed
-        since the last one.
+        {t("A night's dream waits until nothing here has been touched for half an hour, and goes over only what changed since the last one.")}
       </div>
 
-      <h2 className="sleep-section">Recent nights</h2>
-      {dream.runs.length === 0 && <div className="sleep-dim">None yet.</div>}
+      <h2 className="sleep-section">{t("Recent nights")}</h2>
+      {dream.runs.length === 0 && <div className="sleep-dim">{t("None yet.")}</div>}
       {dream.runs.map((r) => (
         <div key={r.at} className={"sleep-run" + (r.undone ? " undone" : "")}>
           <span>{new Date(r.at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</span>
           <span className="sleep-dim">
-            {r.sessions === 0 ? "nothing new" : `${r.sessions} session${r.sessions === 1 ? "" : "s"}`}
-            {r.undone && " · undone"}
+            {r.sessions === 0
+              ? t("nothing new")
+              : r.sessions === 1
+                ? t("{n} session", { n: r.sessions })
+                : t("{n} sessions", { n: r.sessions })}
+            {r.undone && " · " + t("undone")}
           </span>
         </div>
       ))}
@@ -337,6 +344,6 @@ function when(ms: number) {
   const d = new Date(ms)
   const today = new Date()
   const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false })
-  if (d.toDateString() === today.toDateString()) return `today ${time}`
+  if (d.toDateString() === today.toDateString()) return t("today {time}", { time })
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " + time
 }

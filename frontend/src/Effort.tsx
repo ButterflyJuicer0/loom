@@ -1,13 +1,18 @@
 import { Brain } from "lucide-react"
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react"
 import { EFFORTS, updateAgent, type AgentInfo } from "./api"
+import { t, tc } from "./i18n"
+
+// "Light" alone is also the appearance in Settings, which is another word in
+// Chinese.
+const LIGHT = tc("effort", "Light")
 
 const LABELS: Record<string, string> = {
-  low: "Light",
-  medium: "Standard",
-  high: "Extended",
-  xhigh: "Heavy",
-  max: "Max",
+  low: LIGHT,
+  medium: t("Standard"),
+  high: t("Extended"),
+  xhigh: t("Heavy"),
+  max: t("Max"),
 }
 
 // How long a finger rests on the track before it drags: until then a sideways
@@ -18,14 +23,14 @@ const SLOP = 10
 
 // Under the dots, where six full names do not fit.
 const SHORT: Record<string, string> = {
-  low: "Light",
-  medium: "Std",
-  high: "Ext",
-  xhigh: "Heavy",
-  max: "Max",
+  low: LIGHT,
+  medium: t("Std"),
+  high: t("Ext"),
+  xhigh: t("Heavy"),
+  max: t("Max"),
 }
 
-const label = (effort: string | null) => (effort ? (LABELS[effort] ?? effort) : "Auto")
+const label = (effort: string | null) => (effort ? (LABELS[effort] ?? effort) : t("Auto"))
 
 /**
  * Beside +, after ChatGPT's thinking time: a brain that opens a slider from the
@@ -161,7 +166,7 @@ export function EffortButton({ session }: { session: AgentInfo }) {
       <button
         className={"composer-btn effort-btn" + (value ? " set" : "") + (open ? " open" : "")}
         onClick={() => setOpen((o) => !o)}
-        title={`Thinking: ${label(value)}`}
+        title={t("Thinking: {level}", { level: label(value) })}
         aria-expanded={open}
       >
         <Brain />
@@ -169,9 +174,9 @@ export function EffortButton({ session }: { session: AgentInfo }) {
       </button>
 
       {open && (
-        <div className="effort-pop" role="dialog" aria-label="Thinking level">
+        <div className="effort-pop" role="dialog" aria-label={t("Thinking level")}>
           <div className="effort-head">
-            <span>Thinking</span>
+            <span>{t("Thinking")}</span>
             <span className="effort-value">{label(value)}</span>
           </div>
           <div
@@ -211,12 +216,12 @@ export function EffortButton({ session }: { session: AgentInfo }) {
                 onClick={() => choose(stop)}
                 title={label(stop)}
               >
-                {stop ? (SHORT[stop] ?? stop) : "Auto"}
+                {stop ? (SHORT[stop] ?? stop) : t("Auto")}
               </button>
             ))}
           </div>
           <div className="effort-hint">
-            Hold the track to drag. From the next turn on.
+            {t("Hold the track to drag. From the next turn on.")}
           </div>
         </div>
       )}

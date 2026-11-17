@@ -1,0 +1,31 @@
+{
+  "id": "deadcells",
+  "order": 70,
+  "name": {
+    "en": "Dead Cells",
+    "zh": "死亡细胞"
+  },
+  "blurb": {
+    "en": "The Prisoners' Quarters by night, the island at dusk by day: copper-framed panels, cells, scrolls and a head of flame",
+    "zh": "夜里是牢房，白天是黄昏的岛：铜边面板、细胞、卷轴，还有一颗火焰脑袋"
+  },
+  "radius": "4px",
+  "light": {
+    "background": "#f4e9d0",
+    "foreground": "#2b1a26",
+    "sidebar": "#74283a",
+    "card": "#fbf3df",
+    "bubble": "#ead7ae",
+    "primary": "#0e6da0",
+    "border": "#c7a070"
+  },
+  "dark": {
+    "background": "#1a1f36",
+    "foreground": "#ebe5d8",
+    "sidebar": "#10242e",
+    "card": "#142745",
+    "bubble": "#101c2f",
+    "primary": "#35bdea",
+    "border": "#3d4863"
+  }
+}

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { login } from "./api"
+import { t, tc } from "./i18n"
 import "./Login.css"
 
 type Props = {
@@ -21,10 +22,10 @@ export function Login({ onSuccess }: Props) {
     } catch (err) {
       setError(
         err instanceof Error && err.message === "invalid_password"
-          ? "Wrong password"
+          ? t("Wrong password")
           : err instanceof Error && err.message === "too_many_attempts"
-            ? "Too many tries — wait a few minutes"
-            : "Login failed",
+            ? t("Too many tries — wait a few minutes")
+            : t("Login failed"),
       )
       setPassword("")
     } finally {
@@ -39,14 +40,14 @@ export function Login({ onSuccess }: Props) {
         <input
           type="password"
           className="login-input"
-          placeholder="password"
+          placeholder={t("password")}
           value={password}
           autoFocus
           onChange={(e) => setPassword(e.target.value)}
         />
         {error && <div className="login-error">{error}</div>}
         <button className="login-btn" type="submit" disabled={busy || !password}>
-          {busy ? "…" : "Enter"}
+          {busy ? "…" : tc("login", "Enter")}
         </button>
       </form>
     </div>

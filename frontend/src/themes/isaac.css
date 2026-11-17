@@ -1,0 +1,1889 @@
+/* ── 以撒 (The Binding of Isaac: Rebirth) ─────────────────────────────────
+   A tribute to the game, in its own pixels. Two sides, as the game has:
+
+   - Night is a room of the Basement: the page is its floor, dark at the
+     edges, inside four brick walls with a door in the middle of each; the
+     sidebar is the HUD on the dark beside it — three red hearts, the coin /
+     bomb / key counters (they count what the sidebar holds), a row of the
+     map lit where you are.
+   - Day is the paper the game's menus are written on: a pinned sheet on a
+     table a child has pencilled over, a ▶ beside what is chosen.
+
+   On both: a title is the black brush-stroke an item's name is written on;
+   what you say, and every menu and dialog, is a scrap of paper (the pause
+   menu's); a step is the active item and its charge bar, filling while it
+   runs — a bomb for a command, a book to read, a blank card to write, a
+   compass to find, a crystal ball for the web, a little brother for an
+   agent, a battery for what is plugged in, the D6 for the rest; a file is
+   an item on its stone; a turn ends on a boss's bar, as full as the context
+   is; tears for a list's dots and for work under way; a tear to send, a
+   bomb to stop; a trapdoor down to the latest message; two flies. Letters
+   are the bundled pixel font throughout, struck twice where they are bold.
+
+   Colours and the font are tokens (tools/themes/isaac.json); the pictures
+   are Loom's own redraws (tools/art/isaac.mjs), nothing from the game's
+   files. Each selector starts `html[data-style="isaac"][data-theme]`: as
+   specific as themes.css's shapes, and after them, so these win. */
+
+html[data-style="isaac"] {
+  --ink: #352c2d;
+  --ink-dim: #645858;
+  --sheet: #ece5e3;
+  --note: #e8d8c8;
+  --sheet-frame: url("./art/isaac-paper-sheet.svg");
+  --note-frame: url("./art/isaac-paper-note.svg");
+  --box-frame: url("./art/isaac-box-ink.svg");
+  --box-fill: color-mix(in srgb, var(--ink) 6%, transparent);
+  --drop: rgb(0 0 0 / 20%);
+  --banner: url("./art/isaac-banner.svg");
+  --tear-blue: #86bcd6;
+  --charge: #1fb42c;
+  --hud-red: #c80000;
+}
+
+html[data-style="isaac"][data-theme="dark"] {
+  --sheet: #d8c8b0;
+  --note: #e6dccb;
+  --sheet-frame: url("./art/isaac-paper-sheet-night.svg");
+  --note-frame: url("./art/isaac-paper-note-night.svg");
+  --box-frame: url("./art/isaac-box.svg");
+  --ink-dim: #564a4a;
+  --box-fill: rgb(0 0 0 / 26%);
+  --drop: rgb(0 0 0 / 50%);
+  --hud-red: #ff5a48;
+}
+
+/* ── 1. The ground ──────────────────────────────────────────────────────
+   Night: the black of the screen, and the room. The walls and doors are
+   backgrounds laid in the page's own border, so nothing has to stand
+   outside it. */
+
+html[data-style="isaac"][data-theme] .main {
+  position: relative;
+  isolation: isolate;
+}
+
+html[data-style="isaac"][data-theme="dark"] .main {
+  background:
+    radial-gradient(ellipse at 50% 46%, transparent 42%, rgb(0 0 0 / 52%) 100%),
+    url("./art/isaac-floor.svg") 0 0 / 256px 256px repeat,
+    var(--background);
+}
+
+@media (min-width: 641px) {
+  html[data-style="isaac"][data-theme="dark"] .app {
+    background: #000000;
+  }
+
+  html[data-style="isaac"][data-theme="dark"] .main {
+    border: 32px solid transparent;
+    border-radius: 0;
+    background:
+      url("./art/isaac-door-top.svg") center top / 80px 32px no-repeat border-box,
+      url("./art/isaac-door-bottom.svg") center bottom / 80px 32px no-repeat border-box,
+      url("./art/isaac-door-left.svg") left center / 32px 80px no-repeat border-box,
+      url("./art/isaac-door-right.svg") right center / 32px 80px no-repeat border-box,
+      url("./art/isaac-wall-tl.svg") left top / 32px 32px no-repeat border-box,
+      url("./art/isaac-wall-tr.svg") right top / 32px 32px no-repeat border-box,
+      url("./art/isaac-wall-bl.svg") left bottom / 32px 32px no-repeat border-box,
+      url("./art/isaac-wall-br.svg") right bottom / 32px 32px no-repeat border-box,
+      url("./art/isaac-wall-top.svg") left top / 96px 32px repeat-x border-box,
+      url("./art/isaac-wall-bottom.svg") left bottom / 96px 32px repeat-x border-box,
+      url("./art/isaac-wall-left.svg") left top / 32px 96px repeat-y border-box,
+      url("./art/isaac-wall-right.svg") right top / 32px 96px repeat-y border-box,
+      radial-gradient(ellipse at 50% 46%, transparent 42%, rgb(0 0 0 / 55%) 100%) padding-box,
+      url("./art/isaac-floor.svg") 0 0 / 256px 256px repeat padding-box,
+      var(--background) padding-box;
+  }
+
+  /* Day: the table, pencilled over, darker towards one corner; on it the
+     sheet, two pins through its top edge. */
+  html[data-style="isaac"][data-theme="light"] .app {
+    background:
+      radial-gradient(70% 60% at 12% 96%, rgb(60 48 46 / 30%), transparent 70%),
+      url("./art/isaac-doodles.svg") 40px 30px / 256px 256px repeat,
+      var(--sidebar);
+  }
+
+  html[data-style="isaac"][data-theme="light"] .main {
+    border: 12px solid transparent;
+    border-radius: 0;
+    background:
+      url("./art/isaac-pin.svg") 24% 0 / 14px 14px no-repeat border-box,
+      url("./art/isaac-pin.svg") 71% 0 / 14px 14px no-repeat border-box,
+      url("./art/isaac-sheet-tl.svg") left top / 12px 12px no-repeat border-box,
+      url("./art/isaac-sheet-tr.svg") right top / 12px 12px no-repeat border-box,
+      url("./art/isaac-sheet-bl.svg") left bottom / 12px 12px no-repeat border-box,
+      url("./art/isaac-sheet-br.svg") right bottom / 12px 12px no-repeat border-box,
+      url("./art/isaac-sheet-top.svg") 12px top / 128px 12px repeat-x border-box,
+      url("./art/isaac-sheet-bottom.svg") 12px bottom / 128px 12px repeat-x border-box,
+      url("./art/isaac-sheet-left.svg") left 12px / 12px 128px repeat-y border-box,
+      url("./art/isaac-sheet-right.svg") right 12px / 12px 128px repeat-y border-box,
+      var(--background) padding-box;
+  }
+
+  html[data-style="isaac"][data-theme="light"] .sidebar {
+    background: transparent;
+  }
+}
+
+html[data-style="isaac"][data-theme] :is(.placeholder, .loading) {
+  background: transparent;
+}
+
+/* Two flies, each on a round of its own, a hop at a time. They take no
+   clicks. */
+html[data-style="isaac"][data-theme] .main::before,
+html[data-style="isaac"][data-theme] .main::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  width: 28px;
+  height: 13px;
+  background: url("./art/isaac-fly.svg") center / contain no-repeat;
+  pointer-events: none;
+  will-change: transform;
+}
+
+html[data-style="isaac"][data-theme] .main::before {
+  top: 34%;
+  right: 3.2rem;
+  animation:
+    isaac-fly-a 11s steps(1) infinite,
+    isaac-buzz 0.14s steps(2, jump-none) infinite;
+}
+
+html[data-style="isaac"][data-theme] .main::after {
+  bottom: 24%;
+  left: 4.2rem;
+  width: 19px;
+  height: 9px;
+  opacity: 0.8;
+  animation:
+    isaac-fly-b 15s steps(1) infinite,
+    isaac-buzz 0.12s steps(2, jump-none) infinite;
+}
+
+@keyframes isaac-fly-a {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  8% {
+    translate: -14px 6px;
+  }
+
+  16% {
+    translate: -30px 4px;
+  }
+
+  24% {
+    translate: -44px 16px;
+  }
+
+  32% {
+    translate: -38px 32px;
+  }
+
+  40% {
+    translate: -20px 40px;
+  }
+
+  48% {
+    translate: -2px 34px;
+  }
+
+  56% {
+    translate: 14px 38px;
+  }
+
+  64% {
+    translate: 30px 26px;
+  }
+
+  72% {
+    translate: 36px 10px;
+  }
+
+  80% {
+    translate: 26px -4px;
+  }
+
+  90% {
+    translate: 10px -6px;
+  }
+}
+
+@keyframes isaac-fly-b {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  10% {
+    translate: 12px -10px;
+  }
+
+  20% {
+    translate: 18px -26px;
+  }
+
+  30% {
+    translate: 4px -34px;
+  }
+
+  40% {
+    translate: -16px -28px;
+  }
+
+  50% {
+    translate: -34px -14px;
+  }
+
+  60% {
+    translate: -46px 4px;
+  }
+
+  70% {
+    translate: -40px 22px;
+  }
+
+  80% {
+    translate: -22px 26px;
+  }
+
+  90% {
+    translate: -8px 14px;
+  }
+}
+
+/* A phone has no margins for them to keep to: one, small, by the edge. */
+@media (max-width: 640px) {
+  html[data-style="isaac"][data-theme] .main::before {
+    display: none;
+  }
+
+  html[data-style="isaac"][data-theme] .main::after {
+    left: auto;
+    right: 3.4rem;
+    bottom: 30%;
+    opacity: 0.6;
+  }
+}
+
+/* The wings. */
+@keyframes isaac-buzz {
+  50% {
+    scale: 0.86 1.1;
+  }
+}
+
+/* ── 2. The sidebar: the HUD ──────────────────────────────────────────── */
+
+html[data-style="isaac"][data-theme] .sidebar {
+  /* Positioned already: beside the page on a desktop, a drawer on a phone. */
+  isolation: isolate;
+  border-right: 0;
+  counter-reset: isaac-rooms isaac-busy isaac-new;
+  background:
+    url("./art/isaac-doodles.svg") 30px 20px / 256px 256px repeat,
+    var(--sidebar);
+}
+
+html[data-style="isaac"][data-theme="dark"] .sidebar {
+  background:
+    linear-gradient(90deg, rgb(0 0 0 / 62%), rgb(0 0 0 / 18%) 55%, rgb(0 0 0 / 50%)),
+    url("./art/isaac-bricks.svg") 0 0 / 96px 24px repeat,
+    var(--sidebar);
+}
+
+/* Read on the table in ink a shade darker than the quiet text elsewhere. */
+html[data-style="isaac"][data-theme="light"] .app .sidebar {
+  --fg-dim: #4c4243;
+}
+
+html[data-style="isaac"][data-theme="dark"] .app .sidebar {
+  --fg-dim: #b9aea4;
+  --unread: #ff5a4a;
+}
+
+/* What the HUD counts: every chat in the list a coin, every one at work a
+   bomb, every unread one a key. */
+html[data-style="isaac"][data-theme] .sidebar .session {
+  counter-increment: isaac-rooms;
+}
+
+html[data-style="isaac"][data-theme] .sidebar .session.working {
+  counter-increment: isaac-rooms isaac-busy;
+}
+
+html[data-style="isaac"][data-theme] .sidebar .session.unread {
+  counter-increment: isaac-rooms isaac-new;
+}
+
+html[data-style="isaac"][data-theme] .sidebar .session.working.unread {
+  counter-increment: isaac-rooms isaac-busy isaac-new;
+}
+
+/* The corner of the screen: three red hearts, then coin, bomb and key with
+   two digits each. It scrolls away with the list's head. */
+html[data-style="isaac"][data-theme] .sidebar .session-list {
+  position: relative;
+}
+
+html[data-style="isaac"][data-theme] .sidebar .session-list::after {
+  content: counter(isaac-rooms, decimal-leading-zero) "\A" counter(isaac-busy, decimal-leading-zero) "\A" counter(isaac-new, decimal-leading-zero);
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: -1;
+  box-sizing: border-box;
+  width: 84px;
+  height: 112px;
+  padding: 36px 0 0 52px;
+  background:
+    url("./art/isaac-hearts.svg") right top / 82px 24px no-repeat,
+    url("./art/isaac-pickups.svg") 28px 36px / 18px 72px no-repeat;
+  color: #ffffff;
+  /* The pixel font at twice its size: the HUD's own chunky digits, struck
+     twice for weight, a black line round them. */
+  font: 400 24px / 24px var(--font-pixel);
+  letter-spacing: 2px;
+  text-shadow:
+    2px 0 0 #fff,
+    -2px 0 0 #000,
+    4px 0 0 #000,
+    0 2px 0 #000,
+    0 -2px 0 #000,
+    2px 2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    -2px -2px 0 #000,
+    4px 2px 0 #000,
+    4px -2px 0 #000;
+  white-space: pre;
+  pointer-events: none;
+}
+
+/* With Projects or Employees unfolded their rows come down where the
+   counters stand: the hearts stay, the counters step aside. */
+html[data-style="isaac"][data-theme] .sidebar .session-list:has(.nav-item.open > .nav-icon:is(.lucide-folder, .lucide-folder-open, .lucide-folders, .lucide-users, .lucide-users-round, .lucide-user))::after {
+  content: "";
+  height: 24px;
+  padding: 0;
+  background: url("./art/isaac-hearts.svg") right top / 82px 24px no-repeat;
+}
+
+/* The name: in the HUD's own letters, at twice their size. */
+html[data-style="isaac"][data-theme] .brand {
+  font-family: var(--font-pixel);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 3px;
+  text-shadow: 2px 0 0 currentcolor;
+  text-transform: uppercase;
+}
+
+html[data-style="isaac"][data-theme="dark"] .brand {
+  color: #c8b89c;
+}
+
+/* Beside it Isaac, where the woven mark was. */
+html[data-style="isaac"][data-theme] .brand .brand-mark {
+  width: 28px;
+  height: 23px;
+  background: url("./art/isaac-mark.svg") center / contain no-repeat;
+}
+
+html[data-style="isaac"][data-theme] .brand .brand-mark > * {
+  visibility: hidden;
+}
+
+/* Navigation: each entry a pickup. */
+html[data-style="isaac"][data-theme] :is(.nav-item, .list-heading) {
+  font-family: var(--font-pixel);
+  text-shadow: 1px 0 0 currentcolor;
+}
+
+html[data-style="isaac"][data-theme] .nav-item {
+  border-radius: 0;
+  letter-spacing: 0.04em;
+}
+
+html[data-style="isaac"][data-theme] .nav-item > .nav-icon {
+  width: 24px;
+  height: 22px;
+  background: center / 14px 18px no-repeat;
+}
+
+html[data-style="isaac"][data-theme] .nav-item > .nav-icon > * {
+  visibility: hidden;
+}
+
+html[data-style="isaac"][data-theme] .nav-item > .nav-icon {
+  background-image: url("./art/isaac-coin.svg");
+}
+
+html[data-style="isaac"][data-theme] .nav-item.nav-new > .nav-icon {
+  background-image: url("./art/isaac-heart.svg");
+  background-size: 19.5px 18px;
+}
+
+html[data-style="isaac"][data-theme] .nav-item > .nav-icon:is(.lucide-folder, .lucide-folder-open, .lucide-folders) {
+  background-image: url("./art/isaac-chest.svg");
+  background-size: 24px 16.5px;
+}
+
+html[data-style="isaac"][data-theme] .nav-item > .nav-icon:is(.lucide-users, .lucide-users-round, .lucide-user) {
+  background-image: url("./art/isaac-face.svg");
+  background-size: 21px 18px;
+}
+
+html[data-style="isaac"][data-theme] .nav-item > .nav-icon:is(.lucide-clock, .lucide-alarm-clock, .lucide-calendar-clock) {
+  background-image: url("./art/isaac-bomb.svg");
+  background-size: 18px 18px;
+}
+
+html[data-style="isaac"][data-theme] .nav-item > .nav-icon:is(.lucide-messages-square, .lucide-monitor-smartphone, .lucide-laptop, .lucide-monitor) {
+  background-image: url("./art/isaac-key.svg");
+  background-size: 14px 20px;
+}
+
+html[data-style="isaac"][data-theme] .list-heading {
+  letter-spacing: 0.1em;
+}
+
+/* Rows: the one that is open is the room you are in, lit on the map, a ▶
+   beside it; one under the pointer a room you have been through. */
+html[data-style="isaac"][data-theme] .sidebar .session {
+  position: relative;
+  box-sizing: border-box;
+  padding-left: 14px;
+  border: 4px solid transparent;
+  border-radius: 0;
+  background-clip: padding-box;
+}
+
+html[data-style="isaac"][data-theme] :is(.nav-item, .project-row):hover {
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+}
+
+html[data-style="isaac"][data-theme] .sidebar .session:hover {
+  border-image: url("./art/isaac-room-dim.svg") 2 / 4px;
+  background-color: #6e6e6e;
+  --fg: #ffffff;
+  --fg-dim: #ececec;
+  color: #ffffff;
+}
+
+html[data-style="isaac"][data-theme] .sidebar .session.active {
+  border-image: url("./art/isaac-room.svg") 2 / 4px;
+  background-color: #ececec;
+  --fg: #1c1516;
+  --fg-dim: #4c4243;
+  --unread: #c80000;
+  color: #1c1516;
+}
+
+html[data-style="isaac"][data-theme] .sidebar .session.active::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  width: 8px;
+  height: 11px;
+  translate: 0 -50%;
+  background: currentcolor;
+  mask: url("./art/isaac-cursor.svg") center / contain no-repeat;
+  animation: isaac-cursor 0.9s steps(2, jump-none) infinite;
+}
+
+@keyframes isaac-cursor {
+  50% {
+    translate: 2px -50%;
+  }
+}
+
+html[data-style="isaac"][data-theme] .sidebar .session.active .dot {
+  visibility: hidden;
+}
+
+/* A chat's state is a heart: full and beating while it runs, an empty
+   container beating while it starts, half of one where it was stopped; a
+   soul heart for what is unread. */
+html[data-style="isaac"][data-theme] .dot {
+  width: 13px;
+  height: 12px;
+  border-radius: 0;
+  background: url("./art/isaac-heart-empty.svg") center / contain no-repeat;
+}
+
+html[data-style="isaac"][data-theme] .dot:is(.running, .online) {
+  background-image: url("./art/isaac-heart.svg");
+}
+
+html[data-style="isaac"][data-theme] .dot.running {
+  animation: isaac-beat 1s steps(1) infinite;
+}
+
+html[data-style="isaac"][data-theme] .dot.starting {
+  animation: isaac-beat 1s steps(1) infinite;
+}
+
+html[data-style="isaac"][data-theme] .dot.interrupted {
+  background-image: url("./art/isaac-heart-half.svg");
+}
+
+@keyframes isaac-beat {
+  0%,
+  30%,
+  100% {
+    scale: 1;
+  }
+
+  15%,
+  45% {
+    scale: 1.25;
+  }
+}
+
+html[data-style="isaac"][data-theme] .session-unread {
+  width: 13px;
+  height: 12px;
+  border-radius: 0;
+  background: url("./art/isaac-heart-soul.svg") center / contain no-repeat;
+}
+
+/* Pinned: with a pin. */
+html[data-style="isaac"][data-theme] .session-pin {
+  width: 11px;
+  height: 11px;
+  background: url("./art/isaac-pin.svg") center / contain no-repeat;
+}
+
+html[data-style="isaac"][data-theme] .session-pin > * {
+  visibility: hidden;
+}
+
+/* Messages waiting in a chat: a HUD number. */
+html[data-style="isaac"][data-theme] .session-queued {
+  border-radius: 0;
+  background: #c80000;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px #0a0404;
+}
+
+html[data-style="isaac"][data-theme] .bell-dot {
+  width: 9px;
+  height: 8px;
+  border-radius: 0;
+  background: url("./art/isaac-heart.svg") center / contain no-repeat;
+}
+
+/* The foot: plain marks, square under the pointer. */
+html[data-style="isaac"][data-theme] :is(.sidebar-head .icon-btn, .sidebar-foot .devices-btn, .chat-header .icon-btn, .chat-header .chip.button) {
+  border-radius: 0;
+}
+
+/* The phone's "New chat" at the drawer's foot: a scrap of paper. */
+html[data-style="isaac"][data-theme] :is(.new-chat, .new-chat-more) {
+  border: 6px solid transparent;
+  border-image: var(--note-frame) 4 / 6px round;
+  border-radius: 0;
+  background: var(--note) padding-box;
+  color: var(--ink);
+  font-family: var(--font-pixel);
+  font-weight: 800;
+}
+
+html[data-style="isaac"][data-theme] .new-chat svg {
+  background: url("./art/isaac-heart.svg") center / contain no-repeat;
+}
+
+html[data-style="isaac"][data-theme] .new-chat svg > * {
+  visibility: hidden;
+}
+
+/* ── 3. The chat's head: an item's name on its black stroke ───────────── */
+
+html[data-style="isaac"][data-theme] .chat-header {
+  border-bottom-color: transparent;
+  background: transparent;
+}
+
+/* No glass: the floor (or the sheet) itself, closing over what scrolls
+   under the head. */
+html[data-style="isaac"][data-theme] .chat-top::before {
+  background: var(--background);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 18px), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 18px), transparent);
+}
+
+/* At night it darkens towards the walls, as the floor under it does. */
+html[data-style="isaac"][data-theme="dark"] .chat-top::before {
+  background:
+    linear-gradient(90deg, rgb(0 0 0 / 36%), transparent 26%, transparent 74%, rgb(0 0 0 / 36%)),
+    linear-gradient(var(--background), var(--background));
+}
+
+html[data-style="isaac"][data-theme] .chat-header .chat-name {
+  border: solid transparent;
+  border-width: 3px 24px;
+  border-image: var(--banner) 2 16 fill / 3px 24px;
+  color: #ffffff;
+  font-size: 18px;
+  letter-spacing: 1px;
+  /* The banner's letters are heavy: the pixel font, struck twice. */
+  text-shadow: 1px 0 0 #ffffff;
+}
+
+@media (max-width: 640px) {
+  html[data-style="isaac"][data-theme] .chat-header .chat-title {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  html[data-style="isaac"][data-theme] .chat-header .chat-name {
+    border-width: 3px 16px;
+    border-image-width: 3px 16px;
+  }
+}
+
+/* A phone's round buttons: boxes on the HUD. */
+html[data-style="isaac"][data-theme] .chat-header :is(.icon-btn.glass, .chip.button.pane-more) {
+  border: 4px solid transparent;
+  border-image: var(--box-frame) 2 / 4px;
+  border-radius: 0;
+  background: var(--box-fill) padding-box;
+  box-shadow: none;
+}
+
+html[data-style="isaac"][data-theme] .chat-header .chip.button:is(.on, [data-state="open"]) {
+  box-shadow: inset 0 -3px 0 var(--primary);
+}
+
+/* ── 4. Paper ───────────────────────────────────────────────────────────
+   Whatever is laid over the room — a menu, a dialog, the box you write in,
+   what you said, a card — is a scrap of the paper the game's menus are on:
+   torn at the edge, a dark line round it, ink on it. On the night side the
+   paper brings its own colours, so everything on it is read in ink. */
+
+html[data-style="isaac"][data-theme] :is(.modal, .session-menu, .backend-menu, .command-menu, .effort-pop, .plus-pop, .pane-menu, .search-panel, .unsent-menu, .which-key, .composer-box, .tasks-composer-box, .login-box) {
+  --paper: var(--sheet);
+  border: 8px solid transparent;
+  border-image: var(--sheet-frame) 4 / 8px round;
+}
+
+html[data-style="isaac"][data-theme] :is(.bubble.user, .question, .replies, .queue-panel, .md-quote, .task-card, .task-template, .bell-card, .work-card, .kpi-card, .emp-stat, .emp-approval, .emp-attention, .emp-report-row, .dsess-card, .switcher-card, .sleep-bar, .share-bar) {
+  --paper: var(--note);
+  border: 8px solid transparent;
+  border-image: var(--note-frame) 4 / 8px round;
+}
+
+html[data-style="isaac"][data-theme] :is(.modal, .session-menu, .backend-menu, .command-menu, .effort-pop, .plus-pop, .pane-menu, .search-panel, .unsent-menu, .which-key, .composer-box, .tasks-composer-box, .login-box, .bubble.user, .question, .replies, .queue-panel, .md-quote, .task-card, .task-template, .bell-card, .work-card, .kpi-card, .emp-stat, .emp-approval, .emp-attention, .emp-report-row, .dsess-card, .switcher-card, .sleep-bar, .share-bar) {
+  --bg: var(--paper);
+  --bg-raised: var(--paper);
+  --bg-card: color-mix(in srgb, var(--ink) 9%, var(--paper));
+  --line: color-mix(in srgb, var(--ink) 55%, var(--paper));
+  --fg: var(--ink);
+  --fg-dim: var(--ink-dim);
+  --loom-accent: var(--ink);
+  --unread: #c80000;
+  --hud-red: #c80000;
+  --surface-code: color-mix(in srgb, var(--ink) 8%, var(--paper));
+  --surface-menu: var(--paper);
+  --surface-modal: var(--paper);
+  --surface-field: color-mix(in srgb, #ffffff 45%, var(--paper));
+  --composer: var(--paper);
+  --send-off-bg: color-mix(in srgb, var(--ink) 22%, var(--paper));
+  --send-off-fg: var(--paper);
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: color-mix(in srgb, #ffffff 30%, var(--paper));
+  --card-foreground: var(--ink);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+  --primary: #c80000;
+  --primary-foreground: #ffffff;
+  --secondary: color-mix(in srgb, var(--ink) 10%, var(--paper));
+  --secondary-foreground: var(--ink);
+  --muted: color-mix(in srgb, var(--ink) 8%, var(--paper));
+  --muted-foreground: var(--ink-dim);
+  --accent: color-mix(in srgb, var(--ink) 14%, var(--paper));
+  --accent-foreground: var(--ink);
+  --destructive: #980000;
+  --border: var(--ink);
+  --input: var(--ink);
+  --ring: #c80000;
+  --blue: #1a4a90;
+  --red: #b01414;
+  --green: #0a7359;
+  --shadow: rgb(0 0 0 / 14%);
+  --task-card: var(--paper);
+  --task-card-hover: color-mix(in srgb, #ffffff 30%, var(--paper));
+  --task-kind: #1a4a90;
+  --task-prompt: var(--ink);
+  --task-dim: var(--ink-dim);
+  --task-rule: color-mix(in srgb, var(--ink) 45%, var(--paper));
+  --task-dash: color-mix(in srgb, var(--ink) 45%, var(--paper));
+  --task-round: color-mix(in srgb, var(--ink) 10%, var(--paper));
+  --task-error: color-mix(in srgb, #b01414 16%, var(--paper));
+  border-radius: 0;
+  background-color: var(--paper);
+  background-clip: padding-box;
+  color: var(--ink);
+  box-shadow: 4px 4px 0 0 var(--drop);
+}
+
+/* Small scraps wear a thinner edge. */
+html[data-style="isaac"][data-theme] :is(.emp-stat, .emp-report-row, .sleep-bar) {
+  border-width: 6px;
+  border-image-width: 6px;
+  box-shadow: 3px 3px 0 0 var(--drop);
+}
+
+/* Menus and dialogs are in the same pixel letters as the rest. */
+html[data-style="isaac"][data-theme] :is(.modal-head, .session-menu, .backend-menu, .pane-menu, .plus-pop, .effort-pop, .placeholder, .login-box, .tasks-head h1, .tasks-section, .bell-tabs) {
+  font-family: var(--font-pixel);
+}
+
+/* ── 5. The conversation ────────────────────────────────────────────── */
+
+/* What you said: a note. */
+html[data-style="isaac"][data-theme] .bubble.user {
+  padding: 0.3rem 0.8rem;
+}
+
+html[data-style="isaac"][data-theme] .bubble.user .tag {
+  border-radius: 0;
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+/* A heading: the black stroke, white capitals on it. */
+html[data-style="isaac"][data-theme] :is(h1, h2).md-h {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 1px 2px;
+  border: solid transparent;
+  border-width: 3px 24px;
+  border-image: var(--banner) 2 16 fill / 3px 24px;
+  color: #ffffff;
+  font-size: 18px;
+  line-height: 1.5;
+  letter-spacing: 1px;
+  text-shadow: 1px 0 0 #ffffff;
+  text-transform: uppercase;
+}
+
+/* The first rank at twice the font's own size, as an item's name is. */
+html[data-style="isaac"][data-theme] h1.md-h {
+  font-size: 24px;
+  line-height: 1.35;
+  letter-spacing: 2px;
+  text-shadow: 2px 0 0 #ffffff;
+}
+
+html[data-style="isaac"][data-theme] :is(h1, h2).md-h :is(code, a) {
+  color: inherit;
+}
+
+/* A smaller one: the ▶ of a menu before it. */
+html[data-style="isaac"][data-theme] :is(h3, h4).md-h {
+  color: var(--fg);
+  font-weight: 800;
+}
+
+html[data-style="isaac"][data-theme] :is(h3, h4).md-h::before {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 0.7em;
+  margin-right: 0.45em;
+  background: var(--hud-red);
+  mask: url("./art/isaac-cursor.svg") center / contain no-repeat;
+}
+
+/* A list's dots are tears; its numbers, the HUD's red. */
+html[data-style="isaac"][data-theme] ul.md-list > li:not(.md-task) {
+  position: relative;
+  list-style: none;
+}
+
+html[data-style="isaac"][data-theme] ul.md-list > li:not(.md-task)::before {
+  content: "";
+  position: absolute;
+  top: 0.42em;
+  left: -1.3em;
+  width: 12px;
+  height: 12px;
+  background: url("./art/isaac-tear.svg") center / contain no-repeat;
+}
+
+html[data-style="isaac"][data-theme] ol.md-list > li::marker {
+  color: var(--hud-red);
+  font-weight: 700;
+}
+
+/* A rule: a crack in the floor, two rocks and what lies between them. */
+html[data-style="isaac"][data-theme] .md-hr {
+  height: 32px;
+  border: 0;
+  background: url("./art/isaac-rule.svg") center / 192px 32px no-repeat;
+}
+
+/* A quote: a note, pinned. */
+html[data-style="isaac"][data-theme] .md-quote {
+  position: relative;
+  padding: 4px 10px;
+}
+
+html[data-style="isaac"][data-theme] .md-quote::before {
+  content: "";
+  position: absolute;
+  top: -13px;
+  left: 14px;
+  width: 14px;
+  height: 14px;
+  background: url("./art/isaac-pin.svg") center / contain no-repeat;
+}
+
+html[data-style="isaac"][data-theme] .md-quote > :last-child {
+  margin-bottom: 0;
+}
+
+/* A table: ruled by hand, as the stats sheet is. */
+html[data-style="isaac"][data-theme] .md-table :is(th, td) {
+  border: 0;
+  border-bottom: 2px dotted color-mix(in srgb, var(--fg) 40%, transparent);
+}
+
+html[data-style="isaac"][data-theme] .md-table th {
+  border-bottom: 2px solid var(--fg);
+  background: transparent;
+  color: var(--fg);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+html[data-style="isaac"][data-theme] .md-table tbody tr:hover {
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+
+html[data-style="isaac"][data-theme] .md a {
+  text-decoration-style: dotted;
+  text-decoration-color: currentcolor;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+/* The pixel font has one weight: what is bold is struck twice. */
+html[data-style="isaac"][data-theme] .md :is(strong, b, th) {
+  text-shadow: 1px 0 0 currentcolor;
+}
+
+html[data-style="isaac"][data-theme] :not(pre) > code {
+  padding: 0 0.3em;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--fg) 11%, transparent);
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--fg) 22%, transparent);
+}
+
+/* ── 6. Code and files ──────────────────────────────────────────────── */
+
+/* Code: a slab of the Depths' stone, lit along its top. */
+html[data-style="isaac"][data-theme] .code-block {
+  --fg: #ebe4dc;
+  --fg-dim: #b3a9a3;
+  --bg-raised: #221d21;
+  --bg-card: #3a3338;
+  --line: #0c0a0c;
+}
+
+html[data-style="isaac"][data-theme] pre.code {
+  border: 4px solid transparent;
+  border-image: url("./art/isaac-stone.svg") 2 / 4px;
+  border-radius: 0;
+  background: #221d21 padding-box;
+  color: #ebe4dc;
+  box-shadow: 3px 3px 0 0 var(--drop);
+}
+
+html[data-style="isaac"][data-theme] .code-tools {
+  top: 4px;
+  right: 4px;
+  border-radius: 0;
+}
+
+html[data-style="isaac"][data-theme] .code-copy {
+  border-radius: 0;
+}
+
+/* A file: an item on its stone — what kind it is floating over the altar,
+   its name under it. A picture is a picture, in a black frame. */
+html[data-style="isaac"][data-theme] .file-card {
+  border-radius: 0;
+}
+
+html[data-style="isaac"][data-theme] .file-card:not(.image):not(.more) {
+  width: 66px;
+  height: 78px;
+  padding: 0;
+  border: 0;
+  background: url("./art/isaac-altar.svg") center 19px / 40px 24px no-repeat;
+  overflow: visible;
+}
+
+html[data-style="isaac"][data-theme] .file-card.clickable:not(.image):not(.more):hover .file-ext {
+  translate: 0 -2px;
+}
+
+html[data-style="isaac"][data-theme] .file-ext {
+  align-self: center;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 2px 4px 1px;
+  overflow: hidden;
+  background: #c80000;
+  color: #ffffff;
+  font: 400 12px / 12px var(--font-pixel);
+  box-shadow: 0 0 0 2px #0a0404;
+  white-space: nowrap;
+}
+
+html[data-style="isaac"][data-theme] .file-card.failed .file-ext {
+  background: #2c2c34;
+  color: #ffffff;
+}
+
+html[data-style="isaac"][data-theme] .file-name {
+  flex: 0 0 auto;
+  color: var(--fg);
+  font: 400 12px / 14px var(--font-pixel);
+  text-align: center;
+}
+
+html[data-style="isaac"][data-theme] .file-card:is(.image, .more) {
+  border: 4px solid transparent;
+  border-image: var(--box-frame) 2 / 4px;
+  background: #0c0606 padding-box;
+}
+
+html[data-style="isaac"][data-theme] .file-card.more {
+  background: var(--box-fill) padding-box;
+  font-family: var(--font-pixel);
+}
+
+/* ── 7. Steps: the active item and its charge ───────────────────────── */
+
+html[data-style="isaac"][data-theme] .tool.group {
+  border: 4px solid transparent;
+  border-image: var(--box-frame) 2 / 4px;
+  border-radius: 0;
+  background: var(--box-fill) padding-box;
+  box-shadow: none;
+}
+
+html[data-style="isaac"][data-theme] .tool.group:is(:hover, .open) {
+  background: var(--box-fill) padding-box;
+}
+
+html[data-style="isaac"][data-theme] .tool.group.running {
+  box-shadow: none;
+}
+
+/* The active item, and beside it the bar: full when the step is done,
+   filling notch by notch while it runs. Which item depends on the tool: a
+   bomb for a command, a book to read, a blank card to write on, a compass
+   to find, a crystal ball to look far off, a little brother for an agent, a
+   battery for what is plugged in; the D6 for the rest. */
+html[data-style="isaac"][data-theme] :is(.tool, .tool-chip) {
+  --item: url("./art/isaac-item-d6.svg");
+}
+
+html[data-style="isaac"][data-theme] :is(.tool, .tool-chip)[data-tool="Bash"] {
+  --item: url("./art/isaac-item-bomb.svg");
+}
+
+html[data-style="isaac"][data-theme] :is(.tool, .tool-chip):is([data-tool="Read"], [data-tool="NotebookRead"]) {
+  --item: url("./art/isaac-item-book.svg");
+}
+
+html[data-style="isaac"][data-theme] :is(.tool, .tool-chip):is([data-tool="Edit"], [data-tool="Write"], [data-tool="MultiEdit"], [data-tool="NotebookEdit"]) {
+  --item: url("./art/isaac-item-card.svg");
+}
+
+html[data-style="isaac"][data-theme] :is(.tool, .tool-chip):is([data-tool="Grep"], [data-tool="Glob"], [data-tool="ToolSearch"]) {
+  --item: url("./art/isaac-item-compass.svg");
+}
+
+html[data-style="isaac"][data-theme] :is(.tool, .tool-chip):is([data-tool="WebSearch"], [data-tool="WebFetch"]) {
+  --item: url("./art/isaac-item-ball.svg");
+}
+
+html[data-style="isaac"][data-theme] :is(.tool, .tool-chip):is([data-tool="Agent"], [data-tool="Task"], [data-tool="SendMessage"]) {
+  --item: url("./art/isaac-item-bobby.svg");
+}
+
+html[data-style="isaac"][data-theme] :is(.tool, .tool-chip)[data-tool^="mcp__"] {
+  --item: url("./art/isaac-item-battery.svg");
+}
+
+html[data-style="isaac"][data-theme] .tool-icon,
+html[data-style="isaac"][data-theme] .tool.group.running .tool-icon {
+  position: relative;
+  width: 42px;
+  height: 30px;
+  border-radius: 0;
+  background:
+    var(--item) left center / 30px 30px no-repeat,
+    linear-gradient(#170d0b, #170d0b) right 1.5px center / 6px 25px no-repeat;
+}
+
+/* A single call inside an opened card: its item before its name. */
+html[data-style="isaac"][data-theme] .tool:not(.group) > .tool-head::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  background: var(--item) center / contain no-repeat;
+}
+
+html[data-style="isaac"][data-theme] .tool-icon > svg {
+  display: none;
+}
+
+html[data-style="isaac"][data-theme] .tool-icon::before {
+  content: "";
+  position: absolute;
+  right: 1.5px;
+  top: 2.5px;
+  width: 6px;
+  height: 25px;
+  background: linear-gradient(90deg, #6fe07a 0 2px, var(--charge) 2px);
+  transform-origin: bottom;
+}
+
+html[data-style="isaac"][data-theme] .tool-icon::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 1px;
+  width: 9px;
+  height: 28px;
+  background: url("./art/isaac-charge.svg") center / 100% 100% no-repeat;
+}
+
+html[data-style="isaac"][data-theme] .tool.group.running .tool-icon::before {
+  animation: isaac-charge 1.8s steps(6, jump-start) infinite;
+}
+
+@keyframes isaac-charge {
+  from {
+    scale: 1 0;
+  }
+
+  to {
+    scale: 1 1;
+  }
+}
+
+html[data-style="isaac"][data-theme] .tool-name {
+  font-weight: 700;
+}
+
+/* A name on a folded card: its item, small, before it. */
+html[data-style="isaac"][data-theme] .tool-chip[data-tool]::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin: 0 4px 0 -2px;
+  background: var(--item) center / contain no-repeat;
+  vertical-align: -3px;
+}
+
+html[data-style="isaac"][data-theme] .tool-chip {
+  border-radius: 0;
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 30%, transparent);
+}
+
+/* Done: a penny, picked up. Failed: half a heart gone. Still going: the
+   die, rolling. */
+html[data-style="isaac"][data-theme] svg.tool-done {
+  width: 12px;
+  height: 15px;
+  background: url("./art/isaac-coin.svg") center / contain no-repeat;
+}
+
+html[data-style="isaac"][data-theme] .tool-state > svg.lucide-x {
+  width: 15px;
+  height: 14px;
+  background: url("./art/isaac-heart-half.svg") center / contain no-repeat;
+}
+
+html[data-style="isaac"][data-theme] .tool-state > svg.spin {
+  width: 17px;
+  height: 16px;
+  background: url("./art/isaac-d6.svg") center / contain no-repeat;
+  animation: spin 0.8s steps(4) infinite;
+}
+
+html[data-style="isaac"][data-theme] .tool-state > svg:is(.tool-done, .lucide-x, .spin) > * {
+  visibility: hidden;
+}
+
+html[data-style="isaac"][data-theme] .group-steps {
+  border-top: 2px dashed color-mix(in srgb, var(--fg) 35%, transparent);
+}
+
+html[data-style="isaac"][data-theme] .group-steps .tool,
+html[data-style="isaac"][data-theme] .timeline-inner > .tool:not(.group) {
+  border: 2px solid color-mix(in srgb, var(--fg) 30%, transparent);
+  border-radius: 0;
+}
+
+html[data-style="isaac"][data-theme] .tool.failed {
+  border-color: var(--red);
+}
+
+html[data-style="isaac"][data-theme] :is(.tool-output, .tool-input) {
+  border-top: 2px dotted color-mix(in srgb, var(--fg) 28%, transparent);
+}
+
+/* ── 8. States ──────────────────────────────────────────────────────── */
+
+/* Thinking: Isaac. */
+html[data-style="isaac"][data-theme] .thinking > svg {
+  width: 19px;
+  height: 16px;
+  margin-top: 0.1em;
+  background: url("./art/isaac-face.svg") center / contain no-repeat;
+  opacity: 1;
+}
+
+html[data-style="isaac"][data-theme] .thinking > svg > * {
+  visibility: hidden;
+}
+
+html[data-style="isaac"][data-theme] .thinking.live > svg {
+  animation: isaac-bob 0.9s steps(2, jump-none) infinite;
+}
+
+@keyframes isaac-bob {
+  50% {
+    translate: 0 -2px;
+  }
+}
+
+/* At work: three tears, falling one after another. */
+html[data-style="isaac"][data-theme] .working-dots {
+  gap: 3px;
+  height: 14px;
+  padding-top: 0;
+}
+
+html[data-style="isaac"][data-theme] .working-dots i {
+  width: 10px;
+  height: 10px;
+  border-radius: 0;
+  background: url("./art/isaac-tear.svg") center / contain no-repeat;
+  animation: isaac-drip 1.05s steps(1) infinite;
+}
+
+html[data-style="isaac"][data-theme] .working-dots i:nth-child(2) {
+  animation-delay: 0.35s;
+}
+
+html[data-style="isaac"][data-theme] .working-dots i:nth-child(3) {
+  animation-delay: 0.7s;
+}
+
+@keyframes isaac-drip {
+  0% {
+    translate: 0 -4px;
+    opacity: 1;
+  }
+
+  25% {
+    translate: 0 -1px;
+    opacity: 1;
+  }
+
+  50% {
+    translate: 0 2px;
+    opacity: 1;
+  }
+
+  75% {
+    translate: 0 5px;
+    opacity: 0.45;
+  }
+}
+
+html[data-style="isaac"][data-theme] :is(.tool, .thinking, .working[role="status"], .tool-done) {
+  animation-timing-function: steps(3);
+}
+
+/* A turn's end: a skull, and the numbers beside it. The latest one is the
+   boss still standing: its bar, red and full, the skull at the head of it. */
+html[data-style="isaac"][data-theme] .turn-line {
+  position: relative;
+  padding-left: 24px;
+}
+
+html[data-style="isaac"][data-theme] .turn-line::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 18px;
+  height: 16px;
+  margin-top: -2px;
+  translate: 0 -50%;
+  background: url("./art/isaac-skull.svg") center / contain no-repeat;
+}
+
+/* An earlier turn keeps a hair of its bar under the numbers. */
+html[data-style="isaac"][data-theme] .turn-line[data-usage] {
+  padding-bottom: 5px;
+  background:
+    linear-gradient(var(--hud-red), var(--hud-red)) 24px 100% / calc((100% - 24px) * var(--usage, 0)) 2px no-repeat,
+    linear-gradient(color-mix(in srgb, var(--fg) 22%, transparent), color-mix(in srgb, var(--fg) 22%, transparent)) 24px 100% / calc(100% - 24px) 2px no-repeat;
+}
+
+/* The latest: the bar itself, as full as the context is (all of it when
+   the window is not known). */
+html[data-style="isaac"][data-theme] .turn-line:not(:has(~ .turn-line)) {
+  margin-left: 12px;
+  padding: 1px 10px 1px 16px;
+  border: 4px solid transparent;
+  border-image: url("./art/isaac-bar.svg") 2 / 4px;
+  background:
+    linear-gradient(#e01818, #e01818) 0 0 / calc(var(--usage, 1) * 100%) 2px no-repeat padding-box,
+    linear-gradient(#c80000, #c80000) 0 0 / calc(var(--usage, 1) * 100%) 100% no-repeat padding-box,
+    #260808 padding-box;
+  color: #ffffff;
+  text-shadow: 1px 0 0 #ffffff;
+}
+
+html[data-style="isaac"][data-theme] .turn-line:not(:has(~ .turn-line))::before {
+  left: -19px;
+  width: 27px;
+  height: 24px;
+  margin-top: 0;
+}
+
+html[data-style="isaac"][data-theme] .turn-line:not(:has(~ .turn-line)) .turn-model.off {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+html[data-style="isaac"][data-theme] .notice {
+  font-family: var(--font-pixel);
+}
+
+/* What went wrong: blood on it. */
+html[data-style="isaac"][data-theme] .error {
+  padding-left: 40px;
+  border: 2px solid var(--red);
+  border-radius: 0;
+  background: url("./art/isaac-blood.svg") 8px center / 24px 18px no-repeat, color-mix(in srgb, var(--red) 12%, transparent);
+}
+
+/* ── 9. The composer ────────────────────────────────────────────────── */
+
+html[data-style="isaac"][data-theme] .composer-box {
+  padding: 2px 4px;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-style="isaac"][data-theme] .composer-box:has(.composer-input:not(:placeholder-shown)) {
+  background-color: var(--paper);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-style="isaac"][data-theme] .composer-btn {
+  border-radius: 0;
+}
+
+/* Send: a tear, shot. Stop: a bomb, its fuse lit. */
+html[data-style="isaac"][data-theme] .composer-btn.send,
+html[data-style="isaac"][data-theme] .composer-btn.send:hover:not(:disabled) {
+  background: url("./art/isaac-shot.svg") center / 32px 32px no-repeat;
+  color: #16202c;
+}
+
+html[data-style="isaac"][data-theme] .composer-btn.send:disabled {
+  background: url("./art/isaac-shot-off.svg") center / 32px 32px no-repeat;
+  color: #4a4244;
+}
+
+html[data-style="isaac"][data-theme] .composer-btn.stop,
+html[data-style="isaac"][data-theme] .composer-btn.stop:hover {
+  background: url("./art/isaac-bomb-lit.svg") center / 32px 32px no-repeat;
+}
+
+html[data-style="isaac"][data-theme] .composer-btn.stop > svg {
+  opacity: 0;
+}
+
+html[data-style="isaac"][data-theme] .composer-btn:is(.send, .stop) {
+  transition: none;
+}
+
+html[data-style="isaac"][data-theme] .composer-btn.send:hover:not(:disabled),
+html[data-style="isaac"][data-theme] .composer-btn.stop:hover {
+  translate: 0 -2px;
+}
+
+html[data-style="isaac"][data-theme] .composer-btn:is(.send, .stop):active:not(:disabled) {
+  translate: 0 1px;
+}
+
+html[data-style="isaac"][data-theme] .tasks-composer-btn {
+  border-radius: 0;
+}
+
+html[data-style="isaac"][data-theme] .tasks-composer-btn.send {
+  background: url("./art/isaac-shot.svg") center / 32px 32px no-repeat;
+  color: #16202c;
+}
+
+html[data-style="isaac"][data-theme] .tasks-composer-btn.send:disabled {
+  background: url("./art/isaac-shot-off.svg") center / 32px 32px no-repeat;
+  color: #4a4244;
+  opacity: 1;
+}
+
+/* ── 10. Buttons and controls: scraps of paper, ink ─────────────────── */
+
+html[data-style="isaac"][data-theme] :is(.text-btn, .option, .reply, .replies-send, .bell-acts .bell-btn, .login-btn, .settings-back) {
+  border: 6px solid transparent;
+  border-image: var(--note-frame) 4 / 6px round;
+  border-radius: 0;
+  background: var(--note) padding-box;
+  color: var(--ink);
+  font-family: var(--font-pixel);
+  font-weight: 700;
+  box-shadow: 2px 2px 0 0 var(--drop);
+  transition: none;
+}
+
+/* On a note, a button is the lighter sheet. */
+html[data-style="isaac"][data-theme] :is(.question, .replies, .bell-card, .task-card, .work-card, .kpi-card, .dsess-card, .queue-panel) :is(.text-btn, .option, .reply, .replies-send, .bell-acts .bell-btn) {
+  border-image-source: var(--sheet-frame);
+  background-color: var(--sheet);
+}
+
+html[data-style="isaac"][data-theme] :is(.text-btn, .option, .reply, .replies-send, .bell-acts .bell-btn, .login-btn):hover:not(:disabled) {
+  background-color: var(--note);
+  color: #c80000;
+  translate: 0 -1px;
+}
+
+html[data-style="isaac"][data-theme] :is(.question, .replies, .bell-card, .task-card, .work-card, .kpi-card, .dsess-card, .queue-panel) :is(.text-btn, .option, .reply, .replies-send, .bell-acts .bell-btn):hover:not(:disabled) {
+  background-color: var(--sheet);
+}
+
+html[data-style="isaac"][data-theme] :is(.text-btn, .option, .reply, .replies-send, .bell-acts .bell-btn, .login-btn):active:not(:disabled) {
+  translate: 2px 2px;
+  box-shadow: none;
+}
+
+html[data-style="isaac"][data-theme] :is(.text-btn, .replies-send, .login-btn):disabled {
+  opacity: 0.55;
+}
+
+/* One of several: the chosen one is inked in. */
+html[data-style="isaac"][data-theme] .segmented {
+  padding: 2px;
+  border: 2px solid var(--fg);
+  border-radius: 0;
+  background: transparent;
+}
+
+html[data-style="isaac"][data-theme] .segmented button {
+  border-radius: 0;
+  font-family: var(--font-pixel);
+  font-weight: 700;
+}
+
+html[data-style="isaac"][data-theme] .segmented button.on {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+html[data-style="isaac"][data-theme] :is(input, textarea, select):not(.composer-input):not([type="range"]):not([type="checkbox"]):not([type="radio"]) {
+  border-radius: 0;
+}
+
+/* A slider is a charge bar, a tear the thing you drag; a tick is a heart's
+   red. */
+html[data-style="isaac"][data-theme] input[type="range"] {
+  accent-color: var(--charge);
+}
+
+html[data-style="isaac"][data-theme] .slider::before,
+html[data-style="isaac"][data-theme] .slider::after {
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 0;
+}
+
+html[data-style="isaac"][data-theme] .slider::before {
+  background: #170d0b;
+  box-shadow: 0 0 0 2px #0a0404;
+}
+
+html[data-style="isaac"][data-theme] .slider::after {
+  background: linear-gradient(#6fe07a 0 2px, var(--charge) 2px);
+}
+
+html[data-style="isaac"][data-theme] .slider-ticks span,
+html[data-style="isaac"][data-theme] .slider-ticks span.on {
+  width: 2px;
+  height: 8px;
+  border-radius: 0;
+  background: #0a0404;
+}
+
+html[data-style="isaac"][data-theme] .slider .slider-thumb,
+html[data-style="isaac"][data-theme] .slider.armed .slider-thumb {
+  background: url("./art/isaac-shot.svg") center / contain no-repeat;
+  box-shadow: none;
+}
+
+html[data-style="isaac"][data-theme] .slider input::-webkit-slider-thumb {
+  border-radius: 0;
+  background: url("./art/isaac-shot.svg") center / contain no-repeat;
+  box-shadow: none;
+}
+
+html[data-style="isaac"][data-theme] .slider input::-moz-range-thumb {
+  border: 0;
+  border-radius: 0;
+  background: url("./art/isaac-shot.svg") center / contain no-repeat;
+  box-shadow: none;
+}
+
+html[data-style="isaac"][data-theme] input[type="radio"] {
+  accent-color: #c80000;
+}
+
+html[data-style="isaac"][data-theme] :is(.tag, .jump-btn, .chip) {
+  border-radius: 0;
+}
+
+/* A chip: a label with a line round it; one that is on is inked in, and
+   the ones that are buttons of their own are scraps. */
+html[data-style="isaac"][data-theme] .chip:not(.button) {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 40%, transparent);
+}
+
+html[data-style="isaac"][data-theme] .chip.button.on {
+  background: color-mix(in srgb, var(--fg) 16%, transparent);
+  color: var(--fg);
+}
+
+html[data-style="isaac"][data-theme] .chip.button:is(.keep-chip, .model-chip) {
+  border: 6px solid transparent;
+  border-image: var(--note-frame) 4 / 6px round;
+  background: var(--note) padding-box;
+  color: var(--ink);
+  font-family: var(--font-pixel);
+  font-weight: 700;
+}
+
+html[data-style="isaac"][data-theme] .pane-menu-count {
+  color: var(--hud-red);
+  font-family: var(--font-pixel);
+}
+
+/* A tick box: a square in ink, a heart in it when it is ticked. */
+html[data-style="isaac"][data-theme] input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin: 0 4px 0 0;
+  border: 2px solid var(--fg);
+  border-radius: 0;
+  background: transparent center / 13px 12px no-repeat;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+html[data-style="isaac"][data-theme] input[type="checkbox"]:checked {
+  background-image: url("./art/isaac-heart.svg");
+}
+
+/* Nothing here is round: the game's corners are squares. */
+html[data-style="isaac"][data-theme] :is(.install-tab, .dsess-filter, .search-field, .keep-btn, .meeting-bar, .meeting-btn, .meeting-fold-head, .meeting-fold-body, .chat-project, .unsent-mark, .ref-chip, .ref-chip-x, .chat-picker-search, .chat-picker-list button, .emp-tab, .emp-tab-count, .emp-pill, .emp-approval-custom, .emp-new, .kpi-status, .kpi-track, .kpi-fill, .emp-report-kind, .emp-back, .emp-chip, .emp-hire-chat, .tasks-round, .tasks-composer-error, .task-day, .bell-send, .bell-tabs button, .todo-add, .proj-round, .proj-tab, .proj-session-more, .sleep-tabs, .sleep-now, .share-cancel, .share-go, .share-dialog, .share-preview, .dial-btn, .slider-thumb, .moon-btn.proj-moon) {
+  border-radius: 0;
+}
+
+/* Tabs: outlined in ink, the open one inked in. */
+html[data-style="isaac"][data-theme] :is(.emp-tab, .proj-tab, .bell-tabs button, .install-tab, .dsess-filter) {
+  border: 2px solid color-mix(in srgb, var(--fg) 55%, transparent);
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--font-pixel);
+  font-weight: 700;
+}
+
+html[data-style="isaac"][data-theme] :is(.emp-tab, .proj-tab, .bell-tabs button, .install-tab, .dsess-filter):is(.on, .active, [aria-selected="true"]) {
+  border-color: var(--fg);
+  background: var(--fg);
+  color: var(--bg);
+}
+
+/* Small buttons: scraps too. */
+html[data-style="isaac"][data-theme] :is(.emp-pill, .emp-new, .emp-back, .keep-btn, .sleep-now, .share-cancel, .share-go, .meeting-btn, .queue-steer) {
+  border: 6px solid transparent;
+  border-image: var(--note-frame) 4 / 6px round;
+  background: var(--note) padding-box;
+  color: var(--ink);
+  font-family: var(--font-pixel);
+  font-weight: 700;
+}
+
+/* A KPI's progress: a charge bar. */
+html[data-style="isaac"][data-theme] .kpi-track {
+  background: #170d0b;
+  box-shadow: 0 0 0 2px #0a0404;
+}
+
+html[data-style="isaac"][data-theme] .kpi-fill {
+  background: linear-gradient(#6fe07a 0 2px, var(--charge) 2px);
+}
+
+/* The round button that opens the drawer's foot: a box on the HUD. */
+html[data-style="isaac"][data-theme] .dial-btn {
+  border: 4px solid transparent;
+  border-image: var(--box-frame) 2 / 4px;
+  background: var(--sidebar) padding-box;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* ── 11. Menus and dialogs: the pause menu's paper ──────────────────── */
+
+html[data-style="isaac"][data-theme] :is(.pane-menu, .composer-box, .command-menu, .plus-pop, .effort-pop) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-style="isaac"][data-theme] :is(.session-menu, .backend-menu, .pane-menu, .plus-pop, .effort-pop) button {
+  border-radius: 0;
+  font-weight: 700;
+}
+
+/* The entry under the pointer: a stroke of red down its edge. */
+html[data-style="isaac"][data-theme] :is(.session-menu, .backend-menu, .pane-menu, .plus-pop) button:hover:not(:disabled),
+html[data-style="isaac"][data-theme] .command-menu li:is(:hover, .on, .active, [aria-selected="true"]),
+html[data-style="isaac"][data-theme] .search-row:is(:hover, .on, .active, [aria-selected="true"]) {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  box-shadow: inset 4px 0 0 #c80000;
+}
+
+html[data-style="isaac"][data-theme] :is(.command-menu li, .search-row) {
+  border-radius: 0;
+}
+
+html[data-style="isaac"][data-theme] .modal-scrim,
+html[data-style="isaac"][data-theme] .search-sheet {
+  background: rgb(0 0 0 / 62%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* A dialog's head: two pins through the sheet, its name in capitals. */
+html[data-style="isaac"][data-theme] .modal-head {
+  border-bottom: 2px dashed color-mix(in srgb, var(--ink) 45%, transparent);
+  background:
+    url("./art/isaac-pin.svg") 38% 1px / 14px 14px no-repeat,
+    url("./art/isaac-pin.svg") 64% 1px / 14px 14px no-repeat;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+html[data-style="isaac"][data-theme] .settings-row {
+  border-bottom-style: dashed;
+}
+
+html[data-style="isaac"][data-theme] .settings-label {
+  font-weight: 700;
+}
+
+/* ── 12. Questions ──────────────────────────────────────────────────── */
+
+html[data-style="isaac"][data-theme] .question {
+  padding: 6px 10px;
+}
+
+html[data-style="isaac"][data-theme] .replies .reply.on,
+html[data-style="isaac"][data-theme] .replies .reply.on:hover:not(:disabled) {
+  border-image-source: none;
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--sheet);
+}
+
+/* ── 13. Pages and cards ────────────────────────────────────────────── */
+
+html[data-style="isaac"][data-theme] :is(.task-template, .task-card, .bell-card, .dsess-card, .switcher-card) {
+  transition: none;
+}
+
+html[data-style="isaac"][data-theme] :is(.task-template, .bell-card[role="button"]):hover {
+  translate: 0 -2px;
+  background-color: var(--paper);
+}
+
+/* What a task costs to take: a penny before its "+". */
+html[data-style="isaac"][data-theme] .task-template-plus {
+  width: 14px;
+  height: 18px;
+  background: url("./art/isaac-coin.svg") center / contain no-repeat;
+}
+
+html[data-style="isaac"][data-theme] .task-template-plus > * {
+  visibility: hidden;
+}
+
+html[data-style="isaac"][data-theme] :is(.task-template-name, .bell-source, .kpi-card h3, .work-card h3) {
+  font-weight: 800;
+}
+
+html[data-style="isaac"][data-theme] .tasks-section {
+  letter-spacing: 0.1em;
+}
+
+/* An employee: a face on the character sheet. */
+html[data-style="isaac"][data-theme] .emp-avatar {
+  border-radius: 0;
+  box-shadow: 0 0 0 2px #0a0404;
+}
+
+html[data-style="isaac"][data-theme] :is(.emp-row, .proj-session, .project-row) {
+  border-radius: 0;
+}
+
+html[data-style="isaac"][data-theme] .bell-p {
+  border-radius: 0;
+}
+
+html[data-style="isaac"][data-theme] .bell-p.important {
+  background: #c80000;
+  color: #ffffff;
+}
+
+/* ── 14. Empty, signing in, loading ─────────────────────────────────── */
+
+/* No chat open: an item on its stone, Isaac beside it, a rock and what
+   rooms are full of. */
+html[data-style="isaac"][data-theme] .placeholder {
+  flex: 1 1 auto;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+html[data-style="isaac"][data-theme] .placeholder::before {
+  content: "";
+  order: -2;
+  width: 54px;
+  height: 51px;
+  background: url("./art/isaac-d6.svg") center / contain no-repeat;
+  animation: isaac-float 1.6s steps(4, jump-none) infinite;
+}
+
+html[data-style="isaac"][data-theme] .placeholder::after {
+  content: "";
+  order: -1;
+  width: 288px;
+  height: 92px;
+  margin: -8px 0 6px;
+  background:
+    url("./art/isaac-isaac.svg") 34px 4px / 56px 66px no-repeat,
+    url("./art/isaac-altar.svg") center 30px / 80px 48px no-repeat,
+    url("./art/isaac-rock.svg") 200px 40px / 36px 32px no-repeat,
+    url("./art/isaac-poop.svg") 240px 48px / 32px 26px no-repeat;
+}
+
+html[data-style="isaac"][data-theme="dark"] .placeholder::after {
+  background:
+    url("./art/isaac-isaac.svg") 34px 4px / 56px 66px no-repeat,
+    url("./art/isaac-altar.svg") center 30px / 80px 48px no-repeat,
+    url("./art/isaac-rock.svg") 200px 40px / 36px 32px no-repeat,
+    url("./art/isaac-poop.svg") 240px 48px / 32px 26px no-repeat,
+    url("./art/isaac-spot.svg") center bottom / 288px 78px no-repeat;
+}
+
+@keyframes isaac-float {
+  50% {
+    translate: 0 -8px;
+  }
+}
+
+/* Signing in: the dark, a pool of light, Isaac in it; the sheet below. */
+html[data-style="isaac"][data-theme] .login {
+  background: #000000;
+  font-family: var(--font-pixel);
+}
+
+html[data-style="isaac"][data-theme] .login-box {
+  position: relative;
+  margin-top: 110px;
+  border-radius: 0;
+}
+
+html[data-style="isaac"][data-theme] .login-box::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 18px);
+  width: 288px;
+  height: 100px;
+  translate: -50% 0;
+  background:
+    url("./art/isaac-isaac.svg") center 0 / 56px 66px no-repeat,
+    url("./art/isaac-spot.svg") center bottom / 288px 78px no-repeat;
+}
+
+html[data-style="isaac"][data-theme] .login-box::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -12px;
+  height: 14px;
+  background:
+    url("./art/isaac-pin.svg") 22% 0 / 14px 14px no-repeat,
+    url("./art/isaac-pin.svg") 78% 0 / 14px 14px no-repeat;
+}
+
+html[data-style="isaac"][data-theme] .login-title {
+  color: var(--ink);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+html[data-style="isaac"][data-theme] .login-input {
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: color-mix(in srgb, #ffffff 45%, var(--sheet));
+  color: var(--ink);
+}
+
+html[data-style="isaac"][data-theme] .login-input:focus {
+  border-color: #c80000;
+}
+
+html[data-style="isaac"][data-theme] .login-error {
+  color: #b01414;
+}
+
+/* Loading: a penny, turning. */
+html[data-style="isaac"][data-theme] .loading::before {
+  content: "";
+  width: 28px;
+  height: 36px;
+  background: url("./art/isaac-coin.svg") center / contain no-repeat;
+  animation: isaac-turn 0.8s steps(1) infinite;
+}
+
+@keyframes isaac-turn {
+  0% {
+    scale: 1 1;
+  }
+
+  25% {
+    scale: 0.55 1;
+  }
+
+  50% {
+    scale: 0.15 1;
+  }
+
+  75% {
+    scale: 0.55 1;
+  }
+}
+
+/* ── 15. Small things ───────────────────────────────────────────────── */
+
+/* A warning: white on the black stroke, as a pickup is named. */
+html[data-style="isaac"][data-theme] .app-oops {
+  padding: 2px 4px;
+  border: solid transparent;
+  border-width: 4px 32px;
+  border-image: var(--banner) 2 16 fill / 4px 32px;
+  border-radius: 0;
+  background: none;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+/* Down to the latest message: the trapdoor. */
+html[data-style="isaac"][data-theme] .to-bottom {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/isaac-trapdoor.svg") center / 32px 32px no-repeat;
+  box-shadow: none;
+}
+
+html[data-style="isaac"][data-theme] .to-bottom > svg {
+  opacity: 0;
+}
+
+html[data-style="isaac"][data-theme] .to-bottom:hover {
+  translate: 0 2px;
+}
+
+/* Where the keys are: a red line round it. */
+html[data-style="isaac"][data-theme] :is(button, [role="button"], a):focus-visible {
+  outline: 2px solid var(--hud-red);
+  outline-offset: 2px;
+}
+
+html[data-style="isaac"][data-theme] ::selection {
+  background: color-mix(in srgb, var(--tear-blue) 55%, transparent);
+}
+
+html[data-style="isaac"][data-theme] .spin {
+  animation-timing-function: steps(8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-style="isaac"][data-theme] .main::before,
+  html[data-style="isaac"][data-theme] .main::after,
+  html[data-style="isaac"][data-theme] .sidebar .session.active::before,
+  html[data-style="isaac"][data-theme] .dot,
+  html[data-style="isaac"][data-theme] .tool.group.running .tool-icon::before,
+  html[data-style="isaac"][data-theme] .tool-state > svg.spin,
+  html[data-style="isaac"][data-theme] .thinking.live > svg,
+  html[data-style="isaac"][data-theme] .working-dots i,
+  html[data-style="isaac"][data-theme] .placeholder::before,
+  html[data-style="isaac"][data-theme] .loading::before {
+    animation: none;
+  }
+}

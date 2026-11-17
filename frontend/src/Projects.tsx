@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { createProject, deleteProject, updateProject, type Project } from "./api"
 import { Confirm } from "./Confirm"
+import { t } from "./i18n"
 
 /**
  * Make a project, or edit one: its name and the instructions every session in
@@ -52,14 +53,12 @@ export function ProjectDialog({
     }
   }
 
-  const sessions = `${sessionCount} session${sessionCount === 1 ? "" : "s"}`
-
   return createPortal(
     <div className="modal-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal project-dialog" role="dialog" aria-label={project ? "Project" : "New project"}>
+      <div className="modal project-dialog" role="dialog" aria-label={project ? t("Project") : t("New project")}>
         <div className="modal-head">
-          <span>{project ? "Project" : "New project"}</span>
-          <button className="icon-btn" onClick={onClose} title="Close">
+          <span>{project ? t("Project") : t("New project")}</span>
+          <button className="icon-btn" onClick={onClose} title={t("Close")}>
             <X />
           </button>
         </div>
@@ -72,27 +71,27 @@ export function ProjectDialog({
           }}
         >
           <label>
-            <span>Name</span>
-            <input value={name} autoFocus onChange={(e) => setName(e.target.value)} placeholder="e.g. Blog" />
+            <span>{t("Name")}</span>
+            <input value={name} autoFocus onChange={(e) => setName(e.target.value)} placeholder={t("e.g. Blog")} />
           </label>
 
           {project && (
             <label>
-              <span>Workspace</span>
+              <span>{t("Workspace")}</span>
               <code className="project-path">{project.workspace}</code>
-              <small>Every session in the project starts here.</small>
+              <small>{t("Every session in the project starts here.")}</small>
             </label>
           )}
 
           <label>
-            <span>Instructions</span>
+            <span>{t("Instructions")}</span>
             <textarea
               value={instructions}
               rows={7}
               onChange={(e) => setInstructions(e.target.value)}
-              placeholder="What every session in this project should know or do."
+              placeholder={t("What every session in this project should know or do.")}
             />
-            <small>Added to each session's system prompt. Claude Code sessions pick up a change on their next turn.</small>
+            <small>{t("Added to each session's system prompt. Claude Code sessions pick up a change on their next turn.")}</small>
           </label>
 
           {error && <div className="device-error">{error}</div>}
@@ -100,14 +99,14 @@ export function ProjectDialog({
           <div className="confirm-actions">
             {project && (
               <button type="button" className="text-btn danger project-delete" onClick={() => setAsking(true)}>
-                Delete
+                {t("Delete")}
               </button>
             )}
             <button type="button" className="text-btn" onClick={onClose}>
-              Cancel
+              {t("Cancel")}
             </button>
             <button type="submit" className="text-btn primary" disabled={name.trim() === "" || busy}>
-              {project ? "Save" : "Create"}
+              {project ? t("Save") : t("Create")}
             </button>
           </div>
         </form>
@@ -115,11 +114,13 @@ export function ProjectDialog({
 
       {asking && project && (
         <Confirm
-          title={`Delete ${project.name}?`}
-          detail={
-            `Its ${sessions} and their history, and the workspace ${project.workspace} with everything in it.` +
-            " This cannot be undone."
-          }
+          title={t("Delete {name}?", { name: project.name })}
+          detail={t(
+            sessionCount === 1
+              ? "Its {n} session and their history, and the workspace {workspace} with everything in it. This cannot be undone."
+              : "Its {n} sessions and their history, and the workspace {workspace} with everything in it. This cannot be undone.",
+            { n: sessionCount, workspace: project.workspace },
+          )}
           onYes={async () => {
             await deleteProject(project.id)
             onClose()

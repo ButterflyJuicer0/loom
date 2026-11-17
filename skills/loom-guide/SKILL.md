@@ -60,6 +60,56 @@ Some features are told only in the skill that uses them and in
   online Windows or Android row is lit but does not open, and says so on
   hover. Code: the `devices.map` under "Device sessions" in
   `frontend/src/Sidebar.tsx`.
+- **A chat's header buttons.** On a desktop the top right of a chat lists
+  every action as its own icon, left to right: model (opens the list of
+  models), terminals, canvas, continue in a new chat (opens the list of
+  engines), share, keep (an incognito chat only), meeting mode, reload.
+  Hovering one, or reaching it with Tab, opens its name under it — the model
+  button's says which model the chat is on. On a phone there is no room and
+  no hover: the same actions are under the one `…`. Code: `HeaderActions`
+  and `Tip` (desktop), `PaneMenu` (phone) in `frontend/src/Chat.tsx`; the
+  tip is shadcn/ui's `components/ui/tooltip.tsx`, styled `.head-tip` in
+  `theme.css`.
+- **Language of the interface.** Settings → Language: 中文 or English, per
+  device (localStorage), Chinese by default; changing it reloads the page.
+  Only the interface is translated — titles, replies and notices show as they
+  come. Mechanism: `t("English")` looks the text up in the Chinese
+  dictionaries `frontend/src/i18n/zh/*.ts` (one per source file) and falls
+  back to the English (`frontend/src/i18n.ts`); a string still in English in
+  the Chinese interface is one nobody has put in a dictionary.
+- **Themes.** Settings → Theme: "Loom 默认" (the original look) and eight
+  designed themes — 山山兔, 蔚蓝 (Celeste), 以撒 (The Binding of Isaac:
+  Rebirth), 星露谷物语 (Stardew Valley), 小丑牌 (Balatro), 我的世界
+  (Minecraft), 死亡细胞 (Dead Cells), 泰拉瑞亚 (Terraria) — each light and
+  dark (the Appearance switch), per device. They are tributes: every picture
+  is Loom's own pixel art drawn after screenshots of the real thing; nothing
+  is taken from a game's files. A designed theme is colours, corners,
+  shadows and a font (system fonts, or the bundled pixel font) as shadcn/ui
+  tokens, plus pictures and motion of its own for every kind of component;
+  in the game themes the line under a turn shows context usage as the
+  game's gauge (energy bar, experience bar, hearts …) and each tool has its
+  own picture; motion stops under the system's "reduce motion". How: `settings.ts` puts the theme in
+  `data-style` and light/dark in `data-theme` on `<html>`. **A theme is its
+  own files and nothing else** (`frontend/tools/themes/README.md`): tokens
+  `frontend/tools/themes/<id>.json` → `src/themes/<id>.tokens.css` and
+  `<id>.meta.json` (`node tools/themes.mjs <id>`), mapped onto Loom's
+  variables by `themes.css`; design `src/themes/<id>.css`; pictures
+  `src/themes/art/<id>-*.svg` from `tools/art/<id>.mjs`
+  (`node tools/theme-art.mjs <id>`; `<id>-mark.svg` is the one on its card).
+  Nothing is listed by hand: `themes.ts` and the picker find them by name,
+  and `themes/index.ts` fetches a theme's stylesheets only when it is chosen
+  (`settings.ts` sets `data-style` once they have arrived), so the page
+  loads one theme's CSS, not all of them. What components expose to themes: `--usage` (0–1) and `data-usage` on
+  `.turn-line` for a context gauge, `data-tool` on `.tool`, `.tool-chip` and
+  `.tool.group` for a picture per tool, and the bundled pixel font Fusion
+  Pixel (OFL, `frontend/public/fonts`) behind `--font-pixel`. Don't set `position` on `.sidebar`
+  in a theme: it is a drawer on a phone. Tailwind CSS and shadcn/ui
+  components (`frontend/src/components/ui`, `components.json`) are available
+  for new UI; the theme picker (`ThemePicker.tsx`) is built with them.
+- **Opening a project's files.** On a project's page → Files, a Markdown,
+  image, video, PDF, HTML, table or text file opens in a viewer in place; the
+  download mark on its row still downloads it. Served from a signed, sandboxed
+  `/project-files/<id>/<token>/` prefix (`LoomWeb.CanvasController`).
 - **Searching chats.** The magnifier beside the bell at the top of the
   sidebar, or ⌘K (Ctrl+K off Apple devices; not from inside the terminal),
   opens Search: empty it lists the latest chats, typed in it finds chats by

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { Channel } from "phoenix"
 import { getSocket } from "./socket"
+import { t } from "./i18n"
 import { attachmentUrl, seedBlobUrl, uploadAgentFiles, whenCreated, whenMade } from "./api"
 import type { LocalFile } from "./useAttachments"
 import {
@@ -55,7 +56,7 @@ const SUBMIT_TIMEOUT_MS = 20_000
 const UNSENT_KEY = (id: string) => `loom_unsent_${id}`
 
 const unsentOf = (pending: PendingMessage[]): PendingMessage[] =>
-  pending.map((p) => (p.failed ? p : { ...p, failed: "the connection dropped before it was confirmed" }))
+  pending.map((p) => (p.failed ? p : { ...p, failed: t("the connection dropped before it was confirmed") }))
 
 function loadUnsent(id: string): PendingMessage[] {
   try {
@@ -166,7 +167,7 @@ export function useAgent(
         },
         () => {
           if (torn) return
-          setJoinError("Can't reach the server to start this chat — trying again…")
+          setJoinError(t("Can't reach the server to start this chat — trying again…"))
           retry = setTimeout(wait, 3000)
         },
       )
@@ -233,9 +234,9 @@ export function useAgent(
           setJoinError(null)
         })
         .receive("error", (resp: { reason?: string }) =>
-          setJoinError(resp?.reason ?? "join failed"),
+          setJoinError(resp?.reason ?? t("join failed")),
         )
-        .receive("timeout", () => setJoinError("join timed out"))
+        .receive("timeout", () => setJoinError(t("join timed out")))
       return channel
     }
     void wait()
@@ -276,7 +277,7 @@ export function useAgent(
     const fail = (reason: string) => setTranscript((t) => markPending(t, p.clientMsgId, reason))
     // A new chat's channel opens once the server has it; see `whenCreated`.
     if (!channel) {
-      if (waited >= SUBMIT_TIMEOUT_MS) return fail("not connected")
+      if (waited >= SUBMIT_TIMEOUT_MS) return fail(t("not connected"))
       setTimeout(() => push(p, waited + 250), 250)
       return
     }
@@ -298,10 +299,10 @@ export function useAgent(
         // It had already arrived; the `:user` event we have is the bubble.
         if (reply?.status === "duplicate") setTranscript((t) => dropPending(t, p.clientMsgId))
       })
-      .receive("error", (resp: { reason?: string }) => fail(resp?.reason ?? "the server refused it"))
+      .receive("error", (resp: { reason?: string }) => fail(resp?.reason ?? t("the server refused it")))
       // phoenix.js still sends a push that timed out once the channel is back,
       // so a message marked here can arrive after all; its event clears it.
-      .receive("timeout", () => fail("no answer — the connection may be weak"))
+      .receive("timeout", () => fail(t("no answer — the connection may be weak")))
   }, [])
 
   // One go at a pending message. Its bubble is already on screen; this only
@@ -314,12 +315,12 @@ export function useAgent(
   const send = useCallback((p: PendingMessage) => {
     const fail = (reason: string) => setTranscript((t) => markPending(t, p.clientMsgId, reason))
     const uploads = p.uploads ?? []
-    if (!sessionId) return fail("not connected")
+    if (!sessionId) return fail(t("not connected"))
     if (uploads.length === 0) {
-      whenMade(sessionId).then(() => push(p), () => fail("couldn't start this chat — the connection may be weak"))
+      whenMade(sessionId).then(() => push(p), () => fail(t("couldn't start this chat — the connection may be weak")))
       return
     }
-    if (uploads.some((u) => !u.blob)) return fail("its files were lost when the page reloaded — attach them again")
+    if (uploads.some((u) => !u.blob)) return fail(t("its files were lost when the page reloaded — attach them again"))
 
     const blobs = uploads.map((u) => (u.blob instanceof File ? u.blob : new File([u.blob!], u.name, { type: u.type })))
     whenMade(sessionId).then(() => uploadAgentFiles(sessionId, blobs)).then(
@@ -337,7 +338,7 @@ export function useAgent(
         setTranscript((t) => updatePending(t, next))
         push(next)
       },
-      (e: unknown) => fail(e instanceof Error ? e.message : "upload failed"),
+      (e: unknown) => fail(e instanceof Error ? e.message : t("upload failed")),
     )
   }, [sessionId, push])
 

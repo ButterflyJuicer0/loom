@@ -1,10 +1,15 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { fileURLToPath } from 'node:url'
 
 // Proxy API, canvas + websocket to the Phoenix backend so everything is same-origin
 // in dev (no CORS, no hardcoded backend host in the client).
 export default defineConfig({
-  plugins: [react()],
+  // Tailwind for the shadcn/ui components (src/components/ui) and what is built
+  // with them; the rest of the interface keeps its own CSS. See src/tailwind.css.
+  plugins: [react(), tailwindcss()],
+  resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   // noVNC (the browser pane) uses top-level await.
   build: { target: 'es2022' },
   optimizeDeps: { esbuildOptions: { target: 'es2022' } },

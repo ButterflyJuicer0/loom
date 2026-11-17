@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { t } from "./i18n"
 
 /**
  * Vim-style keys for the desktop layout.
@@ -180,10 +181,10 @@ export function KeyHelp({
   const rows = [...extra, ...Object.entries(keymap).map(([k, b]) => [show(k), b.desc])]
   return (
     <div className="modal-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal key-help" role="dialog" aria-label="Keys">
+      <div className="modal key-help" role="dialog" aria-label={t("Keys")}>
         <div className="modal-head">
-          <span>Keys</span>
-          <span className="key-help-hint">Esc to close</span>
+          <span>{t("Keys")}</span>
+          <span className="key-help-hint">{t("Esc to close")}</span>
         </div>
         <div className="key-help-body">
           {rows.map(([key, desc]) => (

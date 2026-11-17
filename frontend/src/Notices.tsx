@@ -10,6 +10,7 @@ import {
   type Notice,
   type Todo,
 } from "./api"
+import { t } from "./i18n"
 import "./Notices.css"
 
 /**
@@ -34,9 +35,9 @@ export const urgent = (n: Notice) => n.status === "open" && n.priority <= 2 && !
 export const important = (n: Notice) => n.status === "open" && n.priority >= 3 && n.priority <= 5 && !putOff(n)
 
 const BANDS: { label: string; tone: string; has: (n: Notice) => boolean }[] = [
-  { label: "Urgent", tone: "urgent", has: (n) => n.priority <= 2 },
-  { label: "Important", tone: "important", has: (n) => n.priority >= 3 && n.priority <= 5 },
-  { label: "Other", tone: "other", has: (n) => n.priority >= 6 },
+  { label: t("Urgent"), tone: "urgent", has: (n) => n.priority <= 2 },
+  { label: t("Important"), tone: "important", has: (n) => n.priority >= 3 && n.priority <= 5 },
+  { label: t("Other"), tone: "other", has: (n) => n.priority >= 6 },
 ]
 
 /** Most urgent first, then newest. */
@@ -48,7 +49,7 @@ export function BellButton({ notices, onClick }: { notices: Notice[]; onClick: (
   const count = notices.filter(urgent).length
   const dot = count === 0 && notices.some(important)
   return (
-    <button className="icon-btn bell-btn" onClick={onClick} title="Notifications">
+    <button className="icon-btn bell-btn" onClick={onClick} title={t("Notifications")}>
       <Bell />
       {count > 0 && <span className="bell-count">{count > 9 ? "9+" : count}</span>}
       {dot && <span className="bell-dot" />}
@@ -83,22 +84,22 @@ export function NoticesSheet({
         <div className="bell-head">
           <div className="bell-tabs" role="tablist">
             <button role="tab" aria-selected={tab === "notices"} className={tab === "notices" ? "on" : ""} onClick={() => setTab("notices")}>
-              Notifications{open.length > 0 && <span className="bell-tab-n">{open.length}</span>}
+              {t("Notifications")}{open.length > 0 && <span className="bell-tab-n">{open.length}</span>}
             </button>
             <button role="tab" aria-selected={tab === "todos"} className={tab === "todos" ? "on" : ""} onClick={() => setTab("todos")}>
-              To-do{openTodos > 0 && <span className="bell-tab-n">{openTodos}</span>}
+              {t("To-do")}{openTodos > 0 && <span className="bell-tab-n">{openTodos}</span>}
             </button>
           </div>
           {tab === "notices" && (
             <button
               className={"icon-btn" + (history ? " on" : "")}
               onClick={() => setHistory((h) => !h)}
-              title={history ? "Back to the open ones" : "History"}
+              title={history ? t("Back to the open ones") : t("History")}
             >
               <History />
             </button>
           )}
-          <button className="icon-btn" onClick={onClose} title="Close">
+          <button className="icon-btn" onClick={onClose} title={t("Close")}>
             <X />
           </button>
         </div>
@@ -110,7 +111,7 @@ export function NoticesSheet({
               settled.length ? (
                 settled.map((n) => <Card key={n.id} n={n} onOpen={onOpen} onAnswered={onAnswered} />)
               ) : (
-                <div className="search-empty">Nothing yet.</div>
+                <div className="search-empty">{t("Nothing yet.")}</div>
               )
             ) : all.length ? (
               <>
@@ -129,7 +130,7 @@ export function NoticesSheet({
                 })}
                 {later.length > 0 && (
                   <section>
-                    <div className="bell-band later">Later</div>
+                    <div className="bell-band later">{t("Later")}</div>
                     {later.map((n) => (
                       <Card key={n.id} n={n} onOpen={onOpen} onAnswered={onAnswered} />
                     ))}
@@ -139,7 +140,7 @@ export function NoticesSheet({
             ) : (
               <div className="bell-empty">
                 <CheckCircle2 />
-                <span>All caught up</span>
+                <span>{t("All caught up")}</span>
               </div>
             )}
           </div>
@@ -201,21 +202,21 @@ function TodoList({ todos: given }: { todos: Todo[] }) {
     })
   }
 
-  const row = (t: Todo) => (
-    <div key={t.id} className={"todo-row" + (t.done ? " done" : "")}>
-      <button className="todo-check" onClick={() => run(t.id, !t.done, updateTodo(t.id, { done: !t.done }))} title={t.done ? "Not done" : "Done"}>
-        {t.done ? <CheckCircle2 /> : <Circle />}
+  const row = (todo: Todo) => (
+    <div key={todo.id} className={"todo-row" + (todo.done ? " done" : "")}>
+      <button className="todo-check" onClick={() => run(todo.id, !todo.done, updateTodo(todo.id, { done: !todo.done }))} title={todo.done ? t("Not done") : t("Done")}>
+        {todo.done ? <CheckCircle2 /> : <Circle />}
       </button>
       <span className="todo-text">
-        {t.text}
-        {(t.due || t.by !== "you") && (
+        {todo.text}
+        {(todo.due || todo.by !== "you") && (
           <span className="todo-meta">
-            {t.due && <span className={!t.done && t.due < today ? "late" : t.due === today ? "today" : ""}>{t.due}</span>}
-            {t.by !== "you" && <span>via {t.by}</span>}
+            {todo.due && <span className={!todo.done && todo.due < today ? "late" : todo.due === today ? "today" : ""}>{todo.due}</span>}
+            {todo.by !== "you" && <span>{t("via {name}", { name: todo.by })}</span>}
           </span>
         )}
       </span>
-      <button className="todo-rm" onClick={() => run(t.id, "gone", deleteTodo(t.id))} title="Remove">
+      <button className="todo-rm" onClick={() => run(todo.id, "gone", deleteTodo(todo.id))} title={t("Remove")}>
         <X />
       </button>
     </div>
@@ -230,19 +231,19 @@ function TodoList({ todos: given }: { todos: Todo[] }) {
           add()
         }}
       >
-        <input value={text} placeholder="Add a to-do" enterKeyHint="done" onChange={(e) => setText(e.target.value)} />
-        <input className="todo-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} title="Due" />
-        <button className="bell-send" type="submit" disabled={!text.trim()} title="Add">
+        <input value={text} placeholder={t("Add a to-do")} enterKeyHint="done" onChange={(e) => setText(e.target.value)} />
+        <input className="todo-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} title={t("Due")} />
+        <button className="bell-send" type="submit" disabled={!text.trim()} title={t("Add")}>
           <ArrowUp />
         </button>
       </form>
       {error && <div className="bell-note bell-error">{error}</div>}
       {open.map(row)}
-      {open.length === 0 && <div className="search-empty">Nothing to do.</div>}
+      {open.length === 0 && <div className="search-empty">{t("Nothing to do.")}</div>}
       {done.length > 0 && (
         <>
           <button className="bell-band todo-done-toggle" onClick={() => setShowDone((v) => !v)}>
-            Done · {done.length}
+            {t("Done · {n}", { n: done.length })}
           </button>
           {showDone && done.map(row)}
         </>
@@ -312,7 +313,7 @@ export function Card({
           {said}
         </div>
       )}
-      {n.status === "open" && putOff(n) && <div className="bell-note">Later · back at {clock(n.later_until!)}</div>}
+      {n.status === "open" && putOff(n) && <div className="bell-note">{t("Later · back at {time}", { time: clock(n.later_until!) })}</div>}
       {/* Put off, or done with: the rest is decided in its own session. */}
       {n.status === "open" && (
         <div className="bell-acts" onClick={(e) => e.stopPropagation()}>
@@ -328,7 +329,7 @@ export function Card({
                   {label}
                 </button>
               ))}
-              <button className="bell-btn bell-icon" onClick={() => setChoosingLater(false)} title="Cancel">
+              <button className="bell-btn bell-icon" onClick={() => setChoosingLater(false)} title={t("Cancel")}>
                 <X />
               </button>
             </>
@@ -336,11 +337,11 @@ export function Card({
             <>
               {canLater && (
                 <button className="bell-btn" disabled={busy} onClick={() => setChoosingLater(true)}>
-                  <Clock /> Later
+                  <Clock /> {t("Later")}
                 </button>
               )}
               <button className="bell-btn" disabled={busy} onClick={() => act(() => dismissNotice(n.id), { status: "done", note: "Dismissed" })}>
-                <Check /> Done
+                <Check /> {t("Done")}
               </button>
             </>
           )}
@@ -362,11 +363,11 @@ function laterChoices(): [string, number][] {
   }
   const hour = 3_600_000
   const choices: [string, number][] = [
-    ["1 h", now.getTime() + hour],
-    ["3 h", now.getTime() + 3 * hour],
+    [t("1 h"), now.getTime() + hour],
+    [t("3 h"), now.getTime() + 3 * hour],
   ]
-  if (now.getHours() < 19) choices.push(["Tonight", at(0, 20)])
-  choices.push(["Tomorrow", at(1, 9)])
+  if (now.getHours() < 19) choices.push([t("Tonight"), at(0, 20)])
+  choices.push([t("Tomorrow"), at(1, 9)])
   return choices
 }
 
@@ -393,9 +394,9 @@ function SourceMark({ n }: { n: Notice }) {
 
 function when(ms: number): string {
   const mins = Math.floor((Date.now() - ms) / 60000)
-  if (mins < 1) return "now"
-  if (mins < 60) return `${mins}m`
+  if (mins < 1) return t("now")
+  if (mins < 60) return t("{n}m", { n: mins })
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h`
-  return `${Math.floor(hours / 24)}d`
+  if (hours < 24) return t("{n}h", { n: hours })
+  return t("{n}d", { n: Math.floor(hours / 24) })
 }

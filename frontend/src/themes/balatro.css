@@ -1,0 +1,2484 @@
+/* ── 小丑牌 (Balatro) ─────────────────────────────────────────────────────
+   A tribute to the game, drawn after its own screens. The sidebar is its
+   left column: slate, a blind's banner at the head, red and orange buttons,
+   and the sessions a hand of white cards. The page is the table: felt at
+   night, gold by day, paint swirling slowly across it. What floats is a
+   slate panel with stepped corners and a hard shadow, as every panel in the
+   game is, whatever the table's colour. A step the agent takes is scored:
+   a blue chips box × a red mult box, on fire while it runs. Send is Play
+   Hand, stop is Discard. A list's dots are the four suits. Over everything,
+   faintly, a CRT's scanlines and dark corners.
+
+   Colours and corners are tokens (tools/themes/balatro.json); the pictures
+   are Loom's own, drawn by tools/art/balatro.mjs.
+
+   Each selector starts `html[data-style="balatro"][data-theme]`: as specific
+   as themes.css's shapes, and after them, so these win. */
+
+html[data-style="balatro"] {
+  --b-ink: #374244;
+  --b-panel: #1b2628;
+  --b-cell: #2f3a3c;
+  --b-row: #4f6367;
+  --b-pale: #dae1e7;
+  --b-blue: #0092ff;
+  --b-red: #fe4c40;
+  --b-orange: #ff9700;
+  /* What white is written on: each a shade deeper, so that it reads. */
+  --b-blue-fill: #0078d6;
+  --b-red-fill: #de3629;
+  --b-orange-fill: #d67100;
+  --b-gold: #efb345;
+  --b-green: #34bd85;
+  --b-purple: #706ecf;
+  /* The font's shadow: a step down. */
+  /* The pixel face has one weight; the game's is a heavy one. So what is
+     bold is drawn twice, a hair apart, and then given its shadow. */
+  --b-ts: 0.035em 0 0 currentcolor, 1px 2px 0 rgb(0 0 0 / 55%), calc(1px + 0.035em) 2px 0 rgb(0 0 0 / 55%);
+  --b-ts-1: 0.035em 0 0 currentcolor, 1px 1px 0 rgb(0 0 0 / 55%), calc(1px + 0.035em) 1px 0 rgb(0 0 0 / 55%);
+  --b-bold: 0.035em 0 0 currentcolor;
+
+  /* How a frame is sliced: three squares of corner (two for a small one),
+     and so many of shadow hung under it, at two pixels to the square. */
+  --n3d2: 3 3 5 3 fill / 6px 6px 10px 6px / 0 0 4px 0;
+  --n3d1: 3 3 4 3 fill / 6px 6px 8px 6px / 0 0 2px 0;
+  --n3: 3 fill / 6px;
+  --n2: 2 fill / 4px;
+  --n2d1: 2 2 3 2 fill / 4px 4px 6px 4px / 0 0 2px 0;
+  --n2d2: 2 2 4 2 fill / 4px 4px 8px 4px / 0 0 4px 0;
+
+  --f-panel: url("./art/balatro-f-panel.svg");
+  --f-cell: url("./art/balatro-f-cell.svg");
+  --f-well: url("./art/balatro-f-well.svg");
+  --f-row: url("./art/balatro-f-row.svg");
+  --f-dialog: url("./art/balatro-f-dialog.svg");
+  --f-dock: url("./art/balatro-f-dock.svg");
+  --f-bad: url("./art/balatro-f-bad.svg");
+  --f-tip: url("./art/balatro-f-tip.svg");
+  --f-card: url("./art/balatro-f-card.svg");
+  --f-card-3: url("./art/balatro-f-card-3.svg");
+  --f-card-up: url("./art/balatro-f-card-up.svg");
+  --f-deck: url("./art/balatro-f-deck.svg");
+  --f-pack: url("./art/balatro-f-pack.svg");
+  --f-blue: url("./art/balatro-f-blue.svg");
+  --f-blue-down: url("./art/balatro-f-blue-down.svg");
+  --f-red: url("./art/balatro-f-red.svg");
+  --f-red-down: url("./art/balatro-f-red-down.svg");
+  --f-orange: url("./art/balatro-f-orange.svg");
+  --f-orange-down: url("./art/balatro-f-orange-down.svg");
+  --f-grey: url("./art/balatro-f-grey.svg");
+  --f-gold: url("./art/balatro-f-gold.svg");
+  --f-pill-blue: url("./art/balatro-f-pill-blue.svg");
+  --f-pill-red: url("./art/balatro-f-pill-red.svg");
+  --f-pill-dark: url("./art/balatro-f-pill-dark.svg");
+  --f-pill-cell: url("./art/balatro-f-pill-cell.svg");
+
+  --swirl-a: url("./art/balatro-swirl-a.svg");
+  --swirl-b: url("./art/balatro-swirl-b.svg");
+  --swirl-c: url("./art/balatro-swirl-c.svg");
+  --scan: rgb(255 255 255 / 3.4%);
+  --corner-dark: rgb(0 0 0 / 22%);
+  --link: #c8eaff;
+  --number: #ffe6ad;
+}
+
+html[data-style="balatro"][data-theme="light"] {
+  --swirl-a: url("./art/balatro-swirl-day-a.svg");
+  --swirl-b: url("./art/balatro-swirl-day-b.svg");
+  --swirl-c: url("./art/balatro-swirl-day-c.svg");
+  --scan: rgb(255 255 255 / 5%);
+  --corner-dark: rgb(70 50 0 / 16%);
+  --link: #0a5aa8;
+  --number: #8f3d00;
+}
+
+/* ── What is inside a slate panel, and what is on a white card ──────────
+   Every panel is dark and every card white, by day as at night, so the
+   colours Loom's own rules read are set again inside them. */
+
+html[data-style="balatro"][data-theme] :is(.modal, .session-menu, .backend-menu, .command-menu, .effort-pop, .plus-pop, .pane-menu, .search-panel, .unsent-menu, .which-key, .composer-box, .tasks-composer-box, .queue-panel, .tool, pre.code, .code-tools, .chat-header, .question, .replies, .task-card, .task-template, .bell-card, .work-card, .kpi-card, .emp-stat, .emp-approval, .emp-attention, .emp-report-row, .emp-row, .dsess-card, .switcher-card, .sleep-bar, .share-bar, .share-dialog, .app-oops, .head-tip, .turn-line, .login-box, .file-card, .md-table td, .to-bottom, .memory-row, .boss-line, .proj-session, .tree-row, .error) {
+  --bg: #374244;
+  --bg-raised: #2f3a3c;
+  --bg-card: #46555a;
+  --line: #53666b;
+  --fg: #ffffff;
+  --fg-dim: #c3cfd2;
+  --loom-accent: #ffffff;
+  --unread: #4db3ff;
+  --surface-code: #1b2628;
+  --surface-menu: #374244;
+  --surface-modal: #374244;
+  --surface-field: #1b2628;
+  --composer: #374244;
+  --send-off-bg: #545454;
+  --send-off-fg: #9a9a9a;
+  --blue: #6cc0ff;
+  --red: #ff8d84;
+  --green: #45d19a;
+  --shadow: rgb(0 0 0 / 40%);
+  --link: #8fd0ff;
+  --number: #ffb14a;
+  --task-kind: #6cc0ff;
+  --task-prompt: #e3eaec;
+  --task-dim: #c3cfd2;
+  --task-rule: #2f3a3c;
+  --task-dash: #4f6367;
+  color: var(--fg);
+}
+
+html[data-style="balatro"][data-theme] :is(.sidebar .session, .bubble.user, .md-quote, .reply, .options .option:nth-child(n + 3)) {
+  --bg: #ffffff;
+  --bg-raised: #f1f4f6;
+  --bg-card: #e3e9ed;
+  --line: #c3cbdb;
+  --fg: #263336;
+  --fg-dim: #56666a;
+  --loom-accent: #263336;
+  --unread: #0a6fd0;
+  --blue: #0a5aa8;
+  --red: #cf2f25;
+  --green: #0e8a62;
+  --link: #0a5aa8;
+  --number: #b85200;
+  color: var(--fg);
+}
+
+/* ── The table: paint, turning slowly ────────────────────────────────────
+   Three drawings of it a third of a turn apart. The first is the page's own
+   ground; the other two lie over it and fade in and out in turn, so the
+   paint creeps from one to the next and round again. Only opacity moves:
+   nothing is painted twice. */
+
+html[data-style="balatro"][data-theme] .main {
+  position: relative;
+  isolation: isolate;
+  background: var(--background) var(--swirl-a) center / cover no-repeat;
+}
+
+html[data-style="balatro"][data-theme] :is(.main, .login)::before,
+html[data-style="balatro"][data-theme] :is(.main, .login)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+}
+
+html[data-style="balatro"][data-theme] :is(.main, .login)::before {
+  background: var(--background) var(--swirl-b) center / cover no-repeat;
+  animation: balatro-flow-b 54s linear infinite;
+}
+
+html[data-style="balatro"][data-theme] :is(.main, .login)::after {
+  background: var(--background) var(--swirl-c) center / cover no-repeat;
+  animation: balatro-flow-c 54s linear infinite;
+}
+
+@keyframes balatro-flow-b {
+  0% {
+    opacity: 0;
+  }
+
+  33.3%,
+  66.6% {
+    opacity: 1;
+  }
+
+  66.7%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes balatro-flow-c {
+  0%,
+  33.3% {
+    opacity: 0;
+  }
+
+  66.6% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+html[data-style="balatro"][data-theme] :is(.placeholder, .loading, .side-column, .tasks-page, .proj-page, .boss-page) {
+  background: transparent;
+}
+
+@media (min-width: 641px) {
+  html[data-style="balatro"][data-theme] .app {
+    background: var(--b-cell);
+  }
+
+  /* The screen in its case. */
+  html[data-style="balatro"][data-theme] .main {
+    border-radius: 14px;
+    box-shadow: 0 0 0 2px var(--b-panel);
+  }
+}
+
+/* The tube: scanlines and dark corners, over everything, still. The lines
+   are light ones, so they show on the table and on the panels and not at
+   all on a white card, where there is something to read. */
+html[data-style="balatro"][data-theme] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background:
+    repeating-linear-gradient(to bottom, var(--scan) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 58%, var(--corner-dark) 100%);
+  pointer-events: none;
+  transform: translateZ(0);
+}
+
+html[data-style="balatro"][data-theme] ::selection {
+  background: color-mix(in srgb, var(--b-orange) 45%, transparent);
+}
+
+html[data-style="balatro"][data-theme] :focus-visible {
+  outline-color: var(--b-orange);
+}
+
+/* ── The left column ─────────────────────────────────────────────────── */
+
+html[data-style="balatro"][data-theme] .sidebar {
+  /* Positioned already: beside the page on a desktop, a drawer on a phone. */
+  isolation: isolate;
+  border-right: 0;
+  background: var(--b-cell);
+}
+
+/* Its head: the blind's banner. */
+html[data-style="balatro"][data-theme] .sidebar-head {
+  height: calc(var(--head-h) - 0.6rem);
+  margin: 0.35rem 0.5rem 0.4rem;
+  padding: 0 0.3rem 0 0.6rem;
+  border: 2px solid transparent;
+  border-image: var(--f-gold) var(--n3d2);
+  background: none;
+}
+
+html[data-style="balatro"][data-theme] .sidebar .brand {
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-shadow: var(--b-ts);
+}
+
+html[data-style="balatro"][data-theme] .brand-mark {
+  --brand-a: #fff3cf;
+  --brand-b: #ffffff;
+  filter: drop-shadow(0 2px 0 rgb(0 0 0 / 30%));
+}
+
+html[data-style="balatro"][data-theme] .sidebar-head .icon-btn {
+  border-radius: 4px;
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .sidebar-head .icon-btn:hover {
+  background: rgb(0 0 0 / 22%);
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .bell-dot,
+html[data-style="balatro"][data-theme] .bell-count {
+  border-radius: 2px;
+  background: var(--b-red-fill);
+  color: #ffffff;
+  box-shadow: 0 0 0 1px #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .sidebar .session-list {
+  padding: 2px 10px 12px;
+}
+
+/* Where to go: Run Info's red, and Options' orange for a new chat. */
+html[data-style="balatro"][data-theme] .sidebar .nav-item {
+  min-height: 2rem;
+  margin-bottom: 8px;
+  border: 2px solid transparent;
+  border-image: var(--f-red) var(--n3d2);
+  border-radius: 6px;
+  background: none;
+  color: #ffffff;
+  font-weight: 700;
+  text-shadow: var(--b-ts-1);
+}
+
+html[data-style="balatro"][data-theme] .sidebar .nav-item.nav-new {
+  border-image-source: var(--f-orange);
+}
+
+html[data-style="balatro"][data-theme] .sidebar .nav-item:hover {
+  background: none;
+  filter: brightness(1.08);
+}
+
+html[data-style="balatro"][data-theme] .sidebar .nav-item:is(:active, .current) {
+  translate: 0 3px;
+  border-image: var(--f-red-down) var(--n3);
+}
+
+html[data-style="balatro"][data-theme] .sidebar .nav-item.nav-new:active {
+  border-image: var(--f-orange-down) var(--n3);
+}
+
+html[data-style="balatro"][data-theme] .sidebar .nav-item :is(.nav-chevron, .nav-count, .session-del) {
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .nav-new-more:hover {
+  background: rgb(0 0 0 / 18%);
+  border-radius: 4px;
+}
+
+/* What a nav item opens: rows in the column's own slate. */
+html[data-style="balatro"][data-theme] .sidebar .project-row {
+  border-radius: 4px;
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .sidebar .project-row:is(:hover, .current) {
+  background: var(--b-panel);
+}
+
+html[data-style="balatro"][data-theme] .sidebar .project-sessions {
+  border-left: 2px solid var(--b-row);
+}
+
+/* A heading: a label as over Hands and Discards, a chip before it. */
+html[data-style="balatro"][data-theme] .sidebar .list-heading {
+  gap: 7px;
+  margin-top: 8px;
+  padding: 5px 2px;
+  color: #ffffff;
+  font-weight: 700;
+  text-shadow: var(--b-ts-1);
+}
+
+html[data-style="balatro"][data-theme] .sidebar .list-heading::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  background: url("./art/balatro-chip-blue.svg") center / contain no-repeat;
+}
+
+html[data-style="balatro"][data-theme] .sidebar .list-heading:nth-of-type(even)::before {
+  background-image: url("./art/balatro-chip-gold.svg");
+}
+
+html[data-style="balatro"][data-theme] .sidebar .list-heading svg {
+  color: #ffffff;
+}
+
+/* ── A session: a card in the hand ───────────────────────────────────── */
+
+html[data-style="balatro"][data-theme] .sidebar .session {
+  position: relative;
+  margin-bottom: 5px;
+  border: 2px solid transparent;
+  border-image: var(--f-card) var(--n2d1);
+  border-radius: 5px;
+  background: none;
+  transition: translate 0.08s steps(2);
+}
+
+html[data-style="balatro"][data-theme] .sidebar .session.working + .session.working {
+  margin-top: 0;
+}
+
+html[data-style="balatro"][data-theme] .sidebar .session:hover {
+  background: none;
+  translate: 0 -1px;
+}
+
+/* The one that is open: raised out of the hand, the pointer at it. */
+html[data-style="balatro"][data-theme] .sidebar .session.active {
+  background: none;
+  translate: 0 -3px;
+  border-image: var(--f-card-up) var(--n2d2);
+  box-shadow: none;
+}
+
+html[data-style="balatro"][data-theme] .sidebar .session.active::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -12px;
+  width: 8px;
+  height: 14px;
+  margin-top: -7px;
+  background: url("./art/balatro-pointer-right.svg") center / contain no-repeat;
+  animation: balatro-point 0.9s steps(2, jump-none) infinite;
+}
+
+@keyframes balatro-point {
+  50% {
+    translate: 2px 0;
+  }
+}
+
+html[data-style="balatro"][data-theme] .sidebar .session.active .session-label {
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] .sidebar .session.cursor {
+  outline: 2px solid var(--b-orange);
+  outline-offset: 1px;
+}
+
+html[data-style="balatro"][data-theme] .sidebar .session .session-del:hover {
+  background: var(--bg-card);
+  color: var(--fg);
+}
+
+/* Its state: a chip. Green while it runs, grey as it starts, red if stopped. */
+html[data-style="balatro"][data-theme] .dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 0;
+  background: url("./art/balatro-chip-grey.svg") center / contain no-repeat;
+}
+
+html[data-style="balatro"][data-theme] .dot:is(.running, .online) {
+  background-image: url("./art/balatro-chip-green.svg");
+}
+
+html[data-style="balatro"][data-theme] .dot.interrupted {
+  background-image: url("./art/balatro-chip-red.svg");
+}
+
+/* A chip, spun on its edge. */
+@keyframes balatro-chip-turn {
+  0%,
+  100% {
+    scale: 1 1;
+  }
+
+  25%,
+  75% {
+    scale: 0.55 1;
+  }
+
+  50% {
+    scale: 0.15 1;
+  }
+}
+
+/* Running: light along the card's edge, coming and going. */
+html[data-style="balatro"][data-theme] .sidebar .session:has(.dot.running)::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border: 2px solid var(--b-blue);
+  border-radius: 5px;
+  pointer-events: none;
+  animation: balatro-edge 1.6s ease-in-out infinite;
+}
+
+@keyframes balatro-edge {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+
+  50% {
+    opacity: 0.9;
+  }
+}
+
+/* Unread: the red alert on the card's corner. */
+html[data-style="balatro"][data-theme] .sidebar .session-unread {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 0;
+  background: url("./art/balatro-alert.svg") center / contain no-repeat;
+  animation: balatro-alert 1.2s steps(2, jump-none) infinite;
+}
+
+@keyframes balatro-alert {
+  50% {
+    translate: 0 -2px;
+  }
+}
+
+/* The foot: a dark panel of small buttons. */
+html[data-style="balatro"][data-theme] .sidebar-foot {
+  margin: 4px 8px 10px;
+  padding: 2px;
+  border: 2px solid transparent;
+  border-image: var(--f-panel) var(--n3d2);
+}
+
+html[data-style="balatro"][data-theme] .sidebar-foot .devices-btn {
+  border-radius: 4px;
+  color: #dfe7ea;
+}
+
+html[data-style="balatro"][data-theme] .sidebar-foot .devices-btn:hover {
+  background: var(--b-cell);
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .sidebar-foot .push-btn.on svg {
+  color: #4db3ff;
+}
+
+html[data-style="balatro"][data-theme] .sidebar-foot .devices-count {
+  color: var(--b-gold);
+}
+
+html[data-style="balatro"][data-theme] .sidebar-foot.folded .devices-btn > span:first-of-type {
+  border: 2px solid var(--b-pale);
+  border-radius: 4px;
+  background: var(--b-ink);
+  color: #ffffff;
+}
+
+/* A phone's drawer: New chat is the big orange button; the dial's are cells. */
+html[data-style="balatro"][data-theme] :is(.new-chat, .new-chat-more) {
+  border: 2px solid transparent;
+  border-image: var(--f-orange) var(--n3d2);
+  border-radius: 6px;
+  background: none;
+  color: #ffffff;
+  font-weight: 700;
+  text-shadow: var(--b-ts-1);
+}
+
+html[data-style="balatro"][data-theme] .new-chat-split {
+  gap: 3px;
+}
+
+html[data-style="balatro"][data-theme] .new-chat-more::before {
+  display: none;
+}
+
+html[data-style="balatro"][data-theme] :is(.dial-btn, .sidebar-foot.dial .devices-btn svg) {
+  border: 2px solid var(--b-row);
+  border-radius: 8px;
+  background: var(--b-panel);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: 0 3px 0 rgb(0 0 0 / 30%);
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .sidebar-foot.dial {
+  margin: 0;
+  border: 0;
+  border-image: none;
+}
+
+html[data-style="balatro"][data-theme] .sidebar-foot.dial .devices-btn:hover {
+  background: none;
+}
+
+html[data-style="balatro"][data-theme] .dial-scrim {
+  background: color-mix(in srgb, var(--b-cell) 92%, transparent);
+}
+
+@media (max-width: 640px) {
+  html[data-style="balatro"][data-theme] .sidebar-head {
+    height: auto;
+    min-height: 3.2rem;
+    margin: 0.5rem 0.75rem;
+    padding: 0.25rem 0.5rem 0.25rem 1rem;
+  }
+
+  html[data-style="balatro"][data-theme] .sidebar :is(.search-btn, .sidebar-head .bell-btn) {
+    border: 0;
+    border-radius: 6px;
+    background: rgb(0 0 0 / 20%);
+  }
+
+  html[data-style="balatro"][data-theme] .sidebar .session-list {
+    padding-inline: 14px;
+  }
+
+  html[data-style="balatro"][data-theme] .sidebar .nav-item {
+    min-height: 2.9rem;
+  }
+}
+
+/* ── The top of a chat: the panel that names the hand ────────────────── */
+
+html[data-style="balatro"][data-theme] .chat-top::before {
+  inset: 0 0 -14px;
+  background: linear-gradient(var(--background) 68%, transparent);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+  opacity: 0.94;
+}
+
+html[data-style="balatro"][data-theme] .chat-name {
+  font-weight: 700;
+  text-shadow: var(--b-ts-1);
+}
+
+html[data-style="balatro"][data-theme] .chip.button.head-btn {
+  border-radius: 4px;
+  color: #dfe7ea;
+}
+
+html[data-style="balatro"][data-theme] .chip.button.head-btn:hover {
+  background: var(--b-cell);
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .chip.button.head-btn.on {
+  background: var(--b-blue-fill);
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .chip.button.head-btn .count {
+  color: var(--b-gold);
+}
+
+@media (min-width: 641px) {
+  html[data-style="balatro"][data-theme] .chat-top {
+    padding: 8px 10px 0;
+  }
+
+  html[data-style="balatro"][data-theme] .chat-header {
+    height: calc(var(--head-h) - 0.6rem);
+    padding: 2px 6px 2px 12px;
+    border: 2px solid transparent;
+    border-image: var(--f-panel) var(--n3d2);
+    background: none;
+  }
+}
+
+/* On a phone the name and each button are panels of their own. */
+@media (max-width: 640px) {
+  html[data-style="balatro"][data-theme] .chat-header {
+    --fg: #ffffff;
+    --fg-dim: #c3cfd2;
+    background: none;
+  }
+
+  html[data-style="balatro"][data-theme] .chat-header :is(.icon-btn.glass, .chip.button.pane-more, .chat-title, .keep-chip) {
+    border: 2px solid transparent;
+    border-image: var(--f-panel) var(--n3d2);
+    border-radius: 8px;
+    background: none;
+    box-shadow: none;
+    color: #ffffff;
+  }
+}
+
+/* ── The conversation ────────────────────────────────────────────────── */
+
+/* What is read at length is set plain; the pixel face is for the table. */
+html[data-style="balatro"][data-theme] :is(.bubble, .composer-input, .task-prompt, .bell-summary, .search-snippet) {
+  font-family: var(--font-sans);
+}
+
+/* What you said: a card, played. An ace of spades, by its corners. */
+html[data-style="balatro"][data-theme] .bubble.user {
+  position: relative;
+  padding: 0.6rem 2.1rem;
+  border: 2px solid transparent;
+  border-image: var(--f-card-3) var(--n3d1);
+  border-radius: 8px;
+  background: none;
+  filter: drop-shadow(0 4px 0 rgb(0 0 0 / 22%));
+}
+
+html[data-style="balatro"][data-theme] .bubble.user::before,
+html[data-style="balatro"][data-theme] .bubble.user::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 26px;
+  background: url("./art/balatro-index.svg") center / contain no-repeat;
+}
+
+html[data-style="balatro"][data-theme] .bubble.user::before {
+  top: 5px;
+  left: 6px;
+}
+
+html[data-style="balatro"][data-theme] .bubble.user::after {
+  right: 6px;
+  bottom: 5px;
+  rotate: 180deg;
+}
+
+html[data-style="balatro"][data-theme] .bubble.user.failed {
+  border-image-source: var(--f-tip);
+  outline: 2px solid var(--b-red);
+  outline-offset: -2px;
+}
+
+html[data-style="balatro"][data-theme] .bubble.assistant.live::after {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 11px;
+  margin-left: 3px;
+  vertical-align: -1px;
+  background: url("./art/balatro-card.svg") center / contain no-repeat;
+  animation: balatro-alert 0.7s steps(2, jump-none) infinite;
+}
+
+/* Headings: a banner, as over a blind — blue, then red; a third is a tab. */
+html[data-style="balatro"][data-theme] .bubble.assistant :is(h1, h2, h3).md-h {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-top: 1.2em;
+  margin-bottom: calc(0.55em + 4px);
+  padding: 1px 12px 2px;
+  border: 2px solid transparent;
+  border-image: var(--f-blue) var(--n3d2);
+  color: #ffffff;
+  font-family: var(--ui);
+  font-weight: 700;
+  text-shadow: var(--b-ts-1);
+}
+
+html[data-style="balatro"][data-theme] .bubble.assistant h2.md-h {
+  border-image-source: var(--f-red);
+}
+
+html[data-style="balatro"][data-theme] .bubble.assistant h3.md-h {
+  padding: 0 10px 1px;
+  border-image: var(--f-panel) var(--n3d2);
+  color: var(--b-gold);
+}
+
+html[data-style="balatro"][data-theme] .bubble.assistant :is(h1, h2, h3).md-h :is(code, a) {
+  color: inherit;
+}
+
+/* A list's dots: spades, hearts, clubs, diamonds, a small card each. */
+html[data-style="balatro"][data-theme] ul.md-list > li:not(.md-task) {
+  position: relative;
+  list-style: none;
+}
+
+html[data-style="balatro"][data-theme] ul.md-list > li:not(.md-task)::before {
+  content: "";
+  position: absolute;
+  top: 0.26em;
+  left: -1.5em;
+  width: 0.95em;
+  height: 1.21em;
+  background: url("./art/balatro-pip-spade.svg") center / contain no-repeat;
+}
+
+html[data-style="balatro"][data-theme] ul.md-list > li:not(.md-task):nth-child(4n + 2)::before {
+  background-image: url("./art/balatro-pip-heart.svg");
+}
+
+html[data-style="balatro"][data-theme] ul.md-list > li:not(.md-task):nth-child(4n + 3)::before {
+  background-image: url("./art/balatro-pip-club.svg");
+}
+
+html[data-style="balatro"][data-theme] ul.md-list > li:not(.md-task):nth-child(4n + 4)::before {
+  background-image: url("./art/balatro-pip-diamond.svg");
+}
+
+/* A numbered list counts in the colour of money. */
+html[data-style="balatro"][data-theme] ol.md-list > li::marker {
+  color: var(--number);
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] .md-check {
+  color: var(--number);
+}
+
+/* A rule: chips, in a row. */
+html[data-style="balatro"][data-theme] .md-hr {
+  height: 18px;
+  margin: 1.2em 0;
+  border: 0;
+  background:
+    url("./art/balatro-chips.svg") center / auto 18px no-repeat,
+    linear-gradient(var(--line), var(--line)) left center / calc(50% - 64px) 2px no-repeat,
+    linear-gradient(var(--line), var(--line)) right center / calc(50% - 64px) 2px no-repeat;
+}
+
+/* A quote: a card's description — a white box in a slate frame. */
+html[data-style="balatro"][data-theme] .md-quote {
+  margin: 0 0 calc(0.8em + 4px);
+  padding: 6px 12px;
+  border: 6px solid transparent;
+  border-image: var(--f-dialog) 3 3 5 3 / 6px 6px 10px 6px / 0 0 4px 0;
+  border-radius: 8px;
+  background: #ffffff;
+  background-clip: padding-box;
+}
+
+html[data-style="balatro"][data-theme] .md-quote > :last-child {
+  margin-bottom: 0;
+}
+
+/* A table: the poker hands, a bar to each. */
+html[data-style="balatro"][data-theme] .md-table {
+  border-collapse: separate;
+  border-spacing: 0 4px;
+}
+
+html[data-style="balatro"][data-theme] .md-table :is(th, td) {
+  border: 0;
+}
+
+html[data-style="balatro"][data-theme] .md-table th {
+  padding-bottom: 2px;
+  background: none;
+  color: var(--fg);
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] .md-table td {
+  padding: 5px 10px;
+  background: var(--b-row);
+  box-shadow: 0 3px 0 rgb(0 0 0 / 26%);
+}
+
+html[data-style="balatro"][data-theme] .md-table td:first-child {
+  border-radius: 6px 0 0 6px;
+  font-weight: 600;
+}
+
+html[data-style="balatro"][data-theme] .md-table td:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+html[data-style="balatro"][data-theme] .md-table td:only-child {
+  border-radius: 6px;
+}
+
+html[data-style="balatro"][data-theme] .md-table tbody tr:hover {
+  background: none;
+}
+
+html[data-style="balatro"][data-theme] .md-table tbody tr:hover td {
+  background: #5b7075;
+}
+
+html[data-style="balatro"][data-theme] .md a {
+  color: var(--link);
+  text-decoration-color: color-mix(in srgb, var(--link) 45%, transparent);
+}
+
+/* Code in a line: a dark cell, its word in the colour that marks a rule. */
+html[data-style="balatro"][data-theme] :not(pre) > code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--b-panel);
+  color: #ffb14a;
+}
+
+html[data-style="balatro"][data-theme] .md-code.copied {
+  background: var(--b-green);
+  color: #ffffff;
+}
+
+/* ── Code and files ──────────────────────────────────────────────────── */
+
+html[data-style="balatro"][data-theme] pre.code {
+  border: 2px solid transparent;
+  border-image: var(--f-panel) var(--n3d2);
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+  color: #e9f0f2;
+}
+
+html[data-style="balatro"][data-theme] .code-block {
+  margin-bottom: 14px;
+}
+
+/* Its tab: the language, in the blue of a header. */
+html[data-style="balatro"][data-theme] .code-tools {
+  top: 4px;
+  right: 4px;
+  padding: 0 0 0 6px;
+  border-radius: 4px;
+  background: var(--b-panel);
+}
+
+html[data-style="balatro"][data-theme] .code-lang {
+  padding: 1px 7px;
+  border-radius: 3px;
+  background: var(--b-blue-fill);
+  color: #ffffff;
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] .code-copy:hover {
+  background: var(--b-cell);
+}
+
+/* A file: a booster pack, crimped top and foot. */
+html[data-style="balatro"][data-theme] .file-card:not(.image) {
+  padding: 8px 6px;
+  border: 1px solid transparent;
+  border-image: var(--f-pack) 3 1 3 1 fill / 6px 2px 6px 2px round;
+  border-radius: 0;
+  background: none;
+  box-shadow: 0 3px 0 rgb(0 0 0 / 28%);
+}
+
+html[data-style="balatro"][data-theme] .file-card .file-ext {
+  width: fit-content;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: var(--b-gold);
+  color: #3a2f12;
+  font-family: var(--ui);
+}
+
+html[data-style="balatro"][data-theme] .file-card .file-name {
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .file-card.image {
+  border: 2px solid #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 3px 0 rgb(0 0 0 / 28%);
+}
+
+html[data-style="balatro"][data-theme] .file-card.clickable:hover {
+  translate: 0 -2px;
+}
+
+html[data-style="balatro"][data-theme] .file-card.failed {
+  filter: grayscale(0.7);
+  outline: 2px solid var(--b-red);
+}
+
+html[data-style="balatro"][data-theme] .error {
+  border: 2px solid transparent;
+  border-image: var(--f-bad) var(--n3d2);
+  border-radius: 8px;
+  background: none;
+}
+
+/* ── A step: scored ──────────────────────────────────────────────────────
+   Chips in a blue box, × , mult in a red one. */
+
+html[data-style="balatro"][data-theme] .tool {
+  border: 2px solid transparent;
+  border-image: var(--f-cell) var(--n3);
+  border-radius: 8px;
+  background: none;
+}
+
+html[data-style="balatro"][data-theme] .tool.group {
+  overflow: visible;
+  margin-bottom: 4px;
+  border-image: var(--f-panel) var(--n3d2);
+  box-shadow: none;
+}
+
+html[data-style="balatro"][data-theme] .tool.group:is(:hover, .open, .running) {
+  background: none;
+  box-shadow: none;
+}
+
+html[data-style="balatro"][data-theme] .tool.failed {
+  border-image: var(--f-bad) var(--n3);
+}
+
+html[data-style="balatro"][data-theme] .tool-head:hover {
+  background: none;
+}
+
+html[data-style="balatro"][data-theme] .tool.group > .tool-head {
+  position: relative;
+  gap: 8px;
+  padding: 7px 10px 7px 9px;
+}
+
+/* The chips box, a chip in it. */
+html[data-style="balatro"][data-theme] .tool-icon {
+  position: relative;
+  width: 1.9rem;
+  height: 1.55rem;
+  margin-right: 17px;
+  border: 1px solid transparent;
+  border-image: var(--f-pill-blue) var(--n2);
+  border-radius: 0;
+  background: none;
+}
+
+html[data-style="balatro"][data-theme] .tool.group.running .tool-icon {
+  background: none;
+}
+
+html[data-style="balatro"][data-theme] .tool-icon > svg {
+  display: none;
+}
+
+html[data-style="balatro"][data-theme] .tool-icon::before {
+  content: "";
+  width: 13px;
+  height: 13px;
+  background: url("./art/balatro-chip.svg") center / contain no-repeat;
+}
+
+html[data-style="balatro"][data-theme] .tool.group.running .tool-icon::before {
+  animation: balatro-chip-turn 0.7s steps(4, jump-none) infinite;
+}
+
+/* The × */
+html[data-style="balatro"][data-theme] .tool-icon::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 5px);
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  background: url("./art/balatro-times.svg") center / contain no-repeat;
+}
+
+/* The mult box, the step's name in it. */
+html[data-style="balatro"][data-theme] .tool.group > .tool-head > .tool-name {
+  --fg: #ffffff;
+  --fg-dim: #ffd0cb;
+  position: relative;
+  isolation: isolate;
+  padding: 1px 9px;
+  color: #ffffff;
+  font-weight: 700;
+  text-shadow: var(--b-ts-1);
+}
+
+/* While it runs the flames say so; the name stays plain to read. */
+html[data-style="balatro"][data-theme] .tool.group > .tool-head > .tool-name.shimmer {
+  background: none;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  animation: none;
+}
+
+html[data-style="balatro"][data-theme] .tool.group > .tool-head > .tool-name::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1px solid transparent;
+  border-image: var(--f-pill-red) var(--n2);
+}
+
+/* Running: both boxes are on fire, as when a hand scores high. */
+html[data-style="balatro"][data-theme] .tool.group.running > .tool-head::before,
+html[data-style="balatro"][data-theme] .tool.group.running > .tool-head > .tool-name::after {
+  content: "";
+  position: absolute;
+  height: 14px;
+  transform-origin: 50% 100%;
+  animation: balatro-flame 0.36s steps(2, jump-none) infinite alternate;
+  pointer-events: none;
+}
+
+html[data-style="balatro"][data-theme] .tool.group.running > .tool-head::before {
+  top: -6px;
+  left: 9px;
+  width: 1.9rem;
+  background: url("./art/balatro-flame-blue-a.svg") center bottom / 100% 100% no-repeat;
+}
+
+html[data-style="balatro"][data-theme] .tool.group.running > .tool-head > .tool-name::after {
+  right: 0;
+  bottom: calc(100% - 1px);
+  left: 0;
+  background: url("./art/balatro-flame-red-a.svg") left bottom / 28px 100% repeat-x;
+  animation-delay: -0.18s;
+}
+
+@keyframes balatro-flame {
+  from {
+    transform: scale(1, 1);
+  }
+
+  to {
+    transform: scale(-1, 1.3);
+  }
+}
+
+html[data-style="balatro"][data-theme] .tool-chip {
+  padding: 1px 7px;
+  border: 1px solid transparent;
+  border-image: var(--f-pill-cell) var(--n2);
+  border-radius: 0;
+  background: none;
+  color: #e3eaec;
+}
+
+/* Which tool: a card to each. The four suits for the four it plays most,
+   a Planet for what searches, a Tarot for the web, a Spectral for what
+   comes from outside, a Joker for another agent; a card's back otherwise. */
+html[data-style="balatro"][data-theme] .tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+html[data-style="balatro"][data-theme] .tool-chip::before,
+html[data-style="balatro"][data-theme] .tool:not(.group) > .tool-head::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 11px;
+  height: 14px;
+  background: url("./art/balatro-mini-back.svg") center / contain no-repeat;
+}
+
+html[data-style="balatro"][data-theme] .tool:not(.group) > .tool-head::before {
+  width: 16.5px;
+  height: 21px;
+}
+
+html[data-style="balatro"][data-theme] .tool-chip:is([data-tool="Bash"], [data-tool="BashOutput"], [data-tool="KillShell"])::before,
+html[data-style="balatro"][data-theme] .tool:not(.group):is([data-tool="Bash"], [data-tool="BashOutput"], [data-tool="KillShell"]) > .tool-head::before {
+  background-image: url("./art/balatro-pip-spade.svg");
+}
+
+html[data-style="balatro"][data-theme] .tool-chip:is([data-tool="Read"], [data-tool="NotebookRead"])::before,
+html[data-style="balatro"][data-theme] .tool:not(.group):is([data-tool="Read"], [data-tool="NotebookRead"]) > .tool-head::before {
+  background-image: url("./art/balatro-pip-heart.svg");
+}
+
+html[data-style="balatro"][data-theme] .tool-chip:is([data-tool="Edit"], [data-tool="MultiEdit"], [data-tool="NotebookEdit"])::before,
+html[data-style="balatro"][data-theme] .tool:not(.group):is([data-tool="Edit"], [data-tool="MultiEdit"], [data-tool="NotebookEdit"]) > .tool-head::before {
+  background-image: url("./art/balatro-pip-diamond.svg");
+}
+
+html[data-style="balatro"][data-theme] .tool-chip[data-tool="Write"]::before,
+html[data-style="balatro"][data-theme] .tool[data-tool="Write"]:not(.group) > .tool-head::before {
+  background-image: url("./art/balatro-pip-club.svg");
+}
+
+html[data-style="balatro"][data-theme] .tool-chip:is([data-tool="Grep"], [data-tool="Glob"], [data-tool="LS"], [data-tool="ToolSearch"])::before,
+html[data-style="balatro"][data-theme] .tool:not(.group):is([data-tool="Grep"], [data-tool="Glob"], [data-tool="LS"], [data-tool="ToolSearch"]) > .tool-head::before {
+  background-image: url("./art/balatro-mini-planet.svg");
+}
+
+html[data-style="balatro"][data-theme] .tool-chip:is([data-tool="WebSearch"], [data-tool="WebFetch"])::before,
+html[data-style="balatro"][data-theme] .tool:not(.group):is([data-tool="WebSearch"], [data-tool="WebFetch"]) > .tool-head::before {
+  background-image: url("./art/balatro-mini-tarot.svg");
+}
+
+html[data-style="balatro"][data-theme] .tool-chip[data-tool^="mcp__"]::before,
+html[data-style="balatro"][data-theme] .tool[data-tool^="mcp__"]:not(.group) > .tool-head::before {
+  background-image: url("./art/balatro-mini-spectral.svg");
+}
+
+html[data-style="balatro"][data-theme] .tool-chip:is([data-tool="Agent"], [data-tool="Task"])::before,
+html[data-style="balatro"][data-theme] .tool:not(.group):is([data-tool="Agent"], [data-tool="Task"]) > .tool-head::before {
+  background-image: url("./art/balatro-mini-joker.svg");
+}
+
+/* Done: a tick, that pops. Failed: a card debuffed. */
+html[data-style="balatro"][data-theme] .tool-state > .tool-done {
+  display: none;
+}
+
+html[data-style="balatro"][data-theme] .tool-state:has(> .tool-done)::before {
+  content: "";
+  width: 18px;
+  height: 16px;
+  background: url("./art/balatro-check.svg") center / contain no-repeat;
+  animation: balatro-pop 0.4s steps(4) 1;
+}
+
+@keyframes balatro-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.6);
+  }
+
+  60% {
+    transform: translateY(-3px) scale(1.15);
+  }
+}
+
+html[data-style="balatro"][data-theme] :is(.tool.group .tool-state.bad, .tool.failed .tool-state) {
+  color: #ff8d84;
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] :is(.tool.group .tool-state.bad, .tool.failed .tool-state) > svg:not(.tool-chevron) {
+  display: none;
+}
+
+html[data-style="balatro"][data-theme] :is(.tool.group .tool-state.bad, .tool.failed .tool-state)::before {
+  content: "";
+  width: 14px;
+  height: 17px;
+  background: url("./art/balatro-debuff.svg") center / contain no-repeat;
+  animation: balatro-crack 0.5s steps(5) 1;
+}
+
+@keyframes balatro-crack {
+  0% {
+    transform: translateX(-3px) rotate(-10deg);
+  }
+
+  25% {
+    transform: translateX(3px) rotate(8deg);
+  }
+
+  50% {
+    transform: translateX(-2px) rotate(-6deg);
+  }
+
+  75% {
+    transform: translateX(2px) rotate(4deg);
+  }
+}
+
+html[data-style="balatro"][data-theme] .tool-chevron {
+  color: #ffffff;
+}
+
+/* Inside an opened one: each call a cell. */
+html[data-style="balatro"][data-theme] .group-steps {
+  border-top: 2px solid var(--b-cell);
+}
+
+html[data-style="balatro"][data-theme] .group-steps .tool-name {
+  color: #6cc0ff;
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] .group-steps .tool-icon {
+  margin-right: 0;
+}
+
+html[data-style="balatro"][data-theme] .group-steps .tool-icon::after {
+  display: none;
+}
+
+html[data-style="balatro"][data-theme] :is(.tool-input, .tool-output) {
+  border-top: 2px solid var(--b-panel);
+  color: #d5dee1;
+}
+
+/* Thinking: the Joker, rocking. */
+html[data-style="balatro"][data-theme] .thinking {
+  align-items: center;
+}
+
+html[data-style="balatro"][data-theme] .thinking > svg {
+  display: none;
+}
+
+html[data-style="balatro"][data-theme] .thinking::before {
+  content: "";
+  flex: 0 0 auto;
+  align-self: flex-start;
+  width: 17.5px;
+  height: 23.5px;
+  background: url("./art/balatro-joker-s.svg") center / contain no-repeat;
+  transform-origin: 50% 85%;
+}
+
+html[data-style="balatro"][data-theme] .thinking.live::before {
+  animation: balatro-rock 1s steps(4, jump-none) infinite alternate;
+}
+
+@keyframes balatro-rock {
+  from {
+    transform: rotate(-9deg);
+  }
+
+  to {
+    transform: rotate(9deg);
+  }
+}
+
+/* Working: three cards, scoring one after the other. */
+html[data-style="balatro"][data-theme] .working-dots {
+  gap: 2px;
+  height: 18px;
+  padding-top: 5px;
+}
+
+html[data-style="balatro"][data-theme] .working-dots i {
+  width: 10.5px;
+  height: 13.5px;
+  border-radius: 0;
+  background: url("./art/balatro-card.svg") center / contain no-repeat;
+  animation: balatro-score 1.1s steps(3, jump-none) infinite;
+}
+
+html[data-style="balatro"][data-theme] .working-dots i:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+html[data-style="balatro"][data-theme] .working-dots i:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+html[data-style="balatro"][data-theme] .working.starting .working-dots i {
+  background: url("./art/balatro-card.svg") center / contain no-repeat;
+  opacity: 0.6;
+}
+
+@keyframes balatro-score {
+  0%,
+  55%,
+  100% {
+    transform: translateY(0);
+  }
+
+  25% {
+    transform: translateY(-5px) rotate(-6deg);
+  }
+}
+
+html[data-style="balatro"][data-theme] .working[role="status"] {
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+/* A turn's end: the round's score — the hour in chips' blue, the model in
+   mult's red, what the context holds between them. */
+html[data-style="balatro"][data-theme] .turn-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 2px 0 8px;
+  padding: 2px 4px 2px 6px;
+  border: 2px solid transparent;
+  border-image: var(--f-panel) var(--n3d2);
+  color: #ffffff;
+  font-family: var(--ui);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* How full the context is: the score bar, ten squares of it, filling from
+   chips' blue towards mult's red. */
+html[data-style="balatro"][data-theme] .turn-line[data-usage] {
+  flex-wrap: wrap;
+  justify-content: center;
+  row-gap: 4px;
+  padding-bottom: 4px;
+}
+
+html[data-style="balatro"][data-theme] .turn-line[data-usage]::after {
+  content: "";
+  flex: 0 0 100%;
+  height: 8px;
+  background:
+    repeating-linear-gradient(to right, transparent 0 calc(10% - 2px), var(--b-panel) calc(10% - 2px) 10%),
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--b-red) calc(var(--usage) * 100%), var(--b-blue)) calc(var(--usage) * 100%),
+      var(--b-cell) 0
+    );
+}
+
+html[data-style="balatro"][data-theme] .turn-line::before {
+  content: "";
+  width: 13px;
+  height: 13px;
+  background: url("./art/balatro-chip.svg") center / contain no-repeat;
+}
+
+html[data-style="balatro"][data-theme] .turn-line :is(.clock, .turn-model) {
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-image: var(--f-pill-blue) var(--n2);
+  color: #ffffff;
+  text-shadow: var(--b-ts-1);
+}
+
+html[data-style="balatro"][data-theme] .turn-line .turn-model {
+  border-image-source: var(--f-pill-red);
+}
+
+html[data-style="balatro"][data-theme] :is(.notice, .show-earlier) {
+  font-family: var(--ui);
+}
+
+/* Back to the newest: a chip. */
+html[data-style="balatro"][data-theme] .to-bottom {
+  width: 39px;
+  height: 39px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/balatro-chip-blue.svg") center / contain no-repeat;
+  box-shadow: none;
+  color: #ffffff;
+  filter: drop-shadow(0 3px 0 rgb(0 0 0 / 35%));
+}
+
+html[data-style="balatro"][data-theme] .to-bottom:hover {
+  color: #ffffff;
+  translate: 0 -2px;
+}
+
+html[data-style="balatro"][data-theme] .to-bottom svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 3.2;
+}
+
+/* ── The dock under the hand: where you write ────────────────────────── */
+
+html[data-style="balatro"][data-theme] :is(.composer-box, .tasks-composer-box) {
+  border: 2px solid transparent;
+  border-image: var(--f-dock) var(--n3d2);
+  border-radius: 8px;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+html[data-style="balatro"][data-theme] .composer-box:has(.composer-input:not(:placeholder-shown)) {
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-style="balatro"][data-theme] .composer-box:focus-within {
+  border-color: transparent;
+}
+
+html[data-style="balatro"][data-theme] .composer-input::placeholder {
+  color: #aab6ba;
+}
+
+html[data-style="balatro"][data-theme] :is(.composer-btn, .tasks-composer-btn) {
+  border-radius: 4px;
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] :is(.composer-btn, .tasks-composer-btn):hover:not(:disabled) {
+  background: var(--b-cell);
+}
+
+/* + : the deck. */
+html[data-style="balatro"][data-theme] .composer-btn.attach {
+  width: 1.8rem;
+  margin: 0 5px 2px 1px;
+  border: 1px solid transparent;
+  border-image: var(--f-deck) var(--n2d1);
+  background: none;
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .composer-btn.attach:is(:hover, .open) {
+  background: none;
+  translate: 0 -2px;
+}
+
+html[data-style="balatro"][data-theme] .composer-btn.attach svg {
+  stroke-width: 3;
+}
+
+html[data-style="balatro"][data-theme] .composer-btn.effort-btn {
+  border: 1px solid transparent;
+  border-image: var(--f-cell) var(--n3);
+  border-radius: 6px;
+}
+
+html[data-style="balatro"][data-theme] .composer-btn.effort-btn:is(.set, .open) {
+  background: none;
+  color: var(--b-orange);
+}
+
+/* Send is Play Hand; stop is Discard. Each goes down when pressed. */
+html[data-style="balatro"][data-theme] :is(.composer-btn.send, .composer-btn.stop, .tasks-composer-btn.send) {
+  width: 3rem;
+  margin-bottom: 3px;
+  border: 1px solid transparent;
+  border-image: var(--f-blue) var(--n3d2);
+  border-radius: 6px;
+  background: none;
+  color: #ffffff;
+  transition: none;
+}
+
+html[data-style="balatro"][data-theme] .composer-btn.stop {
+  border-image-source: var(--f-red);
+}
+
+html[data-style="balatro"][data-theme] :is(.composer-btn.send, .composer-btn.stop, .tasks-composer-btn.send) svg {
+  filter: drop-shadow(0 2px 0 rgb(0 0 0 / 30%));
+}
+
+html[data-style="balatro"][data-theme] :is(.composer-btn.send, .tasks-composer-btn.send):hover:not(:disabled),
+html[data-style="balatro"][data-theme] .composer-btn.stop:hover {
+  background: none;
+  color: #ffffff;
+  filter: brightness(1.1);
+}
+
+html[data-style="balatro"][data-theme] :is(.composer-btn.send, .tasks-composer-btn.send):active:not(:disabled) {
+  translate: 0 4px;
+  border-image: var(--f-blue-down) var(--n3);
+}
+
+html[data-style="balatro"][data-theme] .composer-btn.stop:active {
+  translate: 0 4px;
+  border-image: var(--f-red-down) var(--n3);
+}
+
+html[data-style="balatro"][data-theme] :is(.composer-btn.send, .tasks-composer-btn.send):disabled {
+  border-image-source: var(--f-grey);
+  background: none;
+  color: #8d8d8d;
+}
+
+html[data-style="balatro"][data-theme] .queue-panel {
+  border: 2px solid transparent;
+  border-image: var(--f-panel) var(--n3d2);
+  border-radius: 8px;
+  background: none;
+}
+
+html[data-style="balatro"][data-theme] .queue-panel.parked {
+  border-image-source: var(--f-bad);
+}
+
+html[data-style="balatro"][data-theme] .queue-steer {
+  padding: 1px 9px;
+  border: 1px solid transparent;
+  border-image: var(--f-pill-blue) var(--n2);
+  border-radius: 0;
+  color: #ffffff;
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+/* ── What floats: a slate panel, a pale line round it ────────────────── */
+
+html[data-style="balatro"][data-theme] :is(.modal, .session-menu, .backend-menu, .command-menu, .effort-pop, .plus-pop, .pane-menu, .search-panel, .unsent-menu, .which-key, .share-dialog) {
+  border: 2px solid transparent;
+  border-image: var(--f-dialog) var(--n3d2);
+  border-radius: 8px;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* It comes up with a wobble, as the game's do. */
+html[data-style="balatro"][data-theme] :is(.modal, .session-menu, .backend-menu, .effort-pop, .plus-pop, .pane-menu, .search-panel) {
+  animation: balatro-up 0.28s steps(6) 1;
+}
+
+@keyframes balatro-up {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) rotate(-1.2deg) scale(0.97);
+  }
+
+  50% {
+    transform: translateY(-2px) rotate(0.8deg) scale(1.01);
+  }
+
+  80% {
+    transform: rotate(-0.3deg);
+  }
+}
+
+html[data-style="balatro"][data-theme] .modal-scrim {
+  background: rgb(10 16 17 / 62%);
+}
+
+html[data-style="balatro"][data-theme] .modal-head {
+  border-bottom: 2px solid var(--b-panel);
+  font-weight: 700;
+  text-shadow: var(--b-ts-1);
+}
+
+html[data-style="balatro"][data-theme] :is(.session-menu button, .backend-menu button, .plus-pop button, .pane-menu button, .command-menu li, .search-row) {
+  border-radius: 4px;
+}
+
+html[data-style="balatro"][data-theme] :is(.session-menu button:hover:not(:disabled), .backend-menu button:hover, .plus-pop button:hover, .pane-menu button:hover, .command-menu li.on, .search-row:hover) {
+  background: var(--b-row);
+}
+
+html[data-style="balatro"][data-theme] .command-menu .name {
+  color: var(--b-orange);
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] :is(.session-menu-sep, .session-menu .menu-sep) {
+  height: 2px;
+  background: var(--b-panel);
+}
+
+html[data-style="balatro"][data-theme] .search-field {
+  border-radius: 6px;
+  background: var(--b-panel);
+}
+
+html[data-style="balatro"][data-theme] .search-row b {
+  color: var(--b-orange);
+}
+
+@media (min-width: 641px) {
+  html[data-style="balatro"][data-theme] .search-sheet {
+    background: rgb(10 16 17 / 58%);
+  }
+}
+
+@media (max-width: 640px) {
+  html[data-style="balatro"][data-theme] .search-panel {
+    border: 0;
+    border-image: none;
+    border-radius: 0;
+    background: var(--b-ink);
+    animation: none;
+  }
+}
+
+/* Settings: a row to each, a line of the panel's dark between. */
+html[data-style="balatro"][data-theme] .settings-row {
+  border-bottom: 2px solid color-mix(in srgb, var(--b-panel) 70%, transparent);
+}
+
+html[data-style="balatro"][data-theme] .settings-row:last-child {
+  border-bottom: 0;
+}
+
+html[data-style="balatro"][data-theme] .settings-reset {
+  color: var(--b-orange);
+}
+
+/* The model's strength: a score bar, a chip to slide along it. */
+html[data-style="balatro"][data-theme] .slider::before {
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 3px;
+  background: var(--b-panel);
+  box-shadow: inset 0 0 0 2px var(--b-row);
+}
+
+html[data-style="balatro"][data-theme] .slider::after {
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 3px;
+  background: var(--b-blue-fill);
+}
+
+html[data-style="balatro"][data-theme] .slider-ticks span {
+  width: 4px;
+  height: 4px;
+  border-radius: 0;
+  background: #ffffff;
+  opacity: 0.55;
+}
+
+html[data-style="balatro"][data-theme] .slider-thumb {
+  border-radius: 0;
+  background: url("./art/balatro-chip.svg") center / contain no-repeat;
+  box-shadow: none;
+  filter: drop-shadow(0 2px 0 rgb(0 0 0 / 40%));
+}
+
+html[data-style="balatro"][data-theme] .slider.armed .slider-thumb {
+  box-shadow: none;
+}
+
+html[data-style="balatro"][data-theme] .slider input::-webkit-slider-thumb {
+  opacity: 0;
+}
+
+html[data-style="balatro"][data-theme] .slider input::-moz-range-thumb {
+  opacity: 0;
+}
+
+html[data-style="balatro"][data-theme] .effort-stops button.on {
+  color: var(--b-orange);
+}
+
+html[data-style="balatro"][data-theme] input[type="range"] {
+  accent-color: var(--b-blue);
+}
+
+/* A field to write in: a dark well. */
+html[data-style="balatro"][data-theme] :is(.emp-settings, .emp-modal, .emp-field, .project-form, .task-schedule, .sleep-setting, .device-add, .boss-add, .boss-line, .session-menu-send, .session-menu-new-project, .emp-approval-custom) :is(input:not([type="checkbox"]):not([type="range"]), textarea, select),
+html[data-style="balatro"][data-theme] .device-name-input {
+  border: 2px solid var(--b-row);
+  border-radius: 6px;
+  background: var(--b-panel);
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] :is(.emp-settings, .emp-modal, .emp-field, .project-form, .task-schedule, .sleep-setting, .device-add, .boss-add, .boss-line, .session-menu-send, .session-menu-new-project, .emp-approval-custom) :is(input, textarea, select):focus {
+  border-color: var(--b-orange);
+  outline: 0;
+}
+
+/* A tick box: a blue cell when it is on. */
+html[data-style="balatro"][data-theme] input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 2px solid var(--b-row);
+  border-radius: 4px;
+  background: var(--b-panel);
+  vertical-align: -3px;
+  cursor: pointer;
+}
+
+html[data-style="balatro"][data-theme] input[type="checkbox"]:checked {
+  border-color: var(--b-blue);
+  background: var(--b-blue-fill) url("./art/balatro-check.svg") center / 12px auto no-repeat;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────
+   Orange as Options and Back are; blue for the one that plays; red for the
+   one that discards. Raised on a shadow, and down into it when pressed. */
+
+html[data-style="balatro"][data-theme] :is(.text-btn, .login-btn, .replies-send, .bell-acts .bell-btn, .boss-button, .sleep-now, .share-go, .emp-pill, .keep-btn) {
+  border: 2px solid transparent;
+  border-image: var(--f-orange) var(--n3d2);
+  border-radius: 6px;
+  background: none;
+  color: #ffffff;
+  font-family: var(--ui);
+  font-weight: 700;
+  text-shadow: var(--b-ts-1);
+  transition: none;
+}
+
+html[data-style="balatro"][data-theme] :is(.text-btn, .login-btn, .replies-send, .bell-acts .bell-btn, .boss-button, .sleep-now, .share-go, .emp-pill, .keep-btn):hover:not(:disabled) {
+  background: none;
+  color: #ffffff;
+  filter: brightness(1.08);
+}
+
+html[data-style="balatro"][data-theme] :is(.text-btn, .login-btn, .replies-send, .bell-acts .bell-btn, .boss-button, .sleep-now, .share-go, .emp-pill, .keep-btn):active:not(:disabled) {
+  translate: 0 4px;
+  border-image: var(--f-orange-down) var(--n3);
+}
+
+html[data-style="balatro"][data-theme] .emp-new {
+  border: 2px solid transparent;
+  border-image: var(--f-blue) var(--n3d2);
+  border-radius: 6px;
+  background: none;
+  color: #ffffff;
+  font-family: var(--ui);
+  font-weight: 700;
+  text-shadow: var(--b-ts-1);
+}
+
+html[data-style="balatro"][data-theme] :is(.text-btn.primary, .project-form .text-btn.primary, .login-btn, .replies-send, .bell-acts .bell-btn.pri, .boss-button.strong, .share-go, .emp-pill.strong) {
+  border-image-source: var(--f-blue);
+  background: none;
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] :is(.text-btn.primary, .login-btn, .replies-send, .bell-acts .bell-btn.pri, .boss-button.strong, .share-go, .emp-pill.strong):active:not(:disabled) {
+  border-image: var(--f-blue-down) var(--n3);
+}
+
+html[data-style="balatro"][data-theme] .text-btn.danger {
+  border-image-source: var(--f-red);
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .text-btn.danger:hover {
+  background: none;
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .text-btn.danger:active {
+  border-image: var(--f-red-down) var(--n3);
+}
+
+html[data-style="balatro"][data-theme] :is(.text-btn, .login-btn, .replies-send, .bell-acts .bell-btn, .boss-button, .sleep-now, .share-go):disabled {
+  border-image-source: var(--f-grey);
+  color: #9a9a9a;
+  opacity: 1;
+  text-shadow: none;
+}
+
+html[data-style="balatro"][data-theme] .text-btn kbd {
+  color: inherit;
+}
+
+/* A small one in a header or a row: a cell. */
+html[data-style="balatro"][data-theme] .chip.button:not(.head-btn) {
+  border-radius: 4px;
+  background: var(--b-cell);
+  color: #ffffff;
+}
+
+/* A choice of several: tabs. The one chosen is red. */
+html[data-style="balatro"][data-theme] .segmented {
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid transparent;
+  border-image: var(--f-well) var(--n3);
+  border-radius: 6px;
+  background: none;
+}
+
+html[data-style="balatro"][data-theme] .segmented button {
+  border-radius: 0;
+  color: #c3cfd2;
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] .segmented button.on {
+  border: 1px solid transparent;
+  border-image: var(--f-red-down) var(--n3);
+  background: none;
+  box-shadow: none;
+  color: #ffffff;
+  text-shadow: var(--b-ts-1);
+}
+
+html[data-style="balatro"][data-theme] :is(.bell-tabs button, .sleep-tabs button, .emp-tab, .proj-tab, .task-day, .emp-chip) {
+  border: 1px solid transparent;
+  border-image: var(--f-cell) var(--n3);
+  border-radius: 6px;
+  background: none;
+  color: #dfe7ea;
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] :is(.bell-tabs button, .sleep-tabs button, .emp-tab, .proj-tab, .task-day, .emp-chip):is(.on, [aria-selected="true"]) {
+  border-image-source: var(--f-red-down);
+  background: none;
+  color: #ffffff;
+  text-shadow: var(--b-ts-1);
+}
+
+/* ── Asked something ─────────────────────────────────────────────────────
+   Two big buttons, blue then red; anything further is a card to pick. */
+
+html[data-style="balatro"][data-theme] .question {
+  margin-bottom: 4px;
+  border: 2px solid transparent;
+  border-image: var(--f-dialog) var(--n3d2);
+  border-radius: 8px;
+  background: none;
+}
+
+html[data-style="balatro"][data-theme] .options {
+  gap: 10px;
+  padding-bottom: 4px;
+}
+
+html[data-style="balatro"][data-theme] .option {
+  padding: 6px 16px;
+  border: 2px solid transparent;
+  border-image: var(--f-blue) var(--n3d2);
+  border-radius: 6px;
+  background: none;
+  color: #ffffff;
+  font-family: var(--ui);
+  font-weight: 700;
+  text-shadow: var(--b-ts-1);
+}
+
+html[data-style="balatro"][data-theme] .option:nth-child(2) {
+  border-image-source: var(--f-red);
+}
+
+html[data-style="balatro"][data-theme] .options .option:nth-child(n + 3) {
+  border-image: var(--f-card-3) var(--n3d1);
+  color: #263336;
+  text-shadow: none;
+}
+
+html[data-style="balatro"][data-theme] .option:hover {
+  background: none;
+  color: #ffffff;
+  filter: brightness(1.08);
+}
+
+html[data-style="balatro"][data-theme] .options .option:nth-child(n + 3):hover {
+  color: #263336;
+  filter: none;
+  translate: 0 -3px;
+}
+
+html[data-style="balatro"][data-theme] .option:active {
+  translate: 0 4px;
+  border-image: var(--f-blue-down) var(--n3);
+}
+
+html[data-style="balatro"][data-theme] .option:nth-child(2):active {
+  border-image: var(--f-red-down) var(--n3);
+}
+
+/* Replies to pick from: a hand of cards; the one picked is raised. */
+html[data-style="balatro"][data-theme] .replies {
+  border: 2px solid transparent;
+  border-image: var(--f-dock) var(--n3d2);
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+}
+
+html[data-style="balatro"][data-theme] .reply {
+  border: 2px solid transparent;
+  border-image: var(--f-card-3) var(--n3d1);
+  border-radius: 8px;
+  background: none;
+  transition: translate 0.08s steps(2);
+}
+
+html[data-style="balatro"][data-theme] .reply:hover {
+  background: none;
+  translate: 0 -2px;
+}
+
+html[data-style="balatro"][data-theme] .reply.on {
+  background: none;
+  translate: 0 -4px;
+  outline: 2px solid var(--b-orange);
+  outline-offset: -2px;
+}
+
+/* ── Pages and their cards ───────────────────────────────────────────── */
+
+html[data-style="balatro"][data-theme] :is(.task-card, .task-template, .bell-card, .work-card, .kpi-card, .emp-stat, .emp-approval, .emp-attention, .emp-report-row, .dsess-card, .switcher-card, .sleep-bar, .share-bar, .memory-row, .boss-line) {
+  border: 2px solid transparent;
+  border-image: var(--f-panel) var(--n3d2);
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+}
+
+html[data-style="balatro"][data-theme] :is(.task-card, .bell-card, .work-card, .kpi-card, .emp-report-row, .dsess-card):hover {
+  background: none;
+  filter: brightness(1.12);
+}
+
+html[data-style="balatro"][data-theme] :is(.tasks-head h1, .proj-head h1, .bell-title, .emp-title-text, .tasks-section, .emp-section, .sleep-section) {
+  font-weight: 700;
+  text-shadow: var(--b-ts-1);
+}
+
+/* Tasks: blinds to beat — small, big, then the boss, and round again. */
+html[data-style="balatro"][data-theme] .tasks-section {
+  color: var(--foreground);
+}
+
+html[data-style="balatro"][data-theme] .task-card {
+  position: relative;
+  margin-bottom: 4px;
+  padding: 14px 16px 14px 72px;
+  min-height: 72px;
+}
+
+html[data-style="balatro"][data-theme] .task-card::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 44px;
+  height: 44px;
+  background: url("./art/balatro-blind-small.svg") center / contain no-repeat;
+}
+
+html[data-style="balatro"][data-theme] .task-card:nth-child(3n + 2)::before {
+  background-image: url("./art/balatro-blind-big.svg");
+}
+
+html[data-style="balatro"][data-theme] .task-card:nth-child(3n + 3)::before {
+  background-image: url("./art/balatro-blind-boss.svg");
+}
+
+html[data-style="balatro"][data-theme] .task-card.paused::before {
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+
+html[data-style="balatro"][data-theme] .task-kind {
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] .task-when {
+  color: var(--b-gold);
+  font-family: var(--ui);
+}
+
+html[data-style="balatro"][data-theme] .task-rule {
+  height: 2px;
+}
+
+/* A template: a voucher not yet bought — the panel, its line dashed. */
+html[data-style="balatro"][data-theme] .task-template {
+  border-image: var(--f-cell) var(--n3);
+  outline: 2px dashed var(--b-row);
+  outline-offset: -6px;
+}
+
+html[data-style="balatro"][data-theme] .task-template:hover {
+  background: none;
+  filter: brightness(1.12);
+}
+
+html[data-style="balatro"][data-theme] .tasks-round {
+  border-radius: 6px;
+  color: var(--foreground);
+}
+
+html[data-style="balatro"][data-theme] .tasks-composer-error {
+  border-radius: 6px;
+  color: #ff8d84;
+}
+
+/* Notices: tags and vouchers. */
+html[data-style="balatro"][data-theme] .bell-card {
+  margin-bottom: 12px;
+}
+
+html[data-style="balatro"][data-theme] .bell-band {
+  color: #ffffff;
+  font-family: var(--ui);
+}
+
+html[data-style="balatro"][data-theme] .bell-band::before {
+  width: 9px;
+  height: 9px;
+  border-radius: 0;
+  background: url("./art/balatro-chip-grey.svg") center / contain no-repeat;
+}
+
+html[data-style="balatro"][data-theme] .bell-band.urgent::before {
+  background-image: url("./art/balatro-chip-red.svg");
+}
+
+html[data-style="balatro"][data-theme] .bell-band.important::before {
+  background-image: url("./art/balatro-chip-gold.svg");
+}
+
+html[data-style="balatro"][data-theme] .bell-p {
+  border-radius: 3px;
+  background: var(--b-cell);
+  color: #ffffff;
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] .bell-p.urgent {
+  background: var(--b-red-fill);
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .bell-p.important {
+  background: var(--b-orange-fill);
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .bell-acts {
+  gap: 8px;
+  padding-bottom: 4px;
+}
+
+html[data-style="balatro"][data-theme] .bell-acts .bell-btn {
+  padding: 3px 12px;
+}
+
+html[data-style="balatro"][data-theme] .bell-head .icon-btn {
+  border-radius: 4px;
+}
+
+html[data-style="balatro"][data-theme] .bell-head .icon-btn:is(.on, :hover) {
+  background: var(--b-row);
+}
+
+/* Nothing waiting: a pack, not yet opened. */
+html[data-style="balatro"][data-theme] .bell-empty svg {
+  display: none;
+}
+
+html[data-style="balatro"][data-theme] .bell-empty::before {
+  content: "";
+  width: 42px;
+  height: 62px;
+  background: url("./art/balatro-pack.svg") center / contain no-repeat;
+  filter: drop-shadow(0 4px 0 rgb(0 0 0 / 30%));
+}
+
+html[data-style="balatro"][data-theme] .todo-add {
+  border-radius: 6px;
+  background: var(--b-panel);
+}
+
+html[data-style="balatro"][data-theme] .bell-send {
+  border-radius: 4px;
+  background: var(--b-blue-fill);
+  color: #ffffff;
+}
+
+/* Employees: the troupe — a Joker to each. */
+html[data-style="balatro"][data-theme] .emp-row {
+  position: relative;
+  margin-bottom: 8px;
+  padding-left: 46px;
+  border: 2px solid transparent;
+  border-image: var(--f-panel) var(--n3d2);
+  border-radius: 8px;
+  background: none;
+}
+
+html[data-style="balatro"][data-theme] .emp-row::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 9px;
+  width: 26px;
+  height: 35px;
+  margin-top: -17px;
+  background: url("./art/balatro-joker-s.svg") center / contain no-repeat;
+  rotate: -4deg;
+}
+
+html[data-style="balatro"][data-theme] .emp-row:nth-child(3n + 2)::before {
+  background-image: url("./art/balatro-joker-s-2.svg");
+  rotate: 3deg;
+}
+
+html[data-style="balatro"][data-theme] .emp-row:nth-child(3n + 3)::before {
+  background-image: url("./art/balatro-joker-s-3.svg");
+}
+
+html[data-style="balatro"][data-theme] .emp-row:is(:hover, .active) {
+  background: none;
+  filter: brightness(1.15);
+}
+
+html[data-style="balatro"][data-theme] .emp-row.active {
+  border-image-source: var(--f-dock);
+}
+
+html[data-style="balatro"][data-theme] .emp-stat-value {
+  color: var(--b-gold);
+  font-family: var(--ui);
+  font-weight: 800;
+  text-shadow: var(--b-ts);
+}
+
+/* What it has spent: money, in the money box. */
+html[data-style="balatro"][data-theme] .emp-spend {
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-image: var(--f-pill-dark) var(--n2);
+  color: var(--b-gold);
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] .emp-spend svg {
+  color: var(--b-gold);
+}
+
+html[data-style="balatro"][data-theme] .kpi-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--b-cell);
+}
+
+html[data-style="balatro"][data-theme] .kpi-fill {
+  border-radius: 3px;
+  background: var(--b-blue-fill);
+}
+
+html[data-style="balatro"][data-theme] .kpi-fill.over {
+  background: var(--b-red-fill);
+}
+
+html[data-style="balatro"][data-theme] :is(.kpi-status, .kpi-prio, .emp-report-kind, .memory-type) {
+  border-radius: 3px;
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] :is(.work-card.urgent, .emp-attention.urgent) {
+  border-image-source: var(--f-bad);
+}
+
+/* A project: its tabs, its sessions a row each. */
+html[data-style="balatro"][data-theme] .proj-session {
+  margin-bottom: 6px;
+  border: 2px solid transparent;
+  border-image: var(--f-row) var(--n3d2);
+  border-radius: 6px;
+  background: none;
+}
+
+html[data-style="balatro"][data-theme] .proj-session:is(:hover, .active, .menu-open) {
+  background: none;
+  filter: brightness(1.12);
+}
+
+html[data-style="balatro"][data-theme] :is(.proj-round, .emp-back) {
+  border-radius: 6px;
+  color: var(--foreground);
+}
+
+/* Sharing: what is picked stays bright; the bar under it is the dock. */
+html[data-style="balatro"][data-theme] .share-bar {
+  border-image-source: var(--f-dock);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-style="balatro"][data-theme] .share-action-icon {
+  border-radius: 6px;
+  background: var(--b-panel);
+}
+
+html[data-style="balatro"][data-theme] .share-preview {
+  border: 2px solid var(--b-pale);
+  border-radius: 6px;
+}
+
+/* A device's session, a phone's switcher: the same panel. */
+html[data-style="balatro"][data-theme] .switcher {
+  background: rgb(10 16 17 / 72%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-style="balatro"][data-theme] .switcher-card {
+  border-image: var(--f-dialog) var(--n3d2);
+}
+
+html[data-style="balatro"][data-theme] .switcher-crumb {
+  border-radius: 0;
+}
+
+html[data-style="balatro"][data-theme] .switcher-hint {
+  color: #ffffff;
+}
+
+/* ── Nothing open: the deck, face down ───────────────────────────────── */
+
+html[data-style="balatro"][data-theme] .placeholder {
+  color: var(--foreground);
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] .placeholder::before {
+  content: "";
+  width: 150px;
+  height: 198px;
+  margin-bottom: 0.8rem;
+  background: url("./art/balatro-deck.svg") center / contain no-repeat;
+  filter: drop-shadow(0 6px 0 rgb(0 0 0 / 22%));
+  animation: balatro-breathe 3.2s steps(4, jump-none) infinite alternate;
+}
+
+@keyframes balatro-breathe {
+  from {
+    transform: rotate(-1.5deg);
+  }
+
+  to {
+    transform: rotate(1.5deg) translateY(-4px);
+  }
+}
+
+html[data-style="balatro"][data-theme] .backend-choice {
+  gap: 12px;
+}
+
+/* Loading: a shuffle — two backs, changing places. */
+html[data-style="balatro"][data-theme] .loading {
+  color: var(--foreground);
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] .loading::before,
+html[data-style="balatro"][data-theme] .loading::after {
+  content: "";
+  order: -1;
+  width: 71px;
+  height: 95px;
+  background: url("./art/balatro-back.svg") center / contain no-repeat;
+  animation: balatro-shuffle 0.9s steps(6, jump-none) infinite alternate;
+}
+
+html[data-style="balatro"][data-theme] .loading::after {
+  margin-top: -107px;
+  animation-name: balatro-shuffle-2;
+}
+
+@keyframes balatro-shuffle {
+  from {
+    transform: translateX(-40px) rotate(-8deg);
+  }
+
+  to {
+    transform: translateX(40px) rotate(8deg);
+  }
+}
+
+@keyframes balatro-shuffle-2 {
+  from {
+    transform: translateX(40px) rotate(8deg);
+  }
+
+  to {
+    transform: translateX(-40px) rotate(-8deg);
+  }
+}
+
+/* Signing in: the title screen — the paint, and a Joker over the name. */
+html[data-style="balatro"][data-theme] .login {
+  position: relative;
+  isolation: isolate;
+  background: var(--background) var(--swirl-a) center / cover no-repeat;
+}
+
+html[data-style="balatro"][data-theme] .login-box {
+  position: relative;
+  margin-top: 150px;
+  border: 2px solid transparent;
+  border-image: var(--f-dialog) var(--n3d2);
+  border-radius: 8px;
+  background: none;
+}
+
+html[data-style="balatro"][data-theme] .login-box::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% - 14px);
+  left: 50%;
+  width: 142px;
+  height: 190px;
+  margin-left: -71px;
+  background: url("./art/balatro-joker.svg") center / contain no-repeat;
+  filter: drop-shadow(0 5px 0 rgb(0 0 0 / 28%));
+  transform-origin: 50% 90%;
+  animation: balatro-rock 2.4s steps(6, jump-none) infinite alternate;
+}
+
+html[data-style="balatro"][data-theme] .login-title {
+  padding-top: 8px;
+  font-size: 2.25rem;
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-shadow: 0.035em 0 0 currentcolor, 1px 3px 0 rgb(0 0 0 / 55%), calc(1px + 0.035em) 3px 0 rgb(0 0 0 / 55%);
+  text-transform: uppercase;
+}
+
+html[data-style="balatro"][data-theme] .login-input {
+  border: 2px solid var(--b-row);
+  border-radius: 6px;
+  background: var(--b-panel);
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .login-input:focus {
+  border-color: var(--b-orange);
+}
+
+/* ── Small things ────────────────────────────────────────────────────── */
+
+/* Something to tell you: money, coming in. */
+html[data-style="balatro"][data-theme] .app-oops {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid transparent;
+  border-image: var(--f-dock) var(--n3d2);
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+  color: var(--b-gold);
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+html[data-style="balatro"][data-theme] .app-oops::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 14px;
+  height: 16px;
+  background: url("./art/balatro-dollar.svg") center / contain no-repeat;
+}
+
+html[data-style="balatro"][data-theme] .head-tip {
+  border: 2px solid var(--b-pale);
+  border-radius: 4px;
+  background: var(--b-ink);
+  color: #ffffff;
+}
+
+html[data-style="balatro"][data-theme] .tag {
+  border-radius: 3px;
+  background: var(--b-panel);
+  color: #ffffff;
+  font-family: var(--ui);
+}
+
+html[data-style="balatro"][data-theme] .focus-mark + * {
+  border-radius: 8px;
+}
+
+html[data-style="balatro"][data-theme] .spin {
+  animation-timing-function: steps(8);
+}
+
+html[data-style="balatro"][data-theme] :is(.tool, .thinking, .working[role="status"]) {
+  animation-timing-function: steps(3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-style="balatro"][data-theme] :is(.main, .login)::before,
+  html[data-style="balatro"][data-theme] :is(.main, .login)::after,
+  html[data-style="balatro"][data-theme] .sidebar .session.active::before,
+  html[data-style="balatro"][data-theme] .sidebar .session:has(.dot.running)::after,
+  html[data-style="balatro"][data-theme] .sidebar .session-unread,
+  html[data-style="balatro"][data-theme] .bubble.assistant.live::after,
+  html[data-style="balatro"][data-theme] .tool.group.running .tool-icon::before,
+  html[data-style="balatro"][data-theme] .tool.group.running > .tool-head::before,
+  html[data-style="balatro"][data-theme] .tool.group.running > .tool-head > .tool-name::after,
+  html[data-style="balatro"][data-theme] .tool-state:has(> .tool-done)::before,
+  html[data-style="balatro"][data-theme] :is(.tool.group .tool-state.bad, .tool.failed .tool-state)::before,
+  html[data-style="balatro"][data-theme] .thinking.live::before,
+  html[data-style="balatro"][data-theme] .working-dots i,
+  html[data-style="balatro"][data-theme] .placeholder::before,
+  html[data-style="balatro"][data-theme] .loading::before,
+  html[data-style="balatro"][data-theme] .loading::after,
+  html[data-style="balatro"][data-theme] .login-box::before,
+  html[data-style="balatro"][data-theme] :is(.modal, .session-menu, .backend-menu, .effort-pop, .plus-pop, .pane-menu, .search-panel) {
+    animation: none;
+  }
+
+  html[data-style="balatro"][data-theme] .sidebar .session {
+    transition: none;
+  }
+}

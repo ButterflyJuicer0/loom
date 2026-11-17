@@ -1,0 +1,31 @@
+{
+  "id": "celeste",
+  "order": 20,
+  "name": {
+    "en": "Celeste",
+    "zh": "蔚蓝"
+  },
+  "blurb": {
+    "en": "The climb: the cabin under snow by night, Golden Ridge's pink dusk by day; dialogue boxes, zip movers, dream blocks, crystal hearts",
+    "zh": "登山路上：夜里是雪中木屋，白天是黄金山脊的粉紫晚霞；对话框、红绿灯块、梦境方块、水晶之心"
+  },
+  "radius": "0px",
+  "light": {
+    "background": "#faf3f8",
+    "foreground": "#2a2148",
+    "sidebar": "#eeb4e2",
+    "card": "#fffaf6",
+    "bubble": "#201820",
+    "primary": "#c8304c",
+    "border": "#cdb8e0"
+  },
+  "dark": {
+    "background": "#0a0e20",
+    "foreground": "#eef0fa",
+    "sidebar": "#070a1a",
+    "card": "#141936",
+    "bubble": "#201820",
+    "primary": "#ff6478",
+    "border": "#2c3566"
+  }
+}

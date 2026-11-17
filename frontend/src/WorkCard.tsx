@@ -1,4 +1,5 @@
 import { AlarmClock, BellRing, ListChecks, MessageSquareShare, Play, Siren } from "lucide-react"
+import { t } from "./i18n"
 import "./Employees.css"
 
 /**
@@ -23,19 +24,19 @@ export function WorkCard({ text }: { text: string }) {
   try {
     card = JSON.parse(text)
   } catch {
-    return <div className="work-card pending">work card…</div>
+    return <div className="work-card pending">{t("work card…")}</div>
   }
   if (!card || typeof card !== "object") return null
 
   const next =
     card.next === "continue"
-      ? "Carrying on in a minute"
+      ? t("Carrying on in a minute")
       : card.wake_at
-        ? `Sleeping until ${card.wake_at}`
+        ? t("Sleeping until {time}", { time: card.wake_at })
         : card.sleep_minutes
-          ? `Sleeping ${minutes(card.sleep_minutes)}`
+          ? t("Sleeping {duration}", { duration: minutes(card.sleep_minutes) })
           : card.next === "sleep"
-            ? "Sleeping until the heartbeat"
+            ? t("Sleeping until the heartbeat")
             : null
   const level = card.report?.level
 
@@ -45,7 +46,7 @@ export function WorkCard({ text }: { text: string }) {
         <div className="work-card-row work-card-report">
           {level === "urgent" ? <Siren /> : <BellRing />}
           <span>
-            <b>{level === "urgent" ? "Needs you" : level === "important" ? "Report" : "Note"}</b> · {card.report.text}
+            <b>{level === "urgent" ? t("Needs you") : level === "important" ? t("Report") : t("Note")}</b> · {card.report.text}
           </span>
         </div>
       )}
@@ -64,8 +65,8 @@ export function WorkCard({ text }: { text: string }) {
         <div key={`a${i}`} className="work-card-row">
           <ListChecks />
           <span>
-            New KPI · {k.title}
-            {k.due && <span className="work-card-dim"> — due {k.due}</span>}
+            {t("New KPI · {title}", { title: k.title ?? "" })}
+            {k.due && <span className="work-card-dim"> — {t("due {date}", { date: k.due })}</span>}
           </span>
         </div>
       ))}
@@ -73,14 +74,14 @@ export function WorkCard({ text }: { text: string }) {
         <div className="work-card-row">
           <MessageSquareShare />
           <span>
-            For the work session <span className="work-card-dim">— {card.note_for_work}</span>
+            {t("For the work session")} <span className="work-card-dim">— {card.note_for_work}</span>
           </span>
         </div>
       )}
       {card.wake_now && (
         <div className="work-card-row">
           <Play />
-          <span>Starting work now</span>
+          <span>{t("Starting work now")}</span>
         </div>
       )}
       {next && (
@@ -93,4 +94,4 @@ export function WorkCard({ text }: { text: string }) {
   )
 }
 
-const minutes = (n: number) => (n >= 60 ? `${Math.round((n / 60) * 10) / 10} h` : `${n} min`)
+const minutes = (n: number) => (n >= 60 ? t("{n} h", { n: Math.round((n / 60) * 10) / 10 }) : t("{n} min", { n }))

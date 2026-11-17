@@ -1,0 +1,2051 @@
+/* ── 我的世界 (Minecraft, Java Edition's interface) ───────────────────────
+   A tribute to the game's own screens, redrawn after looking at them
+   (minecraft.wiki: the options and world-selection menus, the inventory,
+   furnace and villager windows, the HUD, the advancement toast, the sign
+   editor, the book and quill). What was seen there, and where it went:
+
+   - Menus stand on dirt darkened to a quarter; a list inside one is darker
+     still, with a shadow along its top and bottom. → the sidebar and the
+     frame round the page; the session list, Search, the bell.
+   - A button is stone-grey noise in a black outline, light along the top
+     and left, dark along the right and (two pixels) the bottom, its label
+     white with a dark shadow; hovered, the outline is white; off, it is
+     near-black noise with grey text. → every button; a slider's track is an
+     "off" button and its handle a small button.
+   - A world's row is a title in white over grey lines; chosen, it is black
+     with a white outline. → session rows.
+   - A container's window is #c6c6c6 in a black outline with stepped
+     corners, white up and left, #555 down and right; labels #404040; slots
+     #8b8b8b, dark up and left, white down and right. → the page by day,
+     dialogs, menus; chips, table cells, header buttons are slots.
+   - A toast is #212121 in a #555 frame with the same outline, its title
+     yellow, its text white. → the page at night, a finished step, notices.
+   - A furnace: three wisps that light, an arrow that fills white. → a step
+     that is running.
+   - A text field is black in a #a0a0a0 line, white when focused. → the
+     composer, inputs, code.
+   - The HUD: ten hearts, ten shanks, the experience bar over the hotbar.
+     → over the composer; the hotbar is the sidebar's foot.
+   - A sign: oak planks, black text. → what you say.
+   - A book and quill: cream page in brown leather. → a quotation.
+
+   Tokens are tools/themes/minecraft.json; the pictures are drawn by
+   tools/art/minecraft.mjs. Each selector starts
+   `html[data-style="minecraft"][data-theme]`: as specific as themes.css's
+   shapes, and after them, so these win. */
+
+html[data-style="minecraft"] {
+  --mc-window: url("./art/minecraft-panel.svg");
+  --mc-toast: url("./art/minecraft-toast.svg");
+  --mc-dirt: url("./art/minecraft-dirt.svg");
+  --mc-dirt-deep: url("./art/minecraft-dirt-deep.svg");
+  --mc-stone: url("./art/minecraft-stone.svg");
+  --mc-stone-off: url("./art/minecraft-stone-off.svg");
+  --mc-button: url("./art/minecraft-button.svg");
+  --mc-button-hover: url("./art/minecraft-button-hover.svg");
+  --mc-button-off: url("./art/minecraft-button-off.svg");
+  /* A raised plate, and a slot let into it. */
+  --mc-plate: #c6c6c6;
+  --mc-plate-hi: #ffffff;
+  --mc-plate-lo: #555555;
+  --mc-slot: #8b8b8b;
+  --mc-slot-hi: #ffffff;
+  --mc-slot-lo: #373737;
+  --mc-slot-ink: #111111;
+  --mc-slot-hover: #c5c5c5;
+  --mc-label: #404040;
+  --mc-yellow: #ffff55;
+  --mc-list: var(--mc-dirt-deep);
+  --mc-list-shade: transparent;
+}
+
+html[data-style="minecraft"][data-theme="dark"] {
+  --mc-window: url("./art/minecraft-toast.svg");
+  --mc-dirt: url("./art/minecraft-dirt-deep.svg");
+  --mc-plate: #2c2c2c;
+  --mc-plate-hi: #555555;
+  --mc-plate-lo: #000000;
+  --mc-slot: #373737;
+  --mc-slot-hi: #555555;
+  --mc-slot-lo: #000000;
+  --mc-slot-ink: #e6e6e6;
+  --mc-slot-hover: #5a5a5a;
+  --mc-label: #e6e6e6;
+  --mc-list-shade: rgb(0 0 0 / 45%);
+}
+
+/* Loom's colours that carry meaning, deepened where the grey of a window
+   would wash them out. */
+html[data-style="minecraft"][data-theme="light"]:root:root {
+  --blue: #1b4a8f;
+  --red: #a11414;
+  --green: #0a5c33;
+  /* Quiet text, a step darker than the least that would pass: 5.5 to 1. */
+  --dim: #464646;
+}
+
+html[data-style="minecraft"][data-theme] ::selection {
+  background: rgb(40 60 200 / 70%);
+  color: #ffffff;
+}
+
+/* ── The ground: dirt ─────────────────────────────────────────────────── */
+
+html[data-style="minecraft"][data-theme] .sidebar {
+  /* Positioned already: beside the page on a desktop, a drawer on a phone. */
+  isolation: isolate;
+  border-right: 0;
+  background: var(--mc-dirt) 0 0 / 64px 64px #1e150f;
+}
+
+@media (min-width: 641px) {
+  html[data-style="minecraft"][data-theme] .app {
+    background: var(--mc-dirt) 0 0 / 64px 64px #1e150f;
+  }
+
+  html[data-style="minecraft"][data-theme] .sidebar {
+    background: transparent;
+  }
+
+  /* The page itself: a window. */
+  html[data-style="minecraft"][data-theme] .main {
+    border: 8px solid transparent;
+    border-image: var(--mc-window) 4 / 8px stretch;
+    border-radius: 0;
+    background-color: var(--background);
+    background-clip: padding-box;
+  }
+}
+
+html[data-style="minecraft"][data-theme] .sidebar-head {
+  border-bottom: 0;
+}
+
+/* The name: stone letters, and the splash beside them. */
+html[data-style="minecraft"][data-theme] .brand {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: 114px;
+  height: 28px;
+  /* The name is the picture: the stone letters of the title screen. */
+  background: url("./art/minecraft-title.svg") right center / 78px 28px no-repeat;
+  color: transparent;
+  font-size: 0;
+  letter-spacing: 0;
+}
+
+html[data-style="minecraft"][data-theme] .brand > svg {
+  display: none;
+}
+
+html[data-style="minecraft"][data-theme] .brand::before {
+  content: "";
+  display: inline-block;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  background: url("./art/minecraft-mark.svg") center / 24px 24px no-repeat;
+  box-shadow: 0 0 0 2px #000000;
+}
+
+html[data-style="minecraft"][data-theme] .brand::after {
+  content: "开工!";
+  position: absolute;
+  right: -26px;
+  bottom: -9px;
+  color: #ffff00;
+  font-size: 12px;
+  line-height: 12px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  text-shadow: 1px 1px 0 #3f3f00;
+  rotate: -20deg;
+  animation: mc-splash 0.45s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes mc-splash {
+  to {
+    scale: 1.12;
+  }
+}
+
+html[data-style="minecraft"][data-theme] .sidebar-head .icon-btn {
+  border-radius: 0;
+  color: #e0e0e0;
+}
+
+html[data-style="minecraft"][data-theme] .sidebar-head .icon-btn:hover {
+  background: rgb(0 0 0 / 45%);
+  color: #ffffff;
+  box-shadow: inset 0 0 0 2px #ffffff;
+}
+
+/* ── The list: darker dirt, in shadow at its top and bottom ───────────── */
+
+html[data-style="minecraft"][data-theme] .sidebar .session-list {
+  background:
+    linear-gradient(var(--mc-list-shade), var(--mc-list-shade)),
+    var(--mc-list) 0 0 / 64px 64px #0f0b07;
+  box-shadow:
+    inset 0 10px 8px -6px #000000,
+    inset 0 -10px 8px -6px #000000,
+    0 -2px 0 rgb(0 0 0 / 70%),
+    0 2px 0 rgb(255 255 255 / 12%);
+  padding-top: 10px;
+}
+
+/* ── Buttons: stone ───────────────────────────────────────────────────── */
+
+html[data-style="minecraft"][data-theme] :is(.text-btn, .option, .nav-item, .composer-btn, .to-bottom, .login-btn, .replies-send, .reply, .dial-btn, .bell-btn:not(.icon-btn), .tasks-composer-btn, .tasks-round, .proj-round, .emp-pill, .emp-new, .new-chat, .new-chat-more, .queue-steer, .search-cancel, .settings-back, .sleep-now, .share-go, .share-cancel, .code-copy) {
+  border: solid transparent;
+  border-width: 4px 4px 6px;
+  border-image: var(--mc-button) 2 2 3 2 / 4px 4px 6px 4px stretch;
+  border-radius: 0;
+  background: var(--mc-stone) 0 0 / 32px 32px #6f6f6f;
+  color: #ffffff;
+  text-shadow: 2px 2px 0 #3f3f3f;
+  box-shadow: none;
+  transition: none;
+  opacity: 1;
+}
+
+html[data-style="minecraft"][data-theme] :is(.text-btn, .option, .nav-item, .composer-btn, .to-bottom, .login-btn, .replies-send, .reply, .dial-btn, .bell-btn:not(.icon-btn), .tasks-composer-btn, .tasks-round, .proj-round, .emp-pill, .emp-new, .new-chat, .new-chat-more, .queue-steer, .search-cancel, .settings-back, .sleep-now, .share-go, .share-cancel, .code-copy):is(:hover, :focus-visible):not(:disabled) {
+  border-image-source: var(--mc-button-hover);
+  background: var(--mc-stone) 0 0 / 32px 32px #6f6f6f;
+  color: #ffffff;
+  outline: 0;
+}
+
+html[data-style="minecraft"][data-theme] :is(.text-btn, .option, .composer-btn, .login-btn, .replies-send, .reply, .dial-btn, .bell-btn:not(.icon-btn), .tasks-composer-btn, .sleep-now, .share-go):disabled {
+  border-image-source: var(--mc-button-off);
+  background: var(--mc-stone-off) 0 0 / 32px 32px #2c2c2c;
+  color: #a0a0a0;
+  text-shadow: none;
+  opacity: 1;
+  cursor: default;
+}
+
+html[data-style="minecraft"][data-theme] :is(.text-btn, .option, .nav-item, .composer-btn, .to-bottom, .replies-send, .reply, .dial-btn, .bell-btn:not(.icon-btn), .tasks-composer-btn, .tasks-round, .proj-round, .emp-pill, .emp-new, .new-chat, .new-chat-more, .settings-back, .code-copy) svg {
+  filter: drop-shadow(1px 1px 0 #3f3f3f);
+}
+
+/* Send and stop are buttons like any other (themes.css paints them in the
+   primary colour, with two classes: said again here, as specifically). */
+html[data-style="minecraft"][data-theme] .composer-btn.send,
+html[data-style="minecraft"][data-theme] .composer-btn.stop,
+html[data-style="minecraft"][data-theme] .composer-btn.send:hover:not(:disabled),
+html[data-style="minecraft"][data-theme] .composer-btn.stop:hover:not(:disabled) {
+  background: var(--mc-stone) 0 0 / 32px 32px #6f6f6f;
+  color: #ffffff;
+}
+
+html[data-style="minecraft"][data-theme] .composer-btn.send:disabled,
+html[data-style="minecraft"][data-theme] .tasks-composer-btn.send:disabled {
+  border-image-source: var(--mc-button-off);
+  background: var(--mc-stone-off) 0 0 / 32px 32px #2c2c2c;
+  color: #a0a0a0;
+  opacity: 1;
+}
+
+html[data-style="minecraft"][data-theme] .composer-btn.send:disabled svg {
+  filter: none;
+}
+
+/* The one to press, in the yellow a hovered label used to turn; the one to
+   think twice about, in red. */
+html[data-style="minecraft"][data-theme] :is(.text-btn.primary, .project-form .text-btn.primary, .bell-btn.pri, .emp-pill.strong) {
+  color: #ffffa0;
+  text-shadow: 2px 2px 0 #3f3f28;
+}
+
+html[data-style="minecraft"][data-theme] .text-btn.danger,
+html[data-style="minecraft"][data-theme] .text-btn.danger:hover {
+  color: #ff7b7b;
+  text-shadow: 2px 2px 0 #3f1515;
+}
+
+html[data-style="minecraft"][data-theme] .text-btn kbd {
+  border-radius: 0;
+  background: rgb(0 0 0 / 35%);
+  color: #ffffff;
+  text-shadow: none;
+}
+
+/* Navigation: a button each, an item for its sign. */
+html[data-style="minecraft"][data-theme] .nav-item {
+  margin-bottom: 4px;
+  padding: 0 6px;
+  font-weight: 400;
+}
+
+html[data-style="minecraft"][data-theme] .nav-item.current {
+  border-image-source: var(--mc-button-hover);
+}
+
+html[data-style="minecraft"][data-theme] .nav-item > .nav-icon {
+  display: none;
+}
+
+html[data-style="minecraft"][data-theme] .nav-item::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  background: url("./art/minecraft-compass.svg") center / 16px 16px no-repeat;
+}
+
+html[data-style="minecraft"][data-theme] .nav-item.nav-new::before {
+  background-image: url("./art/minecraft-quill.svg");
+}
+
+html[data-style="minecraft"][data-theme] .nav-item:nth-last-child(4 of .nav-item):not(.nav-new)::before {
+  background-image: url("./art/minecraft-chest.svg");
+}
+
+html[data-style="minecraft"][data-theme] .nav-item:nth-last-child(3 of .nav-item):not(.nav-new)::before {
+  background-image: url("./art/minecraft-villager.svg");
+}
+
+html[data-style="minecraft"][data-theme] .nav-item:nth-last-child(2 of .nav-item):not(.nav-new)::before {
+  background-image: url("./art/minecraft-clock.svg");
+}
+
+html[data-style="minecraft"][data-theme] .nav-item .nav-new-more {
+  border-radius: 0;
+  color: #ffffff;
+}
+
+html[data-style="minecraft"][data-theme] .nav-item .nav-new-more:hover {
+  background: rgb(0 0 0 / 30%);
+}
+
+html[data-style="minecraft"][data-theme] .list-heading {
+  color: #ffffff;
+  text-shadow: 1px 1px 0 #3f3f3f;
+}
+
+/* ── Rows: worlds in a list ───────────────────────────────────────────── */
+
+html[data-style="minecraft"][data-theme] :is(.sidebar .session, .project-row, .emp-row, .proj-session, .search-row) {
+  border: 2px solid transparent;
+  border-radius: 0;
+}
+
+html[data-style="minecraft"][data-theme] :is(.sidebar .session, .project-row, .emp-row):hover {
+  background: rgb(0 0 0 / 45%);
+}
+
+html[data-style="minecraft"][data-theme] :is(.sidebar .session.active, .project-row.current, .emp-row.active) {
+  border-color: #ffffff;
+  background: #000000;
+}
+
+html[data-style="minecraft"][data-theme] .sidebar :is(.session-label, .emp-row-name) {
+  color: #ffffff;
+  text-shadow: 1px 1px 0 #3f3f3f;
+}
+
+html[data-style="minecraft"][data-theme] .sidebar :is(.session-gist, .session-when, .emp-row-station, .nav-count),
+html[data-style="minecraft"][data-theme] .sidebar .session.working .session-gist {
+  color: #a0a0a0;
+  text-shadow: none;
+}
+
+html[data-style="minecraft"][data-theme] .sidebar .session.unread .session-when {
+  color: #80ff20;
+}
+
+/* A session's state: a clock that turns while it runs, a barrier where it
+   was stopped; an experience orb for what you have not read. */
+html[data-style="minecraft"][data-theme] .dot:is(.running, .starting) {
+  width: 16px;
+  height: 16px;
+  border-radius: 0;
+  background: url("./art/minecraft-clock.svg") center / 16px 16px no-repeat;
+  animation: mc-turn 1.6s steps(8) infinite;
+}
+
+html[data-style="minecraft"][data-theme] .dot.starting {
+  animation: mc-blink 1s steps(2, jump-none) infinite;
+}
+
+html[data-style="minecraft"][data-theme] .dot.interrupted {
+  width: 16px;
+  height: 16px;
+  border-radius: 0;
+  background: url("./art/minecraft-barrier.svg") center / 16px 16px no-repeat;
+}
+
+html[data-style="minecraft"][data-theme] :is(.dot.online, .session-unread, .bell-dot, .moon-btn.news::after) {
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+  background: url("./art/minecraft-orb.svg") center / 12px 12px no-repeat;
+}
+
+html[data-style="minecraft"][data-theme] :is(.session-unread, .bell-dot) {
+  animation: mc-glow 0.9s steps(2, jump-none) infinite;
+}
+
+@keyframes mc-turn {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes mc-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes mc-glow {
+  50% {
+    scale: 0.8;
+    opacity: 0.75;
+  }
+}
+
+/* How many, as the level over the experience bar is written. */
+html[data-style="minecraft"][data-theme] :is(.bell-count, .emp-tab-count, .proj-tab-count, .bell-tab-n, .session-queued) {
+  border-radius: 0;
+  background: transparent;
+  color: #80ff20;
+  font-weight: 700;
+  text-shadow:
+    1px 0 0 #000000,
+    -1px 0 0 #000000,
+    0 1px 0 #000000,
+    0 -1px 0 #000000;
+}
+
+/* ── The foot: the hotbar ─────────────────────────────────────────────── */
+
+html[data-style="minecraft"][data-theme] .sidebar-foot {
+  border-top: 0;
+}
+
+html[data-style="minecraft"][data-theme] .sidebar-foot .devices-btn {
+  border-radius: 0;
+  color: #e0e0e0;
+}
+
+html[data-style="minecraft"][data-theme] .sidebar-foot .devices-btn:hover {
+  background: rgb(0 0 0 / 45%);
+  color: #ffffff;
+}
+
+html[data-style="minecraft"][data-theme] .sidebar-foot.folded {
+  position: relative;
+  padding: 8px;
+}
+
+/* One bar: the black line goes round all of it, not round each slot. */
+html[data-style="minecraft"][data-theme] .sidebar-foot.folded::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  background: #000000;
+}
+
+html[data-style="minecraft"][data-theme] .sidebar-foot.folded .devices-btn {
+  border: 4px solid transparent;
+  border-image: url("./art/minecraft-hotbar.svg") 2 / 4px stretch;
+  border-radius: 0;
+  background: rgb(38 36 12 / 92%);
+  background-clip: padding-box;
+  box-shadow: none;
+  padding: 5px 0;
+}
+
+html[data-style="minecraft"][data-theme] .sidebar-foot.folded .devices-btn:is(:hover, :focus-visible) {
+  border-image-source: url("./art/minecraft-hotbar-held.svg");
+  background: rgb(38 36 12 / 92%);
+  background-clip: padding-box;
+  box-shadow: 0 0 0 2px #000000;
+  z-index: 1;
+  outline: 0;
+}
+
+html[data-style="minecraft"][data-theme] .sidebar-foot .push-btn.on svg {
+  color: #80ff20;
+}
+
+/* What is held, named over the bar: white, shadowed, no box. */
+html[data-style="minecraft"][data-theme] .sidebar-foot.folded .devices-btn > span:first-of-type {
+  border: 0;
+  border-radius: 0;
+  background: rgb(0 0 0 / 70%);
+  color: #ffffff;
+  text-shadow: 1px 1px 0 #3f3f3f;
+  box-shadow: none;
+}
+
+/* ── The chat's head ──────────────────────────────────────────────────── */
+
+html[data-style="minecraft"][data-theme] .chat-top::before {
+  inset: 0;
+  background: var(--background);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--mc-plate-lo) 45%, transparent);
+}
+
+html[data-style="minecraft"][data-theme] .chat-name {
+  color: var(--mc-label);
+}
+
+/* Its actions: a row of slots. */
+html[data-style="minecraft"][data-theme] :is(.chat-header .chip.button, .chat-header .icon-btn, .modal-head .icon-btn, .bell-head .icon-btn, .tool-chip, .emp-avatar, .session-del, .msg-copy, .pane-btn) {
+  border: 2px solid;
+  border-color: var(--mc-slot-lo) var(--mc-slot-hi) var(--mc-slot-hi) var(--mc-slot-lo);
+  border-radius: 0;
+  background: var(--mc-slot);
+  color: var(--mc-slot-ink);
+  box-shadow: none;
+}
+
+html[data-style="minecraft"][data-theme] :is(.chat-header .chip.button, .chat-header .icon-btn, .modal-head .icon-btn, .bell-head .icon-btn, .session-del, .msg-copy, .pane-btn):hover {
+  background: var(--mc-slot-hover);
+  color: var(--mc-slot-ink);
+}
+
+html[data-style="minecraft"][data-theme] :is(.chat-header .chip.button.on, .bell-head .icon-btn.on) {
+  border-color: #ffffff;
+  background: var(--mc-slot-hover);
+  color: var(--mc-slot-ink);
+  box-shadow: 0 0 0 2px #000000;
+}
+
+html[data-style="minecraft"][data-theme] .session-del:hover {
+  background: #e00000;
+  color: #ffffff;
+}
+
+/* ── What you say: a sign ─────────────────────────────────────────────── */
+
+html[data-style="minecraft"][data-theme] .bubble.user {
+  position: relative;
+  margin-bottom: 12px;
+  border: 0;
+  border-radius: 0;
+  background: url("./art/minecraft-planks.svg") 0 0 / 64px 64px #b7985f;
+  color: #1a1208;
+  box-shadow:
+    inset 0 -4px 0 #7d6136,
+    inset 0 4px 0 #c4a66b,
+    0 0 0 2px #4a3718;
+  --fg: #1a1208;
+  --fg-dim: #3a2c12;
+  --blue: #123c7a;
+}
+
+/* Its post. */
+html[data-style="minecraft"][data-theme] .bubble.user::after {
+  content: "";
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 50%;
+  width: 8px;
+  height: 10px;
+  margin-left: -4px;
+  background: linear-gradient(90deg, #9d824c 50%, #6b5430 50%);
+  pointer-events: none;
+}
+
+html[data-style="minecraft"][data-theme] .bubble.user .clock {
+  color: #241a09;
+  opacity: 1;
+}
+
+html[data-style="minecraft"][data-theme] .bubble.user :not(pre) > code {
+  background: rgb(0 0 0 / 14%);
+  color: inherit;
+  box-shadow: none;
+}
+
+/* ── What comes back ──────────────────────────────────────────────────── */
+
+/* A heading: the title of a toast. By day on its own dark plate; at night
+   the page is that plate already. */
+html[data-style="minecraft"][data-theme] :is(h1, h2).md-h {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 3px 12px 4px;
+  border: 2px solid #555555;
+  background: #212121;
+  color: var(--mc-yellow);
+  box-shadow: 0 0 0 2px #000000;
+  text-shadow:
+    1px 0 0 currentColor,
+    2px 2px 0 #3f3f15,
+    3px 2px 0 #3f3f15;
+}
+
+html[data-style="minecraft"][data-theme] .md-h :not(pre) > code {
+  text-shadow: none;
+}
+
+/* The pixel font has one weight, so size carries the order of headings… */
+html[data-style="minecraft"][data-theme] h1.md-h {
+  font-size: 1.5em;
+}
+
+html[data-style="minecraft"][data-theme] h2.md-h {
+  font-size: 1.25em;
+}
+
+html[data-style="minecraft"][data-theme] h3.md-h {
+  font-size: 1.1em;
+}
+
+/* …and bold is the game's: the letters struck twice, a pixel apart. */
+html[data-style="minecraft"][data-theme] :is(.bubble :is(strong, b), h3.md-h, .modal-head, .task-name, .task-template-name, .kpi-title, .tasks-head h1, .proj-head h1, .chat-name, .settings-label, .dsess-card-title, .emp-title-text) {
+  text-shadow: 1px 0 0 currentColor;
+}
+
+html[data-style="minecraft"][data-theme="dark"] :is(h1, h2).md-h {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+html[data-style="minecraft"][data-theme] h3.md-h {
+  color: var(--fg);
+  font-weight: 700;
+}
+
+html[data-style="minecraft"][data-theme="dark"] h3.md-h {
+  color: #ffaa00;
+  text-shadow:
+    1px 0 0 currentColor,
+    1px 1px 0 #3f2a00,
+    2px 1px 0 #3f2a00;
+}
+
+/* A list's dots are diamonds; inside another list, emeralds. */
+html[data-style="minecraft"][data-theme] ul.md-list > li:not(.md-task) {
+  position: relative;
+  list-style: none;
+}
+
+html[data-style="minecraft"][data-theme] ul.md-list > li:not(.md-task)::before {
+  content: "";
+  position: absolute;
+  top: 0.3em;
+  left: -1.45em;
+  width: 16px;
+  height: 16px;
+  background: url("./art/minecraft-diamond.svg") center / 16px 16px no-repeat;
+}
+
+html[data-style="minecraft"][data-theme] ul.md-list ul.md-list > li:not(.md-task)::before {
+  background-image: url("./art/minecraft-emerald.svg");
+}
+
+html[data-style="minecraft"][data-theme] ol.md-list > li::marker {
+  color: var(--fg);
+  font-weight: 700;
+}
+
+/* A rule: a course of bedrock. */
+html[data-style="minecraft"][data-theme] .md-hr {
+  height: 16px;
+  margin: 1.2em 2px;
+  border: 0;
+  background: url("./art/minecraft-bedrock.svg") 0 0 / 32px 32px repeat-x #444444;
+  box-shadow: 0 0 0 2px #000000;
+}
+
+/* A quotation: a page of a book and quill. */
+html[data-style="minecraft"][data-theme] .md-quote {
+  margin: 0.2em 2px 0.9em;
+  padding: 8px 14px 6px;
+  border: 4px solid #652816;
+  border-left-width: 10px;
+  background: #fdf8ec;
+  color: #1c0f00;
+  box-shadow:
+    inset 3px 0 0 #a11f18,
+    inset -4px -4px 0 #f1e2b8,
+    0 0 0 2px #1c0f00;
+  --fg: #1c0f00;
+  --fg-dim: #4a3a28;
+  --blue: #2964aa;
+}
+
+html[data-style="minecraft"][data-theme] .md-quote :not(pre) > code {
+  background: rgb(60 30 0 / 12%);
+  color: inherit;
+  box-shadow: none;
+}
+
+/* A table: a grid of slots under a row of labels. */
+html[data-style="minecraft"][data-theme] .md-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+html[data-style="minecraft"][data-theme] .md-table :is(th, td) {
+  border: 2px solid;
+  border-color: var(--mc-slot-lo) var(--mc-slot-hi) var(--mc-slot-hi) var(--mc-slot-lo);
+  background: var(--mc-slot);
+  color: var(--mc-slot-ink);
+}
+
+html[data-style="minecraft"][data-theme] .md-table th {
+  border-color: #aaaaaa #565656 #565656 #aaaaaa;
+  background: var(--mc-stone) 0 0 / 32px 32px #6f6f6f;
+  color: #ffffff;
+  text-shadow:
+    1px 0 0 currentColor,
+    1px 1px 0 #3f3f3f,
+    2px 1px 0 #3f3f3f;
+}
+
+html[data-style="minecraft"][data-theme] .md-table tbody tr:hover {
+  background: none;
+}
+
+html[data-style="minecraft"][data-theme] .md-table tbody tr:hover td {
+  background: var(--mc-slot-hover);
+}
+
+html[data-style="minecraft"][data-theme] .md-table td :not(pre) > code {
+  background: rgb(0 0 0 / 16%);
+  color: inherit;
+  box-shadow: none;
+}
+
+/* Code in a line: a small slot. */
+html[data-style="minecraft"][data-theme] :not(pre) > code {
+  border-radius: 0;
+  background: #b0b0b0;
+  color: #161616;
+  box-shadow:
+    inset 1px 1px 0 #8b8b8b,
+    inset -1px -1px 0 #ffffff;
+}
+
+html[data-style="minecraft"][data-theme="dark"] :not(pre) > code {
+  background: #0c0c0c;
+  color: #f0f0f0;
+  box-shadow: inset 0 0 0 1px #555555;
+}
+
+/* ── Code: a command block's field ────────────────────────────────────── */
+
+html[data-style="minecraft"][data-theme] pre.code {
+  border: 2px solid #a0a0a0;
+  border-left: 0;
+  border-radius: 0;
+  padding-left: 22px;
+  background:
+    linear-gradient(90deg, #885536 0 2px, #b77244 2px 8px, #71411d 8px 10px, transparent 10px) 0 0 / 12px 100% no-repeat,
+    #000000;
+  color: #e6e6e6;
+}
+
+html[data-style="minecraft"][data-theme] .code-tools {
+  top: 2px;
+  right: 2px;
+  gap: 8px;
+  padding: 2px 2px 2px 6px;
+  border-radius: 0;
+  background: #000000;
+}
+
+html[data-style="minecraft"][data-theme] .code-tools::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background: url("./art/minecraft-command.svg") center / 16px 16px no-repeat;
+}
+
+html[data-style="minecraft"][data-theme] .code-lang {
+  color: #ffaa00;
+}
+
+html[data-style="minecraft"][data-theme] .code-copy {
+  border-width: 2px 2px 4px;
+  border-image-width: 2px 2px 4px;
+  border-image-slice: 1 1 2 1;
+}
+
+/* A file: a sheet lying in a slot. */
+html[data-style="minecraft"][data-theme] .file-card {
+  border: 2px solid;
+  border-color: #373737 #ffffff #ffffff #373737;
+  border-radius: 0;
+  background: #fff0d1;
+  box-shadow: inset 0 0 0 2px #947f5d;
+}
+
+html[data-style="minecraft"][data-theme] .file-card .file-ext {
+  color: #5c2210;
+}
+
+html[data-style="minecraft"][data-theme] .file-card .file-name {
+  color: #4a3a22;
+}
+
+html[data-style="minecraft"][data-theme] .file-card.more {
+  background: var(--mc-slot);
+  color: var(--mc-slot-ink);
+  box-shadow: none;
+}
+
+html[data-style="minecraft"][data-theme] .file-card.failed {
+  border-color: #e00000;
+}
+
+/* ── Steps ────────────────────────────────────────────────────────────── */
+
+/* Done: a toast — "N tools used" in its yellow, an item beside it. */
+html[data-style="minecraft"][data-theme] .tool.group,
+html[data-style="minecraft"][data-theme] .tool.group:is(:hover, .open) {
+  border: 8px solid transparent;
+  border-image: var(--mc-toast) 4 / 8px stretch;
+  border-radius: 0;
+  background-color: #212121;
+  background-clip: padding-box;
+  box-shadow: none;
+  color: #ffffff;
+  --fg: #ffffff;
+  --fg-dim: #b0b0b0;
+  --bg-card: #000000;
+  --red: #ff6b6b;
+  --green: #55ff55;
+  --blue: #66b5ff;
+}
+
+html[data-style="minecraft"][data-theme] .tool.group > .tool-head {
+  gap: 10px;
+  padding: 1px 6px 1px 4px;
+}
+
+html[data-style="minecraft"][data-theme] .tool.group > .tool-head > .tool-name {
+  color: #ffff00;
+  text-shadow: 1px 1px 0 #3f3f00;
+}
+
+/* An item for each tool (`data-tool`): a pickaxe unless it is one of these. */
+html[data-style="minecraft"][data-theme] [data-tool] {
+  --mc-item: url("./art/minecraft-pickaxe.svg");
+}
+
+html[data-style="minecraft"][data-theme] [data-tool^="mcp__" i] {
+  --mc-item: url("./art/minecraft-redstone.svg");
+}
+
+html[data-style="minecraft"][data-theme] :is([data-tool="Bash" i], [data-tool="BashOutput" i], [data-tool="KillShell" i], [data-tool="KillBash" i], [data-tool="shell" i], [data-tool="local_shell" i], [data-tool="exec_command" i], [data-tool="execute_bash" i]) {
+  --mc-item: url("./art/minecraft-command.svg");
+}
+
+html[data-style="minecraft"][data-theme] :is([data-tool="Read" i], [data-tool="NotebookRead" i], [data-tool="read_file" i], [data-tool="fs_read" i]) {
+  --mc-item: url("./art/minecraft-book.svg");
+}
+
+html[data-style="minecraft"][data-theme] :is([data-tool="Edit" i], [data-tool="MultiEdit" i], [data-tool="NotebookEdit" i], [data-tool="apply_patch" i]) {
+  --mc-item: url("./art/minecraft-quill.svg");
+}
+
+html[data-style="minecraft"][data-theme] :is([data-tool="Write" i], [data-tool="write_file" i], [data-tool="fs_write" i]) {
+  --mc-item: url("./art/minecraft-paper.svg");
+}
+
+html[data-style="minecraft"][data-theme] :is([data-tool="Grep" i], [data-tool="Glob" i], [data-tool="LS" i], [data-tool="ToolSearch" i], [data-tool="search" i]) {
+  --mc-item: url("./art/minecraft-compass.svg");
+}
+
+html[data-style="minecraft"][data-theme] :is([data-tool="WebSearch" i], [data-tool="WebFetch" i], [data-tool*="web_search" i], [data-tool*="web-search" i], [data-tool*="web_fetch" i]) {
+  --mc-item: url("./art/minecraft-map.svg");
+}
+
+html[data-style="minecraft"][data-theme] :is([data-tool="Agent" i], [data-tool="Task" i]) {
+  --mc-item: url("./art/minecraft-villager.svg");
+}
+
+html[data-style="minecraft"][data-theme] [data-tool="SendMessage" i] {
+  --mc-item: url("./art/minecraft-feather.svg");
+}
+
+html[data-style="minecraft"][data-theme] :is([data-tool="TodoWrite" i], [data-tool^="Cron" i]) {
+  --mc-item: url("./art/minecraft-clock.svg");
+}
+
+/* A folded card holds its first tool's item. */
+html[data-style="minecraft"][data-theme] .tool-icon,
+html[data-style="minecraft"][data-theme] .tool.group:is(:hover, .open) .tool-icon {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 0;
+  background: var(--mc-item, url("./art/minecraft-pickaxe.svg")) center / 32px 32px no-repeat;
+}
+
+html[data-style="minecraft"][data-theme] .tool-icon > svg {
+  display: none;
+}
+
+/* Which tools: a slot each, its item in it and its name beside. */
+html[data-style="minecraft"][data-theme] .tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px 0 3px;
+  border-color: #373737 #ffffff #ffffff #373737;
+  background: #8b8b8b;
+  color: #111111;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+html[data-style="minecraft"][data-theme] .tool-chip::before {
+  content: "";
+  flex: 0 0 16px;
+  height: 16px;
+  background: var(--mc-item, url("./art/minecraft-pickaxe.svg")) center / 16px 16px no-repeat;
+}
+
+/* A single call: its item before its name. */
+html[data-style="minecraft"][data-theme] .tool:not(.group) > .tool-head::before {
+  content: "";
+  flex: 0 0 16px;
+  height: 16px;
+  background: var(--mc-item, url("./art/minecraft-pickaxe.svg")) center / 16px 16px no-repeat;
+}
+
+/* Running: a furnace. Its window; the fire lit, and burning down as fuel
+   does (full, half, low, and fed again); the arrow filling in white. */
+html[data-style="minecraft"][data-theme] .tool.group.running,
+html[data-style="minecraft"][data-theme] .tool.group.running:is(:hover, .open) {
+  border-image-source: url("./art/minecraft-panel.svg");
+  background-color: #c6c6c6;
+  color: #404040;
+  --fg: #262626;
+  --fg-dim: #4a4a4a;
+  --red: #a11414;
+  --green: #0a5c33;
+  --blue: #1b4a8f;
+}
+
+html[data-style="minecraft"][data-theme] .tool.group.running > .tool-head > .tool-name {
+  text-shadow: none;
+}
+
+html[data-style="minecraft"][data-theme] .tool.group.running .tool-icon {
+  background: url("./art/minecraft-flame-low.svg") center / 28px 28px no-repeat;
+  animation: none;
+}
+
+html[data-style="minecraft"][data-theme] .tool.group.running .tool-icon::before,
+html[data-style="minecraft"][data-theme] .tool.group.running .tool-icon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("./art/minecraft-flame.svg") center / 28px 28px no-repeat;
+  animation: mc-burn-full 3s steps(1) infinite;
+}
+
+html[data-style="minecraft"][data-theme] .tool.group.running .tool-icon::after {
+  background-image: url("./art/minecraft-flame-half.svg");
+  animation-name: mc-burn-half;
+}
+
+@keyframes mc-burn-full {
+  0% {
+    opacity: 1;
+  }
+
+  40%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mc-burn-half {
+  0% {
+    opacity: 0;
+  }
+
+  40% {
+    opacity: 1;
+  }
+
+  70%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* The arrow: grey, and over it a white bar that grows along the shaft two
+   pixels at a time, then the head. Transforms only. */
+html[data-style="minecraft"][data-theme] .tool.group.running > .tool-head > .tool-state {
+  position: relative;
+  padding-left: 52px;
+  background: url("./art/minecraft-arrow-off.svg") left center / 44px 30px no-repeat;
+}
+
+html[data-style="minecraft"][data-theme] .tool.group.running > .tool-head > .tool-state::before,
+html[data-style="minecraft"][data-theme] .tool.group.running > .tool-head > .tool-state::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  transform-origin: left center;
+}
+
+html[data-style="minecraft"][data-theme] .tool.group.running > .tool-head > .tool-state::before {
+  left: 0;
+  width: 28px;
+  height: 6px;
+  margin-top: -3px;
+  background: #ffffff;
+  animation: mc-smelt-shaft 2.4s linear infinite;
+}
+
+html[data-style="minecraft"][data-theme] .tool.group.running > .tool-head > .tool-state::after {
+  left: 28px;
+  width: 16px;
+  height: 30px;
+  margin-top: -15px;
+  background: url("./art/minecraft-arrow-head.svg") center / 16px 30px no-repeat;
+  animation: mc-smelt-head 2.4s linear infinite;
+}
+
+@keyframes mc-smelt-shaft {
+  0% {
+    transform: scaleX(0);
+    animation-timing-function: steps(14);
+  }
+
+  60%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes mc-smelt-head {
+  0% {
+    transform: scaleX(0);
+  }
+
+  60% {
+    transform: scaleX(0);
+    animation-timing-function: steps(8);
+  }
+
+  92%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@media (max-width: 640px) {
+  /* On a phone the names run out before the arrow, with room between. */
+  html[data-style="minecraft"][data-theme] .tool.group.running > .tool-head > .tool-state {
+    margin-left: 10px;
+  }
+}
+
+/* Done, and failed. */
+html[data-style="minecraft"][data-theme] svg.tool-done {
+  width: 24px;
+  height: 18px;
+  background: url("./art/minecraft-check.svg") center / 24px 18px no-repeat;
+}
+
+html[data-style="minecraft"][data-theme] :is(.tool.failed .tool-state, .tool.group .tool-state.bad) > svg:not(.tool-chevron) {
+  width: 22px;
+  height: 20px;
+  background: url("./art/minecraft-cross.svg") center / 22px 20px no-repeat;
+}
+
+html[data-style="minecraft"][data-theme] svg.tool-done > *,
+html[data-style="minecraft"][data-theme] :is(.tool.failed .tool-state, .tool.group .tool-state.bad) > svg:not(.tool-chevron) > *,
+html[data-style="minecraft"][data-theme] .tool-state > svg.spin > * {
+  visibility: hidden;
+}
+
+html[data-style="minecraft"][data-theme] .tool-state > svg.spin {
+  width: 16px;
+  height: 16px;
+  background: url("./art/minecraft-clock.svg") center / 16px 16px no-repeat;
+  animation: mc-turn 1.6s steps(8) infinite;
+}
+
+html[data-style="minecraft"][data-theme] .tool-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Opened: each call a line, what it printed in a field. */
+html[data-style="minecraft"][data-theme] .group-steps {
+  border-top: 2px solid #555555;
+  background: #212121;
+  color: #ffffff;
+  --fg: #ffffff;
+  --fg-dim: #b0b0b0;
+  --red: #ff6b6b;
+  --green: #55ff55;
+  --blue: #66b5ff;
+}
+
+html[data-style="minecraft"][data-theme] .tool:not(.group) {
+  border: 2px solid #555555;
+  border-radius: 0;
+  background: #212121;
+  color: #ffffff;
+  --fg: #ffffff;
+  --fg-dim: #b0b0b0;
+  --red: #ff6b6b;
+  --green: #55ff55;
+}
+
+html[data-style="minecraft"][data-theme] .group-steps .tool:not(.group) {
+  border-width: 0 0 2px;
+  border-color: #3a3a3a;
+  background: transparent;
+}
+
+html[data-style="minecraft"][data-theme] .tool:not(.group) .tool-name {
+  color: #55ffff;
+}
+
+html[data-style="minecraft"][data-theme] .tool:not(.group) .tool-head:hover {
+  background: rgb(255 255 255 / 8%);
+}
+
+html[data-style="minecraft"][data-theme] :is(.tool-output, .tool-input) {
+  border-radius: 0;
+  background: #000000;
+  color: #d8d8d8;
+}
+
+html[data-style="minecraft"][data-theme] .tool.failed {
+  border-color: #e00000;
+}
+
+/* ── Thinking, working, a turn's end ──────────────────────────────────── */
+
+/* Thinking: a book, and the enchanting table's letters while it comes. */
+html[data-style="minecraft"][data-theme] .thinking > svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 0.2em;
+  background: url("./art/minecraft-book.svg") center / 16px 16px no-repeat;
+  opacity: 1;
+}
+
+html[data-style="minecraft"][data-theme] .thinking > svg > * {
+  visibility: hidden;
+}
+
+html[data-style="minecraft"][data-theme] .thinking.live > svg {
+  animation: mc-hop 0.8s steps(2, jump-none) infinite;
+}
+
+/* Two lines of them in one place, one showing while the other does not: the
+   table's words, changing. */
+html[data-style="minecraft"][data-theme] .thinking.live::before,
+html[data-style="minecraft"][data-theme] .thinking.live::after {
+  content: "";
+  flex: 0 0 84px;
+  align-self: center;
+  height: 14px;
+  background-color: #5a3fb0;
+  -webkit-mask: url("./art/minecraft-runes.svg") left center / 112px 14px no-repeat;
+  mask: url("./art/minecraft-runes.svg") left center / 112px 14px no-repeat;
+  animation: mc-runes 1.8s steps(1) infinite;
+}
+
+html[data-style="minecraft"][data-theme] .thinking.live::before {
+  order: 9;
+  margin-left: -91px;
+  -webkit-mask-image: url("./art/minecraft-runes-2.svg");
+  mask-image: url("./art/minecraft-runes-2.svg");
+  animation-delay: -0.9s;
+}
+
+html[data-style="minecraft"][data-theme="dark"] .thinking.live::before,
+html[data-style="minecraft"][data-theme="dark"] .thinking.live::after {
+  background-color: #b59cff;
+}
+
+@keyframes mc-hop {
+  50% {
+    translate: 0 -2px;
+  }
+}
+
+@keyframes mc-runes {
+  0% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Working: a pickaxe swinging, the chips flying off the stone. */
+html[data-style="minecraft"][data-theme] .working-dots {
+  gap: 3px;
+  height: auto;
+  padding-top: 0;
+}
+
+html[data-style="minecraft"][data-theme] .working-dots::before {
+  content: "";
+  width: 32px;
+  height: 32px;
+  margin: -6px 2px -6px 0;
+  background: url("./art/minecraft-pickaxe.svg") center / 32px 32px no-repeat;
+  transform-origin: 20% 85%;
+  animation: mc-swing 0.5s steps(3, jump-none) infinite alternate;
+}
+
+@keyframes mc-swing {
+  from {
+    rotate: -22deg;
+  }
+
+  to {
+    rotate: 34deg;
+  }
+}
+
+html[data-style="minecraft"][data-theme] .working-dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 0;
+  background: #6f6f6f;
+  box-shadow: 0 0 0 1px #000000;
+  animation-timing-function: steps(3, jump-none);
+}
+
+html[data-style="minecraft"][data-theme] .working-dots i:nth-child(2) {
+  background: #8b8b8b;
+}
+
+html[data-style="minecraft"][data-theme] .working-dots i:nth-child(3) {
+  background: #aaaaaa;
+}
+
+html[data-style="minecraft"][data-theme] :is(.shimmer, .spin) {
+  animation-timing-function: steps(12);
+}
+
+html[data-style="minecraft"][data-theme] :is(.tool, .thinking, .working[role="status"], .tool-done, .group-steps) {
+  animation-timing-function: steps(3);
+}
+
+/* A turn's end: an orb comes in; and under the line the experience bar, as
+   full as the context is (`--usage`), its percentage where the level is
+   written. No bar where the window is unknown. */
+html[data-style="minecraft"][data-theme] .turn-line {
+  position: relative;
+  padding: 2px 6px 4px;
+  font-size: 12px;
+}
+
+html[data-style="minecraft"][data-theme] .turn-line > .clock::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  background: url("./art/minecraft-orb.svg") center / 12px 12px no-repeat;
+  animation: mc-orb 0.7s steps(5) 1 backwards;
+}
+
+html[data-style="minecraft"][data-theme] .turn-line[data-usage] {
+  min-width: 13rem;
+  padding-bottom: 25px;
+  text-align: center;
+  background:
+    linear-gradient(#081c11, #081c11) left bottom 2px / 2px 10px no-repeat,
+    linear-gradient(#081c11, #081c11) right bottom 2px / 2px 10px no-repeat,
+    url("./art/minecraft-xp-empty.svg") left 2px bottom 2px / 40px 10px repeat-x;
+}
+
+html[data-style="minecraft"][data-theme] .turn-line[data-usage]::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  bottom: 2px;
+  width: calc((100% - 4px) * var(--usage, 0));
+  height: 10px;
+  background: url("./art/minecraft-xp.svg") 0 0 / 40px 10px repeat-x;
+}
+
+html[data-style="minecraft"][data-theme] .turn-line[data-usage]::after {
+  content: attr(data-usage) "%";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 9px;
+  color: #80ff20;
+  font-size: 12px;
+  line-height: 12px;
+  text-align: center;
+  text-shadow:
+    1px 0 0 #000000,
+    -1px 0 0 #000000,
+    0 1px 0 #000000,
+    0 -1px 0 #000000;
+  pointer-events: none;
+}
+
+@keyframes mc-orb {
+  from {
+    opacity: 0;
+    translate: -40px -14px;
+  }
+}
+
+html[data-style="minecraft"][data-theme] .notice {
+  border-radius: 0;
+}
+
+/* ── The composer: a chat field under the HUD ─────────────────────────── */
+
+html[data-style="minecraft"][data-theme] .composer {
+  position: relative;
+  padding-top: 42px;
+  background: var(--background);
+  box-shadow: 0 -2px 0 color-mix(in srgb, var(--mc-plate-lo) 45%, transparent);
+}
+
+/* Ten hearts, ten shanks, the experience bar: as they sit over the hotbar. */
+html[data-style="minecraft"][data-theme] .composer::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 0;
+  right: 0;
+  width: calc(100% - 28px);
+  max-width: var(--measure);
+  height: 30px;
+  margin-inline: auto;
+  box-sizing: border-box;
+  border-inline: 2px solid transparent;
+  background:
+    url("./art/minecraft-hearts.svg") left top / 162px 18px no-repeat,
+    url("./art/minecraft-hunger.svg") right top / 162px 18px no-repeat,
+    linear-gradient(#081c11, #081c11) left bottom / 2px 10px no-repeat border-box,
+    linear-gradient(#081c11, #081c11) right bottom / 2px 10px no-repeat border-box,
+    url("./art/minecraft-xp.svg") left bottom / 40px 10px repeat-x;
+  pointer-events: none;
+}
+
+html[data-style="minecraft"][data-theme] .composer-box,
+html[data-style="minecraft"][data-theme] .composer-box:has(.composer-input:not(:placeholder-shown)),
+html[data-style="minecraft"][data-theme] .tasks-composer-box {
+  border: 2px solid #a0a0a0;
+  border-radius: 0;
+  background: #000000;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  color: #ffffff;
+  --fg: #ffffff;
+  --fg-dim: #9a9a9a;
+}
+
+html[data-style="minecraft"][data-theme] :is(.composer-box, .tasks-composer-box):focus-within {
+  border-color: #ffffff;
+}
+
+html[data-style="minecraft"][data-theme] :is(.composer-input, .tasks-composer-box textarea) {
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  caret-color: #ffffff;
+}
+
+html[data-style="minecraft"][data-theme] :is(.composer-input, .tasks-composer-box textarea)::placeholder {
+  color: #9a9a9a;
+}
+
+html[data-style="minecraft"][data-theme] .composer-btn:is(.attach.open, .effort-btn.open) {
+  border-image-source: var(--mc-button-hover);
+}
+
+html[data-style="minecraft"][data-theme] .composer-btn.stop svg {
+  color: #ff6b6b;
+}
+
+/* Slash commands: the game's own suggestions over its chat field. */
+html[data-style="minecraft"][data-theme] .command-menu {
+  border: 0;
+  border-radius: 0;
+  background: #0c0c0c;
+  box-shadow: 0 0 0 2px #000000;
+  padding: 4px 0;
+}
+
+html[data-style="minecraft"][data-theme] .command-menu li {
+  border-radius: 0;
+  background: transparent;
+}
+
+html[data-style="minecraft"][data-theme] .command-menu .name {
+  color: #c8c8c8;
+}
+
+html[data-style="minecraft"][data-theme] .command-menu .hint {
+  color: #9a9a9a;
+}
+
+html[data-style="minecraft"][data-theme] .command-menu li:is(.on, :hover) .name {
+  color: #ffff00;
+}
+
+html[data-style="minecraft"][data-theme] .command-menu li:is(.on, :hover) .hint {
+  color: #e0e0e0;
+}
+
+/* What waits its turn: lines of chat. */
+html[data-style="minecraft"][data-theme] .queue-panel {
+  border: 0;
+  border-radius: 0;
+  background: rgb(0 0 0 / 62%);
+  color: #ffffff;
+  --fg: #ffffff;
+  --fg-dim: #c8c8c8;
+  --red: #ff6b6b;
+}
+
+html[data-style="minecraft"][data-theme] .queue-panel.parked {
+  box-shadow: inset 4px 0 0 #e00000;
+}
+
+html[data-style="minecraft"][data-theme] .queue-steer {
+  border-width: 2px 2px 4px;
+  border-image-width: 2px 2px 4px;
+  border-image-slice: 1 1 2 1;
+}
+
+/* Suggested replies: a villager's trades, a row each, an emerald before. */
+html[data-style="minecraft"][data-theme] .reply {
+  padding: 8px 12px;
+  font-weight: 400;
+}
+
+html[data-style="minecraft"][data-theme] .reply::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  background: url("./art/minecraft-emerald.svg") center / 16px 16px no-repeat;
+}
+
+html[data-style="minecraft"][data-theme] .reply.on {
+  border-image-source: var(--mc-button-hover);
+  color: #ffffa0;
+}
+
+html[data-style="minecraft"][data-theme] .replies-send {
+  font-weight: 400;
+}
+
+html[data-style="minecraft"][data-theme] .error {
+  border: 2px solid var(--red);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--red) 12%, transparent);
+}
+
+/* ── Windows: menus and dialogs ───────────────────────────────────────── */
+
+html[data-style="minecraft"][data-theme] :is(.modal, .session-menu, .backend-menu, .effort-pop, .plus-pop, .pane-menu, .unsent-menu, .which-key, .replies, .question) {
+  border: 8px solid transparent;
+  border-image: var(--mc-window) 4 / 8px stretch;
+  border-radius: 0;
+  background-color: var(--card);
+  background-clip: padding-box;
+  box-shadow: none;
+}
+
+/* A window that opens out of the composer's black field is read in the
+   page's own colours again. */
+html[data-style="minecraft"][data-theme] :is(.plus-pop, .effort-pop) {
+  color: var(--foreground);
+  --fg: var(--foreground);
+  --fg-dim: var(--dim);
+}
+
+html[data-style="minecraft"][data-theme] .modal-scrim {
+  background: rgb(16 16 16 / 78%);
+}
+
+html[data-style="minecraft"][data-theme] .modal-head {
+  border-bottom: 0;
+  color: var(--mc-label);
+}
+
+html[data-style="minecraft"][data-theme] :is(.session-menu, .backend-menu, .pane-menu, .plus-pop, .unsent-menu) button {
+  border-radius: 0;
+}
+
+html[data-style="minecraft"][data-theme] :is(.session-menu, .backend-menu, .pane-menu, .plus-pop, .unsent-menu) button:is(:hover, :focus-visible):not(:disabled) {
+  background: var(--mc-slot);
+  color: var(--mc-slot-ink);
+  box-shadow:
+    inset 2px 2px 0 var(--mc-slot-lo),
+    inset -2px -2px 0 var(--mc-slot-hi);
+  outline: 0;
+}
+
+html[data-style="minecraft"][data-theme] .session-menu-sep {
+  height: 4px;
+  border: 0;
+  background: linear-gradient(var(--mc-plate-lo) 50%, var(--mc-plate-hi) 50%);
+  opacity: 0.55;
+}
+
+/* Fields: black, in a grey line that turns white. */
+html[data-style="minecraft"][data-theme] :is(input:not([type="range"], [type="checkbox"], [type="radio"], [type="file"]), textarea, select):not(.composer-input) {
+  border: 2px solid #a0a0a0;
+  border-radius: 0;
+  background-color: #000000;
+  color: #ffffff;
+  caret-color: #ffffff;
+}
+
+html[data-style="minecraft"][data-theme] :is(input, textarea, select):not(.composer-input):focus-visible {
+  border-color: #ffffff;
+  outline: 0;
+}
+
+html[data-style="minecraft"][data-theme] :is(input, textarea):not(.composer-input)::placeholder {
+  color: #9a9a9a;
+}
+
+html[data-style="minecraft"][data-theme] .tasks-composer-box textarea:not(.composer-input),
+html[data-style="minecraft"][data-theme] .search-field input:not(.composer-input) {
+  border: 0;
+  background: transparent;
+}
+
+/* A slider is the game's: a dark track, a small button to drag. */
+html[data-style="minecraft"][data-theme] input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  border: 2px solid #000000;
+  background: var(--mc-stone-off) 0 0 / 32px 32px #2c2c2c;
+}
+
+html[data-style="minecraft"][data-theme] input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 16px;
+  border: 2px solid;
+  border-color: #aaaaaa #565656 #565656 #aaaaaa;
+  border-radius: 0;
+  background: #6f6f6f;
+  box-shadow: 0 0 0 2px #000000;
+}
+
+html[data-style="minecraft"][data-theme] input[type="range"]::-moz-range-thumb {
+  width: 8px;
+  height: 12px;
+  border: 2px solid;
+  border-color: #aaaaaa #565656 #565656 #aaaaaa;
+  border-radius: 0;
+  background: #6f6f6f;
+  box-shadow: 0 0 0 2px #000000;
+}
+
+html[data-style="minecraft"][data-theme] .slider.effort-track {
+  border: 2px solid #000000;
+  background: var(--mc-stone-off) 0 0 / 32px 32px #2c2c2c;
+}
+
+html[data-style="minecraft"][data-theme] .slider-ticks span {
+  border-radius: 0;
+  background: #808080;
+}
+
+html[data-style="minecraft"][data-theme] .slider-ticks span.on {
+  background: #ffffff;
+}
+
+html[data-style="minecraft"][data-theme] .slider-thumb {
+  width: 16px;
+  height: 32px;
+  border: 2px solid;
+  border-color: #aaaaaa #565656 #565656 #aaaaaa;
+  border-radius: 0;
+  background: var(--mc-stone) 0 0 / 32px 32px #6f6f6f;
+  box-shadow: 0 0 0 2px #000000;
+}
+
+html[data-style="minecraft"][data-theme] .effort-stops button {
+  border-radius: 0;
+}
+
+html[data-style="minecraft"][data-theme] .effort-stops button.on {
+  color: var(--fg);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* A checkbox: a dark box, a white check. */
+html[data-style="minecraft"][data-theme] input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 2px solid #a0a0a0;
+  border-radius: 0;
+  background: #000000;
+  vertical-align: -3px;
+}
+
+html[data-style="minecraft"][data-theme] input[type="checkbox"]:checked {
+  background: url("./art/minecraft-check.svg") center / 12px 9px no-repeat #000000;
+}
+
+/* A choice of several: tabs. Dark until chosen, then a button in a white
+   outline. */
+html[data-style="minecraft"][data-theme] :is(.segmented, .emp-tabs, .proj-tabs, .bell-tabs, .sleep-tabs, .dsess-filters, .install-tabs) {
+  gap: 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-style="minecraft"][data-theme] :is(.segmented button, .emp-tab, .proj-tab, .bell-tabs button, .sleep-tabs button, .share-seg, .dsess-filter, .install-tabs button) {
+  border: solid transparent;
+  border-width: 4px 4px 6px;
+  border-image: var(--mc-button-off) 2 2 3 2 / 4px 4px 6px 4px stretch;
+  border-radius: 0;
+  background: var(--mc-stone-off) 0 0 / 32px 32px #2c2c2c;
+  color: #c8c8c8;
+  box-shadow: none;
+  transition: none;
+}
+
+html[data-style="minecraft"][data-theme] :is(.segmented button, .emp-tab, .proj-tab, .bell-tabs button, .sleep-tabs button, .share-seg, .dsess-filter, .install-tabs button):hover {
+  color: #ffffff;
+  background: var(--mc-stone-off) 0 0 / 32px 32px #2c2c2c;
+}
+
+html[data-style="minecraft"][data-theme] :is(.segmented button.on, .emp-tab.on, .proj-tab.on, .bell-tabs button.on, .sleep-tabs button.on, .share-seg.on, .dsess-filter.on, .install-tabs button.on) {
+  border-image-source: var(--mc-button-hover);
+  background: var(--mc-stone) 0 0 / 32px 32px #6f6f6f;
+  color: #ffffff;
+  text-shadow: 2px 2px 0 #3f3f3f;
+}
+
+/* ── Plates: cards ────────────────────────────────────────────────────── */
+
+html[data-style="minecraft"][data-theme] :is(.task-card, .task-template, .work-card, .kpi-card, .emp-stat, .emp-approval, .emp-attention, .emp-report-row, .dsess-card, .switcher-card, .sleep-bar, .memory-row, .install-box) {
+  border: 2px solid;
+  border-color: var(--mc-plate-hi) var(--mc-plate-lo) var(--mc-plate-lo) var(--mc-plate-hi);
+  border-radius: 0;
+  background: var(--mc-plate);
+  box-shadow: 0 0 0 2px #000000;
+}
+
+html[data-style="minecraft"][data-theme] :is(.task-card, .task-template, .kpi-card, .dsess-card, .emp-report-row):hover {
+  background: var(--mc-plate);
+  box-shadow: 0 0 0 2px #ffffff;
+}
+
+html[data-style="minecraft"][data-theme] .dsess-card.on {
+  box-shadow: 0 0 0 2px #ffffff;
+}
+
+/* A measure of progress is the experience bar. */
+html[data-style="minecraft"][data-theme] .kpi-track {
+  height: 10px;
+  border-radius: 0;
+  background: url("./art/minecraft-xp-empty.svg") 0 0 / 40px 10px repeat-x #14261a;
+}
+
+html[data-style="minecraft"][data-theme] .kpi-fill {
+  border-radius: 0;
+  background: url("./art/minecraft-xp.svg") 0 0 / 40px 10px repeat-x #5c853b;
+}
+
+/* What it has spent: a heart before it. */
+html[data-style="minecraft"][data-theme] .emp-spend > svg {
+  width: 18px;
+  height: 18px;
+  background: url("./art/minecraft-heart.svg") center / 18px 18px no-repeat;
+}
+
+html[data-style="minecraft"][data-theme] .emp-spend > svg > * {
+  visibility: hidden;
+}
+
+html[data-style="minecraft"][data-theme] .emp-avatar {
+  font-weight: 700;
+}
+
+/* ── Notices: toasts on a list ────────────────────────────────────────── */
+
+html[data-style="minecraft"][data-theme] .search-panel {
+  border: 2px solid #000000;
+  border-radius: 0;
+  background: url("./art/minecraft-dirt.svg") 0 0 / 64px 64px #1e150f;
+  box-shadow: 0 0 0 2px #555555;
+  color: #ffffff;
+  --fg: #ffffff;
+  --fg-dim: #a8a8a8;
+  --bg-card: rgb(255 255 255 / 10%);
+  --line: #555555;
+  --red: #ff6b6b;
+  --green: #55ff55;
+  --blue: #66b5ff;
+}
+
+html[data-style="minecraft"][data-theme] .search-field {
+  border: 2px solid #a0a0a0;
+  border-radius: 0;
+  background: #000000;
+  color: #ffffff;
+}
+
+html[data-style="minecraft"][data-theme] .search-field:focus-within {
+  border-color: #ffffff;
+}
+
+html[data-style="minecraft"][data-theme] .search-results {
+  background: url("./art/minecraft-dirt-deep.svg") 0 0 / 64px 64px #0f0b07;
+  box-shadow:
+    inset 0 10px 8px -6px #000000,
+    inset 0 -10px 8px -6px #000000;
+}
+
+html[data-style="minecraft"][data-theme] .search-row:is(:hover, .on, :focus-visible) {
+  border-color: #ffffff;
+  background: #000000;
+  outline: 0;
+}
+
+html[data-style="minecraft"][data-theme] .bell-title {
+  text-shadow: 2px 2px 0 #3f3f3f;
+}
+
+html[data-style="minecraft"][data-theme] .bell-card,
+html[data-style="minecraft"][data-theme] .app-oops {
+  border: 8px solid transparent;
+  border-image: var(--mc-toast) 4 / 8px stretch;
+  border-radius: 0;
+  background-color: #212121;
+  background-clip: padding-box;
+  box-shadow: none;
+  color: #ffffff;
+  --fg: #ffffff;
+  --fg-dim: #b0b0b0;
+}
+
+html[data-style="minecraft"][data-theme] .bell-card .bell-source {
+  color: #ffff00;
+}
+
+html[data-style="minecraft"][data-theme] .bell-card .bell-mark {
+  width: 16px;
+  height: 16px;
+  background: url("./art/minecraft-bell.svg") center / 16px 16px no-repeat;
+}
+
+html[data-style="minecraft"][data-theme] .bell-card svg.bell-mark > * {
+  visibility: hidden;
+}
+
+html[data-style="minecraft"][data-theme] .bell-p {
+  border-radius: 0;
+}
+
+html[data-style="minecraft"][data-theme] .bell-band::before {
+  border-radius: 0;
+}
+
+/* Something went wrong: a toast, a creeper on it. */
+html[data-style="minecraft"][data-theme] .app-oops {
+  padding-left: 44px;
+  background-image: url("./art/minecraft-creeper.svg");
+  background-position: 8px center;
+  background-size: 24px 24px;
+  background-repeat: no-repeat;
+  color: #ff7b7b;
+}
+
+/* ── Pages ────────────────────────────────────────────────────────────── */
+
+html[data-style="minecraft"][data-theme] :is(.tasks-head h1, .proj-head h1, .tasks-section, .emp-section, .sleep-section) {
+  color: var(--mc-label);
+}
+
+html[data-style="minecraft"][data-theme] .task-kind::before {
+  content: "";
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  vertical-align: -3px;
+  background: url("./art/minecraft-clock.svg") center / 16px 16px no-repeat;
+}
+
+html[data-style="minecraft"][data-theme] .task-day {
+  border-radius: 0;
+}
+
+html[data-style="minecraft"][data-theme] .proj-session:hover {
+  background: var(--mc-slot);
+  color: var(--mc-slot-ink);
+}
+
+html[data-style="minecraft"][data-theme] .proj-session.active {
+  border-color: var(--mc-label);
+}
+
+/* Settings: its themes are plates; the one in use is outlined in white. */
+html[data-style="minecraft"][data-theme] .settings-body .tw > button[role="radio"] {
+  border: 2px solid;
+  border-color: var(--mc-plate-hi) var(--mc-plate-lo) var(--mc-plate-lo) var(--mc-plate-hi);
+  border-radius: 0;
+  background: var(--mc-plate);
+  color: var(--foreground);
+}
+
+html[data-style="minecraft"][data-theme] .settings-body .tw > button[role="radio"]:is(:hover, [aria-checked="true"]) {
+  background: var(--mc-plate);
+  color: var(--foreground);
+  box-shadow:
+    0 0 0 2px #000000,
+    0 0 0 4px #ffffff;
+}
+
+/* ── No session open: the title screen ────────────────────────────────── */
+
+html[data-style="minecraft"][data-theme] :is(.placeholder, .loading, .login) {
+  position: relative;
+  background: url("./art/minecraft-dirt.svg") 0 0 / 64px 64px #1e150f;
+  color: #ffffff;
+  text-shadow: 2px 2px 0 #3f3f3f;
+}
+
+html[data-style="minecraft"][data-theme] .placeholder {
+  flex: 1 1 auto;
+}
+
+html[data-style="minecraft"][data-theme] .placeholder::before {
+  content: "";
+  width: 312px;
+  max-width: 80%;
+  aspect-ratio: 39 / 14;
+  margin-bottom: 1.6rem;
+  background: url("./art/minecraft-title.svg") center / contain no-repeat;
+}
+
+html[data-style="minecraft"][data-theme] .placeholder::after {
+  content: "开工!";
+  position: absolute;
+  top: calc(50% - 6.4rem);
+  left: calc(50% + 5.6rem);
+  white-space: nowrap;
+  color: #ffff00;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-shadow: 2px 2px 0 #3f3f00;
+  rotate: -20deg;
+  animation: mc-splash 0.45s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+html[data-style="minecraft"][data-theme] .placeholder .backend-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(25rem, 86%);
+}
+
+html[data-style="minecraft"][data-theme] .placeholder .backend-choice .text-btn {
+  width: 100%;
+  min-height: 40px;
+  text-align: center;
+  justify-content: center;
+}
+
+/* Loading: the old bar that fills. */
+html[data-style="minecraft"][data-theme] .loading::after {
+  content: "";
+  order: 1;
+  width: 200px;
+  height: 4px;
+  background: #808080;
+}
+
+html[data-style="minecraft"][data-theme] .loading::before {
+  content: "";
+  order: 2;
+  width: 200px;
+  height: 4px;
+  margin-top: -16px;
+  background: #80ff80;
+  transform-origin: left center;
+  animation: mc-load 1.6s steps(20) infinite;
+}
+
+@keyframes mc-load {
+  from {
+    scale: 0 1;
+  }
+}
+
+/* Signing in. */
+html[data-style="minecraft"][data-theme] .login-box {
+  background: transparent;
+  border-radius: 0;
+}
+
+html[data-style="minecraft"][data-theme] .login-title {
+  height: 70px;
+  background: url("./art/minecraft-title.svg") center / 195px 70px no-repeat;
+  color: transparent;
+  font-size: 0;
+  text-shadow: none;
+}
+
+html[data-style="minecraft"][data-theme] .login-input {
+  border: 2px solid #a0a0a0;
+  border-radius: 0;
+  background: #000000;
+  color: #ffffff;
+  text-shadow: none;
+}
+
+html[data-style="minecraft"][data-theme] .login-input:focus {
+  border-color: #ffffff;
+}
+
+html[data-style="minecraft"][data-theme] .login-error {
+  color: #ff5555;
+}
+
+html[data-style="minecraft"][data-theme] .login-btn {
+  font-weight: 400;
+}
+
+/* A pane beside the chat (the canvas, a terminal): its head is a strip of
+   the menu's dirt, its name in white. */
+html[data-style="minecraft"][data-theme] .pane-head {
+  border-bottom: 2px solid #000000;
+  background: url("./art/minecraft-dirt.svg") 0 0 / 64px 64px #1e150f;
+  color: #ffffff;
+  text-shadow: 1px 1px 0 #3f3f3f;
+  --fg: #ffffff;
+  --fg-dim: #c8c8c8;
+}
+
+html[data-style="minecraft"][data-theme] .side-column {
+  border-left: 2px solid var(--mc-plate-lo);
+}
+
+/* ── Small things ─────────────────────────────────────────────────────── */
+
+html[data-style="minecraft"][data-theme] .to-bottom {
+  width: 40px;
+  height: 40px;
+  box-shadow: none;
+}
+
+/* What has the keyboard's focus: the white outline of a button under the
+   pointer. */
+html[data-style="minecraft"][data-theme] :is(button, [role="button"], [role="radio"], [role="tab"], a):focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 0;
+}
+
+html[data-style="minecraft"][data-theme="light"] .main :is(button, [role="button"], [role="radio"], [role="tab"], a):focus-visible {
+  outline-color: #000000;
+}
+
+html[data-style="minecraft"][data-theme] .tag {
+  border-radius: 0;
+}
+
+@media (max-width: 640px) {
+  /* A phone's header: the name in a slot between two more. */
+  html[data-style="minecraft"][data-theme] .chat-header .chat-title {
+    border: 2px solid;
+    border-color: var(--mc-slot-lo) var(--mc-slot-hi) var(--mc-slot-hi) var(--mc-slot-lo);
+    border-radius: 0;
+    background: var(--mc-slot);
+    box-shadow: none;
+  }
+
+  html[data-style="minecraft"][data-theme] .chat-header .chat-name {
+    color: var(--mc-slot-ink);
+  }
+}
+
+html[data-style="minecraft"][data-theme] .sidebar-foot.dial .devices-btn svg {
+  border: 2px solid #8f8f8f;
+  border-radius: 0;
+  background: rgb(20 19 6 / 80%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: 0 0 0 2px #000000;
+}
+
+html[data-style="minecraft"][data-theme] .dial-btn {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-style="minecraft"][data-theme] .dial-scrim {
+  background: rgb(0 0 0 / 80%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-style="minecraft"][data-theme] .brand::after,
+  html[data-style="minecraft"][data-theme] .placeholder::after,
+  html[data-style="minecraft"][data-theme] .dot,
+  html[data-style="minecraft"][data-theme] .session-unread,
+  html[data-style="minecraft"][data-theme] .bell-dot,
+  html[data-style="minecraft"][data-theme] .tool.group.running .tool-icon::before,
+  html[data-style="minecraft"][data-theme] .tool.group.running .tool-icon::after,
+  html[data-style="minecraft"][data-theme] .tool.group.running > .tool-head > .tool-state::before,
+  html[data-style="minecraft"][data-theme] .tool.group.running > .tool-head > .tool-state::after,
+  html[data-style="minecraft"][data-theme] .tool-state > svg.spin,
+  html[data-style="minecraft"][data-theme] .thinking.live > svg,
+  html[data-style="minecraft"][data-theme] .thinking.live::before,
+  html[data-style="minecraft"][data-theme] .thinking.live::after,
+  html[data-style="minecraft"][data-theme] .working-dots::before,
+  html[data-style="minecraft"][data-theme] .turn-line > .clock::before,
+  html[data-style="minecraft"][data-theme] .loading::before {
+    animation: none;
+  }
+
+  /* Still: the fire full, the arrow half-way, one line of letters. */
+  html[data-style="minecraft"][data-theme] .tool.group.running .tool-icon::after,
+  html[data-style="minecraft"][data-theme] .tool.group.running > .tool-head > .tool-state::after,
+  html[data-style="minecraft"][data-theme] .thinking.live::before {
+    opacity: 0;
+  }
+
+  html[data-style="minecraft"][data-theme] .tool.group.running > .tool-head > .tool-state::before {
+    transform: scaleX(0.5);
+  }
+}

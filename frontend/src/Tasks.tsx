@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { createTask, deleteTask, listTasks, runTask, updateTask, type Task } from "./api"
 import { Confirm } from "./Confirm"
+import { t } from "./i18n"
 import { isComposing } from "./ime"
 import { buildCron, DAY_NAMES, describeCron, readCron, type Frequency, type Schedule } from "./schedule"
 import "./Tasks.css"
@@ -54,38 +55,38 @@ export function Tasks({
     <div className="tasks-page">
       <header className="tasks-head">
         {showSidebarButton ? (
-          <button className="tasks-round" onClick={onToggleSidebar} title="Show sidebar">
+          <button className="tasks-round" onClick={onToggleSidebar} title={t("Show sidebar")}>
             <PanelLeft />
           </button>
         ) : (
           <span className="tasks-round-spacer" />
         )}
-        <h1>Tasks</h1>
+        <h1>{t("Tasks")}</h1>
         <span className="tasks-round-spacer" />
       </header>
 
       <div className="tasks-scroll">
         <div className="tasks-column">
           {error && <div className="tasks-error">{error}</div>}
-          {tasks === null && !error && <div className="tasks-note">loading…</div>}
+          {tasks === null && !error && <div className="tasks-note">{t("loading…")}</div>}
 
           {tasks?.map((task) => (
             <TaskCard key={task.id} task={task} onOpen={() => setEditing(task)} />
           ))}
 
-          <h2 className="tasks-section">{tasks?.length ? "Start from" : "Get started"}</h2>
-          {TEMPLATES.map((t) => (
+          <h2 className="tasks-section">{tasks?.length ? t("Start from") : t("Get started")}</h2>
+          {TEMPLATES.map((tpl) => (
             <button
-              key={t.name}
+              key={tpl.name}
               className="task-template"
-              onClick={() => setEditing({ draft: true, name: t.name, prompt: t.prompt, cron: t.cron })}
+              onClick={() => setEditing({ draft: true, name: tpl.name, prompt: tpl.prompt, cron: tpl.cron })}
             >
               <span className="task-template-head">
-                <span className="task-template-emoji">{t.emoji}</span>
-                <span className="task-template-name">{t.name}</span>
+                <span className="task-template-emoji">{tpl.emoji}</span>
+                <span className="task-template-name">{tpl.name}</span>
                 <Plus className="task-template-plus" />
               </span>
-              <span className="task-template-desc">{t.description}</span>
+              <span className="task-template-desc">{tpl.description}</span>
             </button>
           ))}
         </div>
@@ -110,12 +111,12 @@ function TaskCard({ task, onOpen }: { task: Task; onOpen: () => void }) {
   const { kind, when } = describeCron(task.cron)
   return (
     <button className={"task-card" + (task.paused ? " paused" : "")} onClick={onOpen}>
-      <span className="task-kind">{task.paused ? `${kind} · paused` : kind}</span>
+      <span className="task-kind">{task.paused ? t("{kind} · paused", { kind }) : kind}</span>
       <span className="task-name">{task.name}</span>
       <span className="task-prompt">{task.prompt}</span>
       <span className="task-rule" />
       <span className="task-when">{when}</span>
-      {task.last_error && <span className="task-failed">Last run failed: {task.last_error}</span>}
+      {task.last_error && <span className="task-failed">{t("Last run failed: {error}", { error: task.last_error })}</span>}
     </button>
   )
 }
@@ -157,14 +158,14 @@ function SayTask({ onMade, onBlank }: { onMade: (task: Task) => void; onBlank: (
     <div className="tasks-composer">
       {error && <div className="tasks-composer-error">{error}</div>}
       <div className="tasks-composer-box">
-        <button className="tasks-composer-btn" onClick={onBlank} title="Write a task out by hand">
+        <button className="tasks-composer-btn" onClick={onBlank} title={t("Write a task out by hand")}>
           <Plus />
         </button>
         <textarea
           ref={ref}
           rows={1}
           value={text}
-          placeholder="Schedule a task"
+          placeholder={t("Schedule a task")}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (isComposing(e)) return
@@ -178,7 +179,7 @@ function SayTask({ onMade, onBlank }: { onMade: (task: Task) => void; onBlank: (
           className="tasks-composer-btn send"
           onClick={send}
           disabled={!text.trim() || busy}
-          title="Make it"
+          title={t("Make it")}
         >
           {busy ? <Loader2 className="spin" /> : <ArrowUp />}
         </button>
@@ -190,11 +191,11 @@ function SayTask({ onMade, onBlank }: { onMade: (task: Task) => void; onBlank: (
 type Draft = { draft: true; name: string; prompt: string; cron: string }
 
 const FREQUENCIES: [Frequency, string][] = [
-  ["daily", "Every day"],
-  ["weekdays", "Weekdays"],
-  ["weekly", "Weekly"],
-  ["monthly", "Monthly"],
-  ["custom", "Custom (cron)"],
+  ["daily", t("Every day")],
+  ["weekdays", t("Weekdays")],
+  ["weekly", t("Weekly")],
+  ["monthly", t("Monthly")],
+  ["custom", t("Custom (cron)")],
 ]
 
 /**
@@ -257,10 +258,10 @@ function TaskEditor({
 
   return createPortal(
     <div className="modal-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal task-editor" role="dialog" aria-label={existing ? "Task" : "New task"}>
+      <div className="modal task-editor" role="dialog" aria-label={existing ? t("Task") : t("New task")}>
         <div className="modal-head">
-          <span>{existing ? "Task" : "New task"}</span>
-          <button className="icon-btn" onClick={onClose} title="Close">
+          <span>{existing ? t("Task") : t("New task")}</span>
+          <button className="icon-btn" onClick={onClose} title={t("Close")}>
             <X />
           </button>
         </div>
@@ -273,24 +274,24 @@ function TaskEditor({
           }}
         >
           <label>
-            <span>Name</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Morning news" />
+            <span>{t("Name")}</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("e.g. Morning news")} />
           </label>
 
           <label>
-            <span>Instructions</span>
+            <span>{t("Instructions")}</span>
             <textarea
               value={prompt}
               rows={5}
               autoFocus={!existing}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="What it should do each time it runs."
+              placeholder={t("What it should do each time it runs.")}
             />
           </label>
 
           <div className="task-schedule">
             <label>
-              <span>Repeats</span>
+              <span>{t("Repeats")}</span>
               <select
                 value={schedule.frequency}
                 onChange={(e) => {
@@ -309,7 +310,7 @@ function TaskEditor({
 
             {schedule.frequency === "custom" ? (
               <label className="task-schedule-wide">
-                <span>Cron (minute hour day month weekday)</span>
+                <span>{t("Cron (minute hour day month weekday)")}</span>
                 <input
                   value={schedule.cron}
                   onChange={(e) => set({ cron: e.target.value })}
@@ -320,14 +321,14 @@ function TaskEditor({
               </label>
             ) : (
               <label>
-                <span>At</span>
+                <span>{t("At")}</span>
                 <input type="time" value={schedule.time} onChange={(e) => set({ time: e.target.value || "09:00" })} />
               </label>
             )}
 
             {schedule.frequency === "monthly" && (
               <label>
-                <span>Day</span>
+                <span>{t("Day")}</span>
                 <select value={schedule.dom} onChange={(e) => set({ dom: Number(e.target.value) })}>
                   {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                     <option key={d} value={d}>
@@ -340,7 +341,7 @@ function TaskEditor({
           </div>
 
           {schedule.frequency === "weekly" && (
-            <div className="task-days" role="group" aria-label="Days">
+            <div className="task-days" role="group" aria-label={t("Days")}>
               {[1, 2, 3, 4, 5, 6, 0].map((d) => {
                 const on = schedule.days.includes(d)
                 return (
@@ -365,12 +366,12 @@ function TaskEditor({
             </div>
           )}
 
-          <small className="task-zone">Times are Beijing time (UTC+{(existing?.utc_offset ?? 480) / 60}).</small>
+          <small className="task-zone">{t("Times are Beijing time (UTC+{n}).", { n: (existing?.utc_offset ?? 480) / 60 })}</small>
 
           {existing && (
             <div className="task-actions">
               <button type="button" className="text-btn" onClick={() => onOpenSession(existing.target)}>
-                <MessageSquare /> Open conversation
+                <MessageSquare /> {t("Open conversation")}
               </button>
               <button
                 type="button"
@@ -378,7 +379,7 @@ function TaskEditor({
                 onClick={() =>
                   act(async () => {
                     // Said on the tap; taken back if it did not start.
-                    setNote("Running now; the reply lands in its conversation.")
+                    setNote(t("Running now; the reply lands in its conversation."))
                     try {
                       return await runTask(existing.id)
                     } catch (e) {
@@ -388,14 +389,14 @@ function TaskEditor({
                   }, false)
                 }
               >
-                <Play /> Run now
+                <Play /> {t("Run now")}
               </button>
               <button
                 type="button"
                 className="text-btn"
                 onClick={() => act(() => updateTask(existing.id, { paused: !existing.paused }))}
               >
-                {existing.paused ? <Play /> : <Pause />} {existing.paused ? "Resume" : "Pause"}
+                {existing.paused ? <Play /> : <Pause />} {existing.paused ? t("Resume") : t("Pause")}
               </button>
             </div>
           )}
@@ -406,14 +407,14 @@ function TaskEditor({
           <div className="confirm-actions">
             {existing && (
               <button type="button" className="text-btn danger project-delete" onClick={() => setAsking(true)}>
-                Delete
+                {t("Delete")}
               </button>
             )}
             <button type="button" className="text-btn" onClick={onClose}>
-              Cancel
+              {t("Cancel")}
             </button>
             <button type="submit" className="text-btn primary" disabled={!ready || busy}>
-              {existing ? "Save" : "Create"}
+              {existing ? t("Save") : t("Create")}
             </button>
           </div>
         </form>
@@ -421,8 +422,8 @@ function TaskEditor({
 
       {asking && existing && (
         <Confirm
-          title={`Delete ${existing.name}?`}
-          detail="The task stops. Its conversation, and every reply so far, stays."
+          title={t("Delete {name}?", { name: existing.name })}
+          detail={t("The task stops. Its conversation, and every reply so far, stays.")}
           onYes={async () => {
             await deleteTask(existing.id)
             onDeleted(existing.id)
@@ -441,7 +442,7 @@ const TEMPLATES = [
   {
     emoji: "📰",
     name: "Morning tech news",
-    description: "Every morning, the AI and cloud news worth knowing, in five bullets.",
+    description: t("Every morning, the AI and cloud news worth knowing, in five bullets."),
     cron: "0 9 * * *",
     prompt:
       "Search the web for today's most important AI and cloud computing news. Give me the five that matter most, each with a one-line summary and a link.",
@@ -449,7 +450,7 @@ const TEMPLATES = [
   {
     emoji: "☁️",
     name: "AWS architecture weekly",
-    description: "Every Monday, what changed in AWS services and solutions architecture.",
+    description: t("Every Monday, what changed in AWS services and solutions architecture."),
     cron: "0 9 * * 1",
     prompt:
       "Give me an industry weekly for AWS solutions architecture work: notable AWS service and architecture updates, Amazon Bedrock and agent news, and what they mean for customers. Keep it scannable.",
@@ -457,7 +458,7 @@ const TEMPLATES = [
   {
     emoji: "🩺",
     name: "Server health check",
-    description: "Each morning, disk, memory and services on this machine, and anything wrong.",
+    description: t("Each morning, disk, memory and services on this machine, and anything wrong."),
     cron: "0 8 * * *",
     prompt:
       "Check this server's health: disk usage, memory, load, failed systemd units, and recent errors from the loom service. Report only what needs attention, briefly; say all clear if nothing does.",
@@ -465,7 +466,7 @@ const TEMPLATES = [
   {
     emoji: "📦",
     name: "Dependency updates",
-    description: "Every Friday, which of Loom's dependencies have updates worth taking.",
+    description: t("Every Friday, which of Loom's dependencies have updates worth taking."),
     cron: "0 17 * * 5",
     prompt:
       "In ~/loom, check for outdated Elixir dependencies (mix hex.outdated) and frontend ones (pnpm outdated in frontend/). Summarize which updates matter and why, and which are safe to take.",
@@ -473,7 +474,7 @@ const TEMPLATES = [
   {
     emoji: "💼",
     name: "Job openings",
-    description: "Mondays and Thursdays, fresh postings that fit me.",
+    description: t("Mondays and Thursdays, fresh postings that fit me."),
     cron: "0 9 * * 1,4",
     prompt:
       "Find recent job postings for senior cloud solutions architect roles, and list the best ten with company, location and a link.",

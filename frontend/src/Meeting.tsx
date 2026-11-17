@@ -5,6 +5,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react"
 import { createPortal } from "react-dom"
 import { ChevronRight, Mic, Square, Sparkles } from "lucide-react"
+import { t } from "./i18n"
 import {
   askNow,
   closeMeetingDialog,
@@ -32,20 +33,23 @@ export function MeetingDialog() {
 
   return createPortal(
     <div className="modal-scrim" onMouseDown={(e) => e.target === e.currentTarget && closeMeetingDialog()}>
-      <div className="modal confirm meeting-dialog" role="dialog" aria-label="Meeting mode">
-        <div className="modal-head">Meeting mode</div>
+      <div className="modal confirm meeting-dialog" role="dialog" aria-label={t("Meeting mode")}>
+        <div className="modal-head">{t("Meeting mode")}</div>
         <div className="confirm-body">
-          {m.phase === "checking" && <p>Checking the speech models…</p>}
+          {m.phase === "checking" && <p>{t("Checking the speech models…")}</p>}
 
           {m.phase === "offer" && (
             <>
               <p>
-                Meeting mode transcribes the meeting in this browser and tells voices apart, then
-                the agent in this chat gives hints as it goes and writes the minutes at the end.
+                {t(
+                  "Meeting mode transcribes the meeting in this browser and tells voices apart, then the agent in this chat gives hints as it goes and writes the minutes at the end.",
+                )}
               </p>
               <p>
-                It needs the speech models first (about {mb(m.total || 228_000_000)}, once). The
-                server fetches them and passes them on; this browser keeps them.
+                {t(
+                  "It needs the speech models first (about {size}, once). The server fetches them and passes them on; this browser keeps them.",
+                  { size: mb(m.total || 228_000_000) },
+                )}
               </p>
               {m.error && <p className="confirm-error">{m.error}</p>}
             </>
@@ -55,10 +59,10 @@ export function MeetingDialog() {
             <>
               <p>
                 {m.phase === "browser"
-                  ? "Downloading to this browser…"
+                  ? t("Downloading to this browser…")
                   : m.unpacking
-                    ? "The server is unpacking the models…"
-                    : "The server is fetching the models…"}
+                    ? t("The server is unpacking the models…")
+                    : t("The server is fetching the models…")}
                 <span className="meeting-pct">
                   {m.total > 0 ? `${mb(m.got)} / ${mb(m.total)}` : mb(m.got)}
                 </span>
@@ -72,28 +76,29 @@ export function MeetingDialog() {
           {m.phase === "ready" && (
             <>
               <p>
-                On a computer, share your screen <b>with system audio</b> on — that is how the other
-                side is heard. Your microphone is you. Headphones keep the two apart.
+                {t("On a computer, share your screen ")}
+                <b>{t("with system audio")}</b>
+                {t(" on — that is how the other side is heard. Your microphone is you. Headphones keep the two apart.")}
               </p>
-              <p>No screen to share (a phone, or a meeting in the room): only the microphone is used.</p>
+              <p>{t("No screen to share (a phone, or a meeting in the room): only the microphone is used.")}</p>
             </>
           )}
 
-          {m.phase === "loading" && <p>Starting the recognisers…</p>}
+          {m.phase === "loading" && <p>{t("Starting the recognisers…")}</p>}
           {m.phase === "error" && <p className="confirm-error">{m.error}</p>}
 
           <div className="confirm-actions">
             <button className="text-btn" onClick={closeMeetingDialog}>
-              {m.phase === "server" || m.phase === "browser" ? "Hide" : "Cancel"}
+              {m.phase === "server" || m.phase === "browser" ? t("Hide") : t("Cancel")}
             </button>
             {m.phase === "offer" && (
               <button className="text-btn" onClick={() => void downloadModels()}>
-                Download
+                {t("Download")}
               </button>
             )}
             {m.phase === "ready" && (
               <button className="text-btn" onClick={() => void startMeeting(sessionId)}>
-                Start
+                {t("Start")}
               </button>
             )}
           </div>
@@ -136,20 +141,20 @@ export function MeetingBar({ sessionId }: { sessionId: string }) {
     const live = m.partial.them || m.partial.me
     return (
       <div className="meeting-bar">
-        <span className="meeting-dot" title={m.speakers ? "Listening; voices are told apart" : "Listening"} />
+        <span className="meeting-dot" title={m.speakers ? t("Listening; voices are told apart") : t("Listening")} />
         <span className="meeting-time">
           <Elapsed since={m.startedAt ?? Date.now()} />
         </span>
         <span className="meeting-live" title={live}>
-          {live || (m.systemAudio ? "Listening…" : "Listening (microphone only)…")}
+          {live || (m.systemAudio ? t("Listening…") : t("Listening (microphone only)…"))}
         </span>
-        <button className="meeting-btn" title="Send what was said so far and get hints now" onClick={() => void askNow()}>
+        <button className="meeting-btn" title={t("Send what was said so far and get hints now")} onClick={() => void askNow()}>
           <Sparkles />
-          Ask
+          {t("Ask")}
         </button>
-        <button className="meeting-btn end" title="End the meeting and write the minutes" onClick={() => void stopMeeting()}>
+        <button className="meeting-btn end" title={t("End the meeting and write the minutes")} onClick={() => void stopMeeting()}>
           <Square />
-          End
+          {t("End")}
         </button>
       </div>
     )
@@ -160,15 +165,15 @@ export function MeetingBar({ sessionId }: { sessionId: string }) {
     return (
       <div className="meeting-bar">
         <span className="meeting-dot off" />
-        <span className="meeting-live">A meeting is open in this chat but not listening here.</span>
+        <span className="meeting-live">{t("A meeting is open in this chat but not listening here.")}</span>
         <button className="meeting-btn" onClick={() => void startMeeting(sessionId, true)}>
           <Mic />
-          Resume
+          {t("Resume")}
           <ChevronRight />
         </button>
         <button className="meeting-btn end" onClick={() => void stopMeeting(sessionId).then(() => setOrphan(null))}>
           <Square />
-          End
+          {t("End")}
         </button>
       </div>
     )

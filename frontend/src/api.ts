@@ -1,3 +1,5 @@
+import { t } from "./i18n"
+
 export class UnauthorizedError extends Error {
   constructor() {
     super("unauthorized")
@@ -370,7 +372,7 @@ export function changeAgent(before: AgentInfo, attrs: Parameters<typeof updateAg
     (s) => shown?.upsert(s),
     (e: Error) => {
       shown?.upsert(before)
-      shown?.oops(`Couldn't save that — ${e.message}`)
+      shown?.oops(t("Couldn't save that — {error}", { error: e.message }))
     },
   )
 }
@@ -387,7 +389,7 @@ export async function renameAgent(
     body: JSON.stringify({ title }),
   })
   if (res.status === 401) throw unauthorized()
-  if (!res.ok) throw new Error(`renameAgent failed: ${res.status}`)
+  if (!res.ok) throw new Error(t("renameAgent failed: {status}", { status: res.status }))
   return res.json()
 }
 
@@ -504,7 +506,7 @@ export async function deleteAgent(id: string): Promise<void> {
   })
   if (res.status === 401) throw unauthorized()
   if (!res.ok && res.status !== 404) {
-    throw new Error(`deleteAgent failed: ${res.status}`)
+    throw new Error(t("deleteAgent failed: {status}", { status: res.status }))
   }
 }
 
@@ -561,7 +563,7 @@ export async function sessionTree(id: string): Promise<SessionTree> {
   await untilMade(id)
   const res = await fetch(`/api/agents/${id}/tree`, { headers: authHeaders() })
   if (res.status === 401) throw unauthorized()
-  if (!res.ok) throw new Error(`could not list the files: ${res.status}`)
+  if (!res.ok) throw new Error(t("could not list the files: {status}", { status: res.status }))
   return res.json()
 }
 
@@ -639,7 +641,7 @@ export async function downloadWorkspaceFile(id: string, path: string): Promise<v
 export async function projectTree(id: string): Promise<{ files: TreeFile[]; truncated: boolean }> {
   const res = await fetch(`/api/projects/${id}/tree`, { headers: authHeaders() })
   if (res.status === 401) throw unauthorized()
-  if (!res.ok) throw new Error(`could not list the files: ${res.status}`)
+  if (!res.ok) throw new Error(t("could not list the files: {status}", { status: res.status }))
   return res.json()
 }
 
@@ -662,9 +664,9 @@ export async function downloadAgentZip(id: string, path: string): Promise<void> 
 async function download(url: string, filename: string): Promise<void> {
   const res = await fetch(url, { headers: authHeaders() })
   if (res.status === 401) throw unauthorized()
-  if (res.status === 404) throw new Error("the file is no longer there")
-  if (res.status === 413) throw new Error("too big to zip (over 1 GB)")
-  if (!res.ok) throw new Error(`download failed: ${res.status}`)
+  if (res.status === 404) throw new Error(t("the file is no longer there"))
+  if (res.status === 413) throw new Error(t("too big to zip (over 1 GB)"))
+  if (!res.ok) throw new Error(t("download failed: {status}", { status: res.status }))
 
   // Typed as opaque bytes: an HTML or SVG blob that a browser navigated to
   // instead of saving would run on loom's origin.
@@ -699,7 +701,7 @@ export function canvasBase(id: string): Promise<CanvasBases> {
   const bases = untilMade(id).then(() => fetch(`/api/agents/${id}/canvas`, { method: "POST", headers: authHeaders() })).then(
     async (res) => {
       if (res.status === 401) throw unauthorized()
-      if (!res.ok) throw new Error(`canvas failed: ${res.status}`)
+      if (!res.ok) throw new Error(t("canvas failed: {status}", { status: res.status }))
       const body = await res.json()
       return { output: body.base as string, files: body.files as string }
     },
@@ -721,7 +723,7 @@ export function projectBase(id: string): Promise<string> {
 
   const base = fetch(`/api/projects/${id}/canvas`, { method: "POST", headers: authHeaders() }).then(async (res) => {
     if (res.status === 401) throw unauthorized()
-    if (!res.ok) throw new Error(`viewer failed: ${res.status}`)
+    if (!res.ok) throw new Error(t("viewer failed: {status}", { status: res.status }))
     return (await res.json()).base as string
   })
   base.catch(() => projectBases.delete(id))
@@ -751,7 +753,7 @@ export async function uploadAgentFiles(
   if (res.status === 401) throw unauthorized()
   if (!res.ok) {
     const detail = await res.json().catch(() => null)
-    throw new Error(detail?.error ?? `upload failed: ${res.status}`)
+    throw new Error(detail?.error ?? t("upload failed: {status}", { status: res.status }))
   }
   return (await res.json()).files
 }
@@ -810,7 +812,7 @@ async function apiCall<T>(url: string, init: RequestInit): Promise<T> {
   if (res.status === 401) throw unauthorized()
   if (res.status === 204) return undefined as T
   const body = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(body.error ?? `request failed: ${res.status}`)
+  if (!res.ok) throw new Error(body.error ?? t("request failed: {status}", { status: res.status }))
   return body
 }
 
@@ -946,7 +948,7 @@ export type SessionPick = {
 /** The server Loom runs on, listed with the devices: its sessions are the main agent's. */
 export const HOST_DEVICE: Device = {
   id: "host",
-  name: "This server",
+  name: t("This server"),
   icon: "linux",
   online: true,
   os: "linux",
@@ -1479,7 +1481,7 @@ export async function shareImage(id: string, html: string, css: string): Promise
   if (res.status === 401) throw unauthorized()
   if (!res.ok) {
     const err = await res.json().catch(() => null)
-    throw new Error(err?.error ?? `image failed: ${res.status}`)
+    throw new Error(err?.error ?? t("image failed: {status}", { status: res.status }))
   }
   return res.blob()
 }

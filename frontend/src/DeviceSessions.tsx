@@ -3,6 +3,7 @@ import { Confirm } from "./Confirm"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { DeviceIcon, deviceIcon } from "./DeviceIcon"
+import { t } from "./i18n"
 import { Markdown } from "./markdown"
 import { useNarrow } from "./useNarrow"
 import {
@@ -122,19 +123,19 @@ export function DeviceSessionsDialog({
 
   return createPortal(
     <div className="modal-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal dsess" role="dialog" aria-label={`Sessions on ${device.name}`}>
+      <div className="modal dsess" role="dialog" aria-label={t("Sessions on {name}", { name: device.name })}>
         <div className="modal-head">
           <span className="dsess-title">
             {narrow && picked && (
-              <button className="icon-btn" onClick={() => setPicked(null)} title="Back">
+              <button className="icon-btn" onClick={() => setPicked(null)} title={t("Back")}>
                 <ArrowLeft />
               </button>
             )}
             <DeviceIcon icon={deviceIcon(device)} />
-            <span>Sessions · {device.name}</span>
+            <span>{t("Sessions · {name}", { name: device.name })}</span>
             {data && (
               <span className="dsess-sub">
-                {liveCount} running · {data.sessions.length} recent
+                {t("{live} running · {recent} recent", { live: liveCount, recent: data.sessions.length })}
               </span>
             )}
           </span>
@@ -142,12 +143,12 @@ export function DeviceSessionsDialog({
             <button
               className={"icon-btn" + (loading ? " dsess-spin" : "")}
               onClick={() => void load()}
-              title="Refresh"
+              title={t("Refresh")}
               disabled={loading}
             >
               <RefreshCw />
             </button>
-            <button className="icon-btn" onClick={onClose} title="Close">
+            <button className="icon-btn" onClick={onClose} title={t("Close")}>
               <X />
             </button>
           </span>
@@ -166,23 +167,23 @@ export function DeviceSessionsDialog({
                 <input
                   value={task}
                   onChange={(e) => setTask(e.target.value)}
-                  placeholder="Describe the task to pick its session…"
+                  placeholder={t("Describe the task to pick its session…")}
                   disabled={!data}
                 />
-                <button type="submit" className="text-btn" disabled={!task.trim() || picking || !data} title="Pick the session this task belongs to">
-                  <Sparkles /> {picking ? "Picking…" : "Pick"}
+                <button type="submit" className="text-btn" disabled={!task.trim() || picking || !data} title={t("Pick the session this task belongs to")}>
+                  <Sparkles /> {picking ? t("Picking…") : t("Pick")}
                 </button>
               </form>
               {pickError && <div className="device-error">{pickError}</div>}
               {picks && (
                 <>
                   <div className="dsess-group">
-                    Suggested{picks.by === "words" ? " (by matching words)" : ""}
-                    <button className="dsess-clear" onClick={() => setPicks(null)} title="Clear">
+                    {picks.by === "words" ? t("Suggested (by matching words)") : t("Suggested")}
+                    <button className="dsess-clear" onClick={() => setPicks(null)} title={t("Clear")}>
                       <X />
                     </button>
                   </div>
-                  {suggested.length === 0 && <div className="device-empty">No session looks like that task.</div>}
+                  {suggested.length === 0 && <div className="device-empty">{t("No session looks like that task.")}</div>}
                   {suggested.map(({ p, s }) => (
                     <SessionCard onHost={device.id === "host"}
                       key={"pick-" + keyOf(s)}
@@ -203,20 +204,20 @@ export function DeviceSessionsDialog({
                     className={"dsess-filter" + (filter === f ? " on" : "")}
                     onClick={() => setFilter(f)}
                   >
-                    {f === "all" ? "All" : f === "live" ? "Running" : LONG[f]}
+                    {f === "all" ? t("All") : f === "live" ? t("Running") : LONG[f]}
                   </button>
                 ))}
               </div>
 
               {error && <div className="device-error">{error}</div>}
-              {!data && !error && <div className="device-empty">Scanning {device.name}…</div>}
-              {data && sessions.length === 0 && <div className="device-empty">No sessions here.</div>}
+              {!data && !error && <div className="device-empty">{t("Scanning {name}…", { name: device.name })}</div>}
+              {data && sessions.length === 0 && <div className="device-empty">{t("No sessions here.")}</div>}
 
-              {live.length > 0 && <div className="dsess-group">Running now</div>}
+              {live.length > 0 && <div className="dsess-group">{t("Running now")}</div>}
               {live.map((s) => (
                 <SessionCard onHost={device.id === "host"} key={keyOf(s)} s={s} home={data?.home} on={(!!picked && keyOf(picked) === keyOf(s))} onPick={() => setPicked(s)} onDelete={() => setDoomed(s)} />
               ))}
-              {rest.length > 0 && <div className="dsess-group">Recent</div>}
+              {rest.length > 0 && <div className="dsess-group">{t("Recent")}</div>}
               {rest.map((s) => (
                 <SessionCard onHost={device.id === "host"} key={keyOf(s)} s={s} home={data?.home} on={(!!picked && keyOf(picked) === keyOf(s))} onPick={() => setPicked(s)} onDelete={() => setDoomed(s)} />
               ))}
@@ -237,7 +238,7 @@ export function DeviceSessionsDialog({
                   onDelete={() => setDoomed(picked)}
                 />
               ) : (
-                <div className="dsess-placeholder">Pick a session to see its conversation.</div>
+                <div className="dsess-placeholder">{t("Pick a session to see its conversation.")}</div>
               )}
             </div>
           )}
@@ -245,11 +246,22 @@ export function DeviceSessionsDialog({
       </div>
       {doomed && (
         <Confirm
-          title={`Delete this ${LONG[doomed.agent]} session from ${placeOf(doomed, device)}?`}
+          title={
+            onServer(doomed, device)
+              ? t("Delete this {agent} session from this server?", { agent: LONG[doomed.agent] })
+              : t("Delete this {agent} session from {device}?", { agent: LONG[doomed.agent], device: device.name })
+          }
           detail={
             doomed.loom_id
-              ? "It is one of Loom's own: it leaves the sidebar too. Its files go to the trash, here and in Loom."
-              : `“${doomed.title || doomed.first || doomed.id}” — its files go to the trash on ${placeOf(doomed, device)}, so it can be put back from there.`
+              ? t("It is one of Loom's own: it leaves the sidebar too. Its files go to the trash, here and in Loom.")
+              : onServer(doomed, device)
+                ? t("“{title}” — its files go to the trash on this server, so it can be put back from there.", {
+                    title: doomed.title || doomed.first || doomed.id,
+                  })
+                : t("“{title}” — its files go to the trash on {device}, so it can be put back from there.", {
+                    title: doomed.title || doomed.first || doomed.id,
+                    device: device.name,
+                  })
           }
           onYes={async () => {
             await deleteDeviceSession(doomed.source ?? device.id, doomed)
@@ -258,7 +270,11 @@ export function DeviceSessionsDialog({
             setPicked((p) => (p && keyOf(p) === keyOf(doomed) ? null : p))
             void load()
           }}
-          busyAction={`Deleting from ${placeOf(doomed, device)}…`}
+          busyAction={
+            onServer(doomed, device)
+              ? t("Deleting from this server…")
+              : t("Deleting from {device}…", { device: device.name })
+          }
           onClose={() => setDoomed(null)}
         />
       )}
@@ -267,8 +283,9 @@ export function DeviceSessionsDialog({
   )
 }
 
-const placeOf = (s: DeviceSession, device: Device) =>
-  (s.source ?? device.id) === "host" ? "this server" : device.name
+// On this server or on the device: each is its own sentence, so the Chinese
+// can say "本服务器" without the quotes a device's name gets.
+const onServer = (s: DeviceSession, device: Device) => (s.source ?? device.id) === "host"
 
 /** Running ones cannot be deleted; Loom's own say for themselves whether they are mid-turn. */
 const deletable = (s: DeviceSession) => !s.live || !!s.loom_id
@@ -302,14 +319,14 @@ function SessionCard({
     )}
     <button className={"dsess-card" + (on ? " on" : "")} onClick={onPick}>
       <div className="dsess-card-top">
-        <span className={"dsess-dot " + state} title={s.live ? (s.status ?? "running") : "not running"} />
+        <span className={"dsess-dot " + state} title={s.live ? (s.status ?? t("running")) : t("not running")} />
         <span className={"dsess-agent " + s.agent}>{SHORT[s.agent]}</span>
-        {s.source === "host" && !onHost && <span className="dsess-where">server</span>}
+        {s.source === "host" && !onHost && <span className="dsess-where">{t("server")}</span>}
         {s.loom_id && <span className="dsess-where loom">Loom</span>}
         <span className="dsess-card-title">{s.loom_title || s.title || s.first || s.id}</span>
       </div>
       <div className="dsess-card-meta">
-        {[shortPath(s.cwd, home), s.model, `${s.messages} msgs`, ago(s.updated)].filter(Boolean).join(" · ")}
+        {[shortPath(s.cwd, home), s.model, t("{n} msgs", { n: s.messages }), ago(s.updated)].filter(Boolean).join(" · ")}
       </div>
       {reason ? (
         <div className="dsess-card-reason">
@@ -364,7 +381,16 @@ function Transcript({
   const { agent, file, live } = session
   // A pick can come from the server while a device is open, or the reverse.
   const source = session.source ?? device.id
-  const place = source === "host" ? "this server" : device.name
+  const host = source === "host"
+  const path = shortPath(session.cwd, home)
+  // Where a session carried on from here will work, for the box's hint.
+  const runsOn = host
+    ? path
+      ? t("Runs on this server in {path}.", { path })
+      : t("Runs on this server.")
+    : path
+      ? t("Runs on {device} in {path}.", { device: device.name, path })
+      : t("Runs on {device}.", { device: device.name })
   useEffect(() => {
     let gone = false
     setMessages(null)
@@ -401,22 +427,28 @@ function Transcript({
         <div className="dsess-info-title">{session.title || session.first || session.id}</div>
         <div className="dsess-info-meta">
           <span className={"dsess-agent " + session.agent}>{LONG[session.agent]}</span>
-          {source === "host" && <span className="dsess-where">this server</span>}
-          {session.loom_id && <span className="dsess-where loom">a Loom session</span>}
-          {session.live && <span className="dsess-live">● {session.status ?? "running"}{session.pid ? ` · pid ${session.pid}` : ""}</span>}
+          {source === "host" && <span className="dsess-where">{t("this server")}</span>}
+          {session.loom_id && <span className="dsess-where loom">{t("a Loom session")}</span>}
+          {session.live && <span className="dsess-live">● {session.status ?? t("running")}{session.pid ? ` · pid ${session.pid}` : ""}</span>}
           {session.cwd && <code>{shortPath(session.cwd, home)}</code>}
           {session.branch && session.branch !== "HEAD" && <span>⎇ {session.branch}</span>}
           {session.model && <span>{session.model}</span>}
-          <span>{session.messages} msgs</span>
-          <span>updated {ago(session.updated)}</span>
+          <span>{t("{n} msgs", { n: session.messages })}</span>
+          <span>{t("updated {when}", { when: ago(session.updated) })}</span>
         </div>
         <div className="dsess-id-row">
-          <code className="dsess-id" title="Session id">{session.id}</code>
+          <code className="dsess-id" title={t("Session id")}>{session.id}</code>
           <button
             className="icon-btn dsess-delete"
             onClick={onDelete}
             disabled={!deletable(session)}
-            title={deletable(session) ? `Delete from ${place}` : "Still running — stop it first"}
+            title={
+              !deletable(session)
+                ? t("Still running — stop it first")
+                : host
+                  ? t("Delete from this server")
+                  : t("Delete from {device}", { device: device.name })
+            }
           >
             <Trash2 />
           </button>
@@ -437,9 +469,9 @@ function Transcript({
         }}
       >
         {error && <div className="device-error">{error}</div>}
-        {!messages && !error && <div className="device-empty">Reading the conversation…</div>}
+        {!messages && !error && <div className="device-empty">{t("Reading the conversation…")}</div>}
         {messages && total > messages.length && (
-          <div className="dsess-more">Showing the last {messages.length} of {total} messages</div>
+          <div className="dsess-more">{t("Showing the last {n} of {total} messages", { n: messages.length, total })}</div>
         )}
         {messages?.map((m, i) =>
           m.role === "user" ? (
@@ -470,9 +502,9 @@ function Transcript({
       {session.loom_id ? (
         <div className="dsess-continue">
           <div className="dsess-continue-row">
-            <span className="dsess-warn">One of Loom&apos;s own sessions: it opens as it is.</span>
+            <span className="dsess-warn">{t("One of Loom's own sessions: it opens as it is.")}</span>
             <button className="text-btn dsess-go" onClick={() => onOpenSession(session.loom_id!)}>
-              <CornerDownRight /> Open in Loom
+              <CornerDownRight /> {t("Open in Loom")}
             </button>
           </div>
         </div>
@@ -494,13 +526,19 @@ function Transcript({
             }
           }}
           rows={2}
-          placeholder={`What next? Leave empty to open it on a recap. Runs on ${place}${session.cwd ? " in " + shortPath(session.cwd, home) : ""}.`}
+          placeholder={t("What next? Leave empty to open it on a recap. {where}", { where: runsOn })}
         />
         <div className="dsess-continue-row">
           {goError && <span className="device-error">{goError}</span>}
-          {session.live && <span className="dsess-warn">Still open on {place}: the new session works beside it.</span>}
+          {session.live && (
+            <span className="dsess-warn">
+              {host
+                ? t("Still open on this server: the new session works beside it.")
+                : t("Still open on {device}: the new session works beside it.", { device: device.name })}
+            </span>
+          )}
           <button type="submit" className="text-btn dsess-go" disabled={going}>
-            <CornerDownRight /> {going ? "Starting…" : "Continue in Loom"}
+            <CornerDownRight /> {going ? t("Starting…") : t("Continue in Loom")}
           </button>
         </div>
       </form>
@@ -523,9 +561,9 @@ function shortPath(p: string | null, home?: string): string | null {
 function ago(iso: string | null | undefined): string {
   if (!iso) return ""
   const mins = Math.floor((Date.now() - Date.parse(iso)) / 60000)
-  if (mins < 1) return "just now"
-  if (mins < 60) return `${mins}m ago`
+  if (mins < 1) return t("just now")
+  if (mins < 60) return t("{n}m ago", { n: mins })
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.floor(hours / 24)}d ago`
+  if (hours < 24) return t("{n}h ago", { n: hours })
+  return t("{n}d ago", { n: Math.floor(hours / 24) })
 }

@@ -1,0 +1,31 @@
+{
+  "id": "bunny",
+  "order": 10,
+  "name": {
+    "en": "Shanshan Rabbit",
+    "zh": "山山兔"
+  },
+  "blurb": {
+    "en": "The deadpan plush rabbit, sitting, drawn after the real doll: its tent, lamp and rug, tags and sparkles, five of them in a row",
+    "zh": "面无表情的毛绒兔坐在这儿，照着真玩偶画的：帐篷、蘑菇灯和毛毯，吊牌和星星，五只排排坐"
+  },
+  "radius": "0.5rem",
+  "light": {
+    "background": "#fffaf4",
+    "foreground": "#33261f",
+    "sidebar": "#d6eefb",
+    "card": "#ffffff",
+    "bubble": "#cfe6f7",
+    "primary": "#a55824",
+    "border": "#e7d2bd"
+  },
+  "dark": {
+    "background": "#251e1c",
+    "foreground": "#f1e7da",
+    "sidebar": "#1a2133",
+    "card": "#322925",
+    "bubble": "#2c4a61",
+    "primary": "#eba56c",
+    "border": "#4d3f37"
+  }
+}

@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "re
 import { createPortal } from "react-dom"
 import type { AgentBackend } from "./api"
 import { BackendIcon } from "./BackendIcon"
+import { t } from "./i18n"
 
 export const BACKENDS: { id: AgentBackend; label: string }[] = [
   { id: "claude_code", label: "Claude Code" },
@@ -72,7 +73,7 @@ export function NewMenu({
         {icon}
         <span className="session-menu-label">{label}</span>
       </button>
-      <button className="new-menu-more" title="Choose the engine" onClick={() => setModels(k)}>
+      <button className="new-menu-more" title={t("Choose the engine")} onClick={() => setModels(k)}>
         <ChevronRight />
       </button>
     </div>
@@ -87,7 +88,7 @@ export function NewMenu({
   ) : models ? (
     <>
       <button role="menuitem" className="session-menu-back" onClick={() => setModels(null)}>
-        <ChevronLeft /> {models === "incognito" ? "Incognito chat" : "Chat"}
+        <ChevronLeft /> {models === "incognito" ? t("Incognito chat") : t("Chat")}
       </button>
       <div className="session-menu-sep" />
       {BACKENDS.map((b) => (
@@ -98,8 +99,8 @@ export function NewMenu({
     </>
   ) : (
     <>
-      {kind("chat", <SquarePen />, "Chat")}
-      {kind("incognito", <HatGlasses />, "Incognito chat")}
+      {kind("chat", <SquarePen />, t("Chat"))}
+      {kind("incognito", <HatGlasses />, t("Incognito chat"))}
     </>
   )
 

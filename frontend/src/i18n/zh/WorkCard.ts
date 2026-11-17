@@ -1,0 +1,16 @@
+export default {
+  "work card…": "工作卡片…",
+  "Carrying on in a minute": "一分钟后继续",
+  "Sleeping until {time}": "休眠至 {time}",
+  "Sleeping {duration}": "休眠 {duration}",
+  "Sleeping until the heartbeat": "休眠到下次心跳",
+  "Needs you": "需要你处理",
+  Report: "汇报",
+  Note: "备注",
+  "New KPI · {title}": "新增 KPI · {title}",
+  "due {date}": "{date} 截止",
+  "For the work session": "转告工作会话",
+  "Starting work now": "现在开始工作",
+  "{n} h": "{n} 小时",
+  "{n} min": "{n} 分钟",
+} satisfies Record<string, string>

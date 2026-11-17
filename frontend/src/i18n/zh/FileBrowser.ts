@@ -1,0 +1,17 @@
+export default {
+  "Show {path} in the canvas": "在画布中显示 {path}",
+  "Download {path} as a zip": "将 {path} 下载为 zip",
+  "Download {name}": "下载 {name}",
+  "Delete {name}?": "删除“{name}”？",
+  "The folder {path} and everything in it. This cannot be undone.": "文件夹 {path} 及其中的所有内容。此操作无法撤销。",
+  "{path} — this cannot be undone.": "{path}：此操作无法撤销。",
+  "loading…": "加载中…",
+  Output: "输出",
+  "Nothing made in this session yet.": "本会话还没有生成任何文件。",
+  "The project's working directory, shared by its sessions": "项目的工作目录，由项目内的会话共用",
+  Workspace: "工作区",
+  "The project's workspace is empty.": "项目的工作区是空的。",
+  "Only the first {n} files are listed.": "仅列出前 {n} 个文件。",
+  Uploads: "上传",
+  "Nothing attached in this session yet.": "本会话还没有上传任何文件。",
+} satisfies Record<string, string>

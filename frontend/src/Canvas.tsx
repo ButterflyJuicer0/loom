@@ -9,6 +9,7 @@ import {
 } from "./api"
 import { viewerFor, type CanvasItem, type Viewer } from "./canvasItems"
 import { FileBrowser, type TreeNav } from "./FileBrowser"
+import { t } from "./i18n"
 import { Markdown } from "./markdown"
 
 /**
@@ -120,7 +121,7 @@ export function Canvas({
       <div className="pane-head">
         <span className="pane-title">
           {narrow && (
-            <button className="pane-btn" onClick={onBack} title="Back to the chat">
+            <button className="pane-btn" onClick={onBack} title={t("Back to the chat")}>
               <ChevronLeft />
             </button>
           )}
@@ -128,13 +129,13 @@ export function Canvas({
             <button
               className={"pane-btn tree-toggle" + (showTree ? " on" : "")}
               onClick={toggleTree}
-              title={showTree ? "Hide the files" : "All files in this session"}
+              title={showTree ? t("Hide the files") : t("All files in this session")}
             >
               <FolderTree />
             </button>
           )}
           <span className="canvas-title" title={item?.path}>
-            {item ? item.title : "canvas"}
+            {item ? item.title : t("canvas")}
           </span>
         </span>
         <span className="pane-actions">
@@ -144,12 +145,12 @@ export function Canvas({
               <button
                 className="pane-btn"
                 onClick={onToggleMaximized}
-                title={maximized ? "Back beside the chat (Esc)" : "Full window"}
+                title={maximized ? t("Back beside the chat (Esc)") : t("Full window")}
               >
                 {maximized ? <Minimize /> : <Maximize />}
               </button>
             )}
-            <button className="pane-btn" onClick={() => setReloads((n) => n + 1)} title="Reload">
+            <button className="pane-btn" onClick={() => setReloads((n) => n + 1)} title={t("Reload")}>
               <RotateCw />
             </button>
             <button
@@ -157,8 +158,8 @@ export function Canvas({
               onClick={download}
               title={
                 item.download.kind === "dir"
-                  ? `Download ${item.download.path} as a zip`
-                  : `Download ${item.download.path}`
+                  ? t("Download {path} as a zip", { path: item.download.path })
+                  : t("Download {path}", { path: item.download.path })
               }
             >
               <Download />
@@ -194,7 +195,7 @@ export function Canvas({
           ) : (
             !error && (
               <div className="canvas-note">
-                {item ? "loading…" : sessionId ? "Pick a file to show it here." : "No session selected."}
+                {item ? t("loading…") : sessionId ? t("Pick a file to show it here.") : t("No session selected.")}
               </div>
             )
           )}
@@ -256,7 +257,7 @@ function ImageView({ src, alt }: { src: string; alt: string }) {
         alt={alt}
         className={actual ? "actual" : "fit"}
         onClick={() => setActual((a) => !a)}
-        title={actual ? "Fit to the pane" : "Actual size"}
+        title={actual ? t("Fit to the pane") : t("Actual size")}
       />
     </div>
   )
@@ -280,7 +281,7 @@ function TextView({ src, viewer, path }: { src: string; viewer: Viewer; path: st
       })
       .then(
         (t) => live && setText(t),
-        (e: Error) => live && setError(`could not load: ${e.message}`),
+        (e: Error) => live && setError(t("could not load: {error}", { error: e.message })),
       )
     return () => {
       live = false
@@ -288,7 +289,7 @@ function TextView({ src, viewer, path }: { src: string; viewer: Viewer; path: st
   }, [src])
 
   if (error) return <div className="canvas-note failed">{error}</div>
-  if (text === null) return <div className="canvas-note">loading…</div>
+  if (text === null) return <div className="canvas-note">{t("loading…")}</div>
 
   const cut = text.length > TEXT_LIMIT
   const shown = cut ? text.slice(0, TEXT_LIMIT) : text
@@ -301,7 +302,7 @@ function TextView({ src, viewer, path }: { src: string; viewer: Viewer; path: st
       ) : (
         <pre className="canvas-text">{pretty(shown, path)}</pre>
       )}
-      {cut && <div className="canvas-note">Cut short at 1 MB. Download for the rest.</div>}
+      {cut && <div className="canvas-note">{t("Cut short at 1 MB. Download for the rest.")}</div>}
     </div>
   )
 }
@@ -321,7 +322,7 @@ function Table({ text, tsv }: { text: string; tsv: boolean }) {
     while (rows.length && rows[rows.length - 1].every((c) => c === "")) rows.pop()
     return rows
   }, [text, tsv])
-  if (!rows.length) return <div className="canvas-note">empty</div>
+  if (!rows.length) return <div className="canvas-note">{t("empty")}</div>
 
   const [head, ...body] = rows
   return (
@@ -346,7 +347,7 @@ function Table({ text, tsv }: { text: string; tsv: boolean }) {
       </table>
       {body.length > TABLE_ROWS && (
         <div className="canvas-note">
-          First {TABLE_ROWS} of {body.length} rows. Download for the rest.
+          {t("First {shown} of {total} rows. Download for the rest.", { shown: TABLE_ROWS, total: body.length })}
         </div>
       )}
     </div>

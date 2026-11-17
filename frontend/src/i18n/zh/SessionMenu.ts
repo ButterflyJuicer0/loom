@@ -1,0 +1,26 @@
+// SessionMenu.tsx: a session row's … menu.
+export default {
+  "Queued: it goes in when this turn ends.": "已排队：本轮结束后送出。",
+  "Sent.": "已发送。",
+  Unpin: "取消置顶",
+  Pin: "置顶",
+  "Continue in new chat": "在新会话中继续",
+  "Continue on another engine": "换一个引擎继续",
+  "Send a message…": "发送消息…",
+  "Wait for the turn to end": "请等本轮结束",
+  Project: "项目",
+  "Move to project": "移到项目",
+  Unarchive: "取消归档",
+  Archive: "归档",
+  "Send to": "发送到",
+  "It is working: this waits for the turn to end.": "正在运行：消息会等本轮结束后送出。",
+  "Write to this session without opening it.": "不用打开会话，直接给它发消息。",
+  "Sending…": "发送中…",
+  "New project…": "新建项目…",
+  "Project name": "项目名称",
+  "Creating…": "创建中…",
+  Create: "创建",
+  "Remove from {name}": "从 {name} 中移出",
+  "It carries on in the project's workspace; files it already made stay where they are.":
+    "会话会在项目的工作区中继续；已生成的文件留在原处。",
+} satisfies Record<string, string>

@@ -26,6 +26,7 @@ import { useEffect, useState, type ComponentProps, type ComponentType, type Reac
 import { createPortal } from "react-dom"
 import { Chat } from "./Chat"
 import { Confirm } from "./Confirm"
+import { t, tc } from "./i18n"
 import { Markdown } from "./markdown"
 import {
   addKpi,
@@ -73,12 +74,12 @@ export const hasNews = (work: AgentInfo | undefined) =>
   work !== undefined && !busy(work) && work.seq > (work.seen_seq ?? 0)
 
 export const STATUS: Record<Employee["status"], { label: string; tone: string }> = {
-  working: { label: "Working", tone: "green" },
-  sleeping: { label: "Sleeping", tone: "dim" },
-  paused: { label: "Paused", tone: "dim" },
-  approval: { label: "Budget reached", tone: "amber" },
-  blocked: { label: "Needs you", tone: "red" },
-  offline: { label: "Workstation offline", tone: "dim" },
+  working: { label: t("Working"), tone: "green" },
+  sleeping: { label: t("Sleeping"), tone: "dim" },
+  paused: { label: t("Paused"), tone: "dim" },
+  approval: { label: t("Budget reached"), tone: "amber" },
+  blocked: { label: t("Needs you"), tone: "red" },
+  offline: { label: t("Workstation offline"), tone: "dim" },
 }
 
 /** A round initial on a neutral disc, the same for everyone, like the rest of the sidebar. */
@@ -203,7 +204,7 @@ export function EmployeePage({
     return (
       <Chat
         {...chat}
-        session={{ ...workSession, title: `${employee.name} · updates` }}
+        session={{ ...workSession, title: t("{name} · updates", { name: employee.name }) }}
         subhead={bar}
         earlier={employee.past_work}
       />
@@ -213,7 +214,7 @@ export function EmployeePage({
     <div className="chat">
       <header className="chat-header">
         {!chat.sidebarOpen && (
-          <button className="icon-btn" onClick={chat.onToggleSidebar} title="Show sidebar">
+          <button className="icon-btn" onClick={chat.onToggleSidebar} title={t("Show sidebar")}>
             <PanelLeft />
           </button>
         )}
@@ -247,11 +248,11 @@ export function EmployeePage({
 // ── The bar under the header ───────────────────────────────────────────────
 
 const TABS: { id: EmployeeTab; label: string; icon: ReactNode }[] = [
-  { id: "updates", label: "Updates", icon: <Siren /> },
-  { id: "chat", label: "Chat", icon: <MessageCircle /> },
-  { id: "kpis", label: "KPIs", icon: <ListChecks /> },
-  { id: "reports", label: "Reports", icon: <FileText /> },
-  { id: "settings", label: "Settings", icon: <SettingsIcon /> },
+  { id: "updates", label: t("Updates"), icon: <Siren /> },
+  { id: "chat", label: t("Chat"), icon: <MessageCircle /> },
+  { id: "kpis", label: t("KPIs"), icon: <ListChecks /> },
+  { id: "reports", label: t("Reports"), icon: <FileText /> },
+  { id: "settings", label: t("Settings"), icon: <SettingsIcon /> },
 ]
 
 function EmployeeBar({
@@ -308,30 +309,30 @@ function EmployeeBar({
         <span className={"emp-status " + status.tone}>
           <span className="emp-status-dot" />
           {status.label}
-          {e.status === "sleeping" && e.wake_at && <span className="emp-dim"> · wakes {clock(e.wake_at)}</span>}
+          {e.status === "sleeping" && e.wake_at && <span className="emp-dim"> · {t("wakes {time}", { time: clock(e.wake_at) })}</span>}
         </span>
         {e.permissions && (
           <span className="emp-restricted" title={e.permissions.summary}>
-            <Lock /> Restricted
+            <Lock /> {t("Restricted")}
           </span>
         )}
-        <span className="emp-spend" title="Spent today, of today's budget">
+        <span className="emp-spend" title={t("Spent today, of today's budget")}>
           <Wallet />
           {short(e, e.spent_today)}
           <span className="emp-dim"> / {amount(e, e.cap_today)}</span>
         </span>
         <span className="emp-state-actions">
           {!e.paused && e.status !== "working" && e.status !== "approval" && (
-            <button className="emp-pill" onClick={() => act(wakeEmployee(e.id), { ...e, status: "working" })} title="Wake it now">
-              <Play /> Wake
+            <button className="emp-pill" onClick={() => act(wakeEmployee(e.id), { ...e, status: "working" })} title={t("Wake it now")}>
+              <Play /> {t("Wake")}
             </button>
           )}
           <button
             className="emp-pill"
             onClick={() => act(pauseEmployee(e.id, !e.paused), { ...e, paused: !e.paused })}
-            title={e.paused ? "Let it carry on" : "Stop it, now and until resumed"}
+            title={e.paused ? t("Let it carry on") : t("Stop it, now and until resumed")}
           >
-            {e.paused ? <Play /> : <Pause />} {e.paused ? "Resume" : "Pause"}
+            {e.paused ? <Play /> : <Pause />} {e.paused ? t("Resume") : t("Pause")}
           </button>
         </span>
       </div>
@@ -354,16 +355,19 @@ function Approval({ employee: e, onDone }: { employee: Employee; onDone: (call: 
   return (
     <div className="emp-approval">
       <div>
-        <b>Today's budget is spent</b>
+        <b>{t("Today's budget is spent")}</b>
         <span className="emp-dim">
           {" "}
-          — {amount(e, e.spent_today)} of {amount(e, e.cap_today)}. It rests until you approve more, or until tomorrow.
+          {t("— {spent} of {cap}. It rests until you approve more, or until tomorrow.", {
+            spent: amount(e, e.spent_today),
+            cap: amount(e, e.cap_today),
+          })}
         </span>
       </div>
       <div className="emp-approval-actions">
         {(e.budget_unit === "usd" ? [20, 50] : [10, 20]).map((n) => (
           <button key={n} className="emp-pill strong" onClick={() => onDone(approveEmployee(e.id, n))}>
-            +{amount(e, n)} today
+            {t("+{amount} today", { amount: amount(e, n) })}
           </button>
         ))}
         <form
@@ -375,7 +379,7 @@ function Approval({ employee: e, onDone }: { employee: Employee; onDone: (call: 
           }}
         >
           <span>{e.budget_unit === "usd" ? "$" : "+"}</span>
-          <input inputMode="decimal" value={custom} onChange={(ev) => setCustom(ev.target.value)} placeholder="other" />
+          <input inputMode="decimal" value={custom} onChange={(ev) => setCustom(ev.target.value)} placeholder={t("other")} />
         </form>
       </div>
     </div>
@@ -385,11 +389,11 @@ function Approval({ employee: e, onDone }: { employee: Employee; onDone: (call: 
 // ── KPIs ───────────────────────────────────────────────────────────────────
 
 const KPI_STATUS: Record<Kpi["status"], string> = {
-  todo: "To do",
-  doing: "In progress",
-  review: "For review",
-  done: "Done",
-  parked: "Parked",
+  todo: t("To do"),
+  doing: t("In progress"),
+  review: t("For review"),
+  done: t("Done"),
+  parked: t("Parked"),
 }
 
 function KpiPane({ employee: e, onUpsert }: { employee: Employee; onUpsert: (e: Employee) => void }) {
@@ -420,19 +424,19 @@ function KpiPane({ employee: e, onUpsert }: { employee: Employee; onUpsert: (e: 
   return (
     <>
       <div className="emp-summary">
-        <Stat label="Open" value={open.length} />
-        <Stat label="For review" value={e.kpis.filter((k) => k.status === "review").length} />
-        <Stat label="Done" value={e.kpis.filter((k) => k.status === "done").length} />
-        <Stat label="Avg. progress" value={average === null ? "—" : `${average}%`} />
+        <Stat label={tc("kpi", "Open")} value={open.length} />
+        <Stat label={t("For review")} value={e.kpis.filter((k) => k.status === "review").length} />
+        <Stat label={t("Done")} value={e.kpis.filter((k) => k.status === "done").length} />
+        <Stat label={t("Avg. progress")} value={average === null ? "—" : `${average}%`} />
         <button className="emp-new" onClick={() => setEditing("new")}>
-          <Plus /> New KPI
+          <Plus /> {t("New KPI")}
         </button>
       </div>
       {error && <div className="emp-error">{error}</div>}
 
       {kpis.length === 0 && (
         <div className="emp-empty">
-          No KPIs yet. Add one here, or tell {e.name} in the chat — "research X by Friday" becomes a KPI.
+          {t('No KPIs yet. Add one here, or tell {name} in the chat — "research X by Friday" becomes a KPI.', { name: e.name })}
         </div>
       )}
 
@@ -440,11 +444,11 @@ function KpiPane({ employee: e, onUpsert }: { employee: Employee; onUpsert: (e: 
         <div key={k.id} className={"kpi-card " + k.status} onClick={() => setEditing(k)}>
           <div className="kpi-top">
             <span className={"kpi-status " + k.status}>{KPI_STATUS[k.status]}</span>
-            {k.priority !== "normal" && <span className={"kpi-prio " + k.priority}>{k.priority}</span>}
-            {k.due && <span className="emp-dim kpi-due">due {k.due}</span>}
+            {k.priority !== "normal" && <span className={"kpi-prio " + k.priority}>{k.priority === "high" ? t("high") : t("low")}</span>}
+            {k.due && <span className="emp-dim kpi-due">{t("due {date}", { date: k.due })}</span>}
           </div>
           <div className="kpi-title">{k.title}</div>
-          {k.criteria && <div className="kpi-criteria">Done when: {k.criteria}</div>}
+          {k.criteria && <div className="kpi-criteria">{t("Done when: {criteria}", { criteria: k.criteria })}</div>}
           <div className="kpi-progress">
             <span className="kpi-track">
               <span className="kpi-fill" style={{ width: `${k.progress}%` }} />
@@ -455,10 +459,10 @@ function KpiPane({ employee: e, onUpsert }: { employee: Employee; onUpsert: (e: 
           {k.status === "review" && (
             <div className="kpi-review" onClick={(ev) => ev.stopPropagation()}>
               <button className="emp-pill strong" onClick={() => act(reviewKpi(e.id, k.id, true), withKpi(e, k.id, "done"))}>
-                <Check /> Accept
+                <Check /> {t("Accept")}
               </button>
               <button className="emp-pill" onClick={() => setSending(k)}>
-                <Undo2 /> Send back
+                <Undo2 /> {t("Send back")}
               </button>
             </div>
           )}
@@ -522,7 +526,7 @@ function KpiEditor({
   const set = (attrs: KpiAttrs) => setDraft((d) => ({ ...d, ...attrs }))
 
   return (
-    <Modal title={kpi ? "KPI" : "New KPI"} onClose={onClose}>
+    <Modal title={kpi ? "KPI" : t("New KPI")} onClose={onClose}>
       <form
         className="project-form"
         onSubmit={async (ev) => {
@@ -536,33 +540,33 @@ function KpiEditor({
         }}
       >
         <label>
-          <span>Title</span>
-          <input autoFocus value={draft.title ?? ""} onChange={(ev) => set({ title: ev.target.value })} placeholder="e.g. A market report on X" />
+          <span>{t("Title")}</span>
+          <input autoFocus value={draft.title ?? ""} onChange={(ev) => set({ title: ev.target.value })} placeholder={t("e.g. A market report on X")} />
         </label>
         <label>
-          <span>What</span>
-          <textarea rows={3} value={draft.detail ?? ""} onChange={(ev) => set({ detail: ev.target.value })} placeholder="The task, in as much detail as it needs." />
+          <span>{t("What")}</span>
+          <textarea rows={3} value={draft.detail ?? ""} onChange={(ev) => set({ detail: ev.target.value })} placeholder={t("The task, in as much detail as it needs.")} />
         </label>
         <label>
-          <span>Done when</span>
-          <textarea rows={2} value={draft.criteria ?? ""} onChange={(ev) => set({ criteria: ev.target.value })} placeholder="How you will check it: tests pass, five sources cited…" />
+          <span>{t("Done when")}</span>
+          <textarea rows={2} value={draft.criteria ?? ""} onChange={(ev) => set({ criteria: ev.target.value })} placeholder={t("How you will check it: tests pass, five sources cited…")} />
         </label>
         <div className="emp-form-row">
           <label>
-            <span>Due</span>
+            <span>{t("Due")}</span>
             <input type="date" value={draft.due ?? ""} onChange={(ev) => set({ due: ev.target.value })} />
           </label>
           <label>
-            <span>Priority</span>
+            <span>{t("Priority")}</span>
             <select value={draft.priority} onChange={(ev) => set({ priority: ev.target.value as Kpi["priority"] })}>
-              <option value="high">High</option>
-              <option value="normal">Normal</option>
-              <option value="low">Low</option>
+              <option value="high">{t("High")}</option>
+              <option value="normal">{t("Normal")}</option>
+              <option value="low">{t("Low")}</option>
             </select>
           </label>
           {kpi && (
             <label>
-              <span>Status</span>
+              <span>{t("Status")}</span>
               <select value={draft.status} onChange={(ev) => set({ status: ev.target.value as Kpi["status"] })}>
                 {Object.entries(KPI_STATUS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -575,7 +579,7 @@ function KpiEditor({
         </div>
         {kpi && (
           <label>
-            <span>Progress · {draft.progress}%</span>
+            <span>{t("Progress · {n}%", { n: draft.progress ?? 0 })}</span>
             <input type="range" min={0} max={100} step={5} value={draft.progress ?? 0} onChange={(ev) => set({ progress: Number(ev.target.value) })} />
           </label>
         )}
@@ -583,21 +587,21 @@ function KpiEditor({
         <div className="confirm-actions">
           {onDelete && (
             <button type="button" className="text-btn danger project-delete" onClick={() => setAsking(true)}>
-              Delete
+              {t("Delete")}
             </button>
           )}
           <button type="button" className="text-btn" onClick={onClose}>
-            Cancel
+            {t("Cancel")}
           </button>
           <button type="submit" className="text-btn primary" disabled={!draft.title?.trim()}>
-            {kpi ? "Save" : "Add"}
+            {kpi ? t("Save") : t("Add")}
           </button>
         </div>
       </form>
       {asking && onDelete && (
         <Confirm
-          title={`Delete ${kpi?.title}?`}
-          detail="The KPI goes from the list. What was done for it stays in the work log."
+          title={t("Delete {title}?", { title: kpi?.title ?? "" })}
+          detail={t("The KPI goes from the list. What was done for it stays in the work log.")}
           onYes={async () => {
             await onDelete()
             onClose()
@@ -612,7 +616,7 @@ function KpiEditor({
 function SendBack({ kpi, onSend, onClose }: { kpi: Kpi; onSend: (note: string) => Promise<void>; onClose: () => void }) {
   const [note, setNote] = useState("")
   return (
-    <Modal title="Send back" onClose={onClose}>
+    <Modal title={t("Send back")} onClose={onClose}>
       <form
         className="project-form"
         onSubmit={(ev) => {
@@ -623,15 +627,15 @@ function SendBack({ kpi, onSend, onClose }: { kpi: Kpi; onSend: (note: string) =
         }}
       >
         <label>
-          <span>What is missing from “{kpi.title}”</span>
-          <textarea autoFocus rows={4} value={note} onChange={(ev) => setNote(ev.target.value)} placeholder="It goes to its next wake-up, which is now." />
+          <span>{t("What is missing from “{title}”", { title: kpi.title })}</span>
+          <textarea autoFocus rows={4} value={note} onChange={(ev) => setNote(ev.target.value)} placeholder={t("It goes to its next wake-up, which is now.")} />
         </label>
         <div className="confirm-actions">
           <button type="button" className="text-btn" onClick={onClose}>
-            Cancel
+            {t("Cancel")}
           </button>
           <button type="submit" className="text-btn primary">
-            Send back
+            {t("Send back")}
           </button>
         </div>
       </form>
@@ -664,10 +668,10 @@ function ReportsPane({ employee: e }: { employee: Employee }) {
     return (
       <>
         <button className="emp-back" onClick={() => setOpen(null)}>
-          <ChevronLeft /> All reports
+          <ChevronLeft /> {t("All reports")}
         </button>
         <div className="emp-report">
-          {open.text === null ? <div className="emp-dim">loading…</div> : <Markdown text={open.text} />}
+          {open.text === null ? <div className="emp-dim">{t("loading…")}</div> : <Markdown text={open.text} />}
         </div>
       </>
     )
@@ -682,23 +686,26 @@ function ReportsPane({ employee: e }: { employee: Employee }) {
   return (
     <>
       {error && <div className="emp-error">{error}</div>}
-      <h2 className="emp-section">Reports</h2>
-      {reports === null && !error && <div className="emp-dim">loading…</div>}
+      <h2 className="emp-section">{t("Reports")}</h2>
+      {reports === null && !error && <div className="emp-dim">{t("loading…")}</div>}
       {reports?.length === 0 && (
         <div className="emp-empty">
-          None yet. A weekly report comes on {DAYS[e.weekly_report.day - 1]} at {e.weekly_report.time}.
+          {t("None yet. A weekly report comes on {day} at {time}.", {
+            day: DAYS[e.weekly_report.day - 1],
+            time: e.weekly_report.time,
+          })}
         </div>
       )}
       {reports?.map((r) => (
         <button key={r.file} className="emp-report-row" onClick={() => show(r.file)}>
-          <span className={"emp-report-kind " + r.kind}>{r.kind === "weekly" ? "Weekly" : "Daily"}</span>
+          <span className={"emp-report-kind " + r.kind}>{r.kind === "weekly" ? tc("report", "Weekly") : tc("report", "Daily")}</span>
           <span className="emp-report-title">{r.title.replace(/^(daily|weekly)-/, "")}</span>
           <span className="emp-dim">{when(r.mtime)}</span>
         </button>
       ))}
 
-      <h2 className="emp-section">Recent work</h2>
-      {e.log.length === 0 && <div className="emp-empty">Nothing yet.</div>}
+      <h2 className="emp-section">{t("Recent work")}</h2>
+      {e.log.length === 0 && <div className="emp-empty">{t("Nothing yet.")}</div>}
       {e.log.slice(0, 30).map((entry) => (
         <div key={entry.at} className="emp-log-row">
           <span className="emp-dim emp-log-when">{when(entry.at)}</span>
@@ -711,8 +718,8 @@ function ReportsPane({ employee: e }: { employee: Employee }) {
         </div>
       ))}
 
-      <h2 className="emp-section">Spend, last days</h2>
-      {days.length === 0 && <div className="emp-empty">Nothing spent yet.</div>}
+      <h2 className="emp-section">{t("Spend, last days")}</h2>
+      {days.length === 0 && <div className="emp-empty">{t("Nothing spent yet.")}</div>}
       {days.map(([day, n]) => (
         <div key={day} className="emp-spend-row">
           <span className="emp-dim">{day.slice(5)}</span>
@@ -728,7 +735,7 @@ function ReportsPane({ employee: e }: { employee: Employee }) {
 
 // ── Settings ───────────────────────────────────────────────────────────────
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+const DAYS = [t("Monday"), t("Tuesday"), t("Wednesday"), t("Thursday"), t("Friday"), t("Saturday"), t("Sunday")]
 
 function SettingsPane({
   employee: e,
@@ -774,22 +781,22 @@ function SettingsPane({
     >
       <ProfileFields draft={draft} setDraft={setDraft} projects={projects} />
 
-      <h2 className="emp-section">Schedule</h2>
+      <h2 className="emp-section">{t("Schedule")}</h2>
       <div className="emp-form-row">
         <label>
-          <span>Working hours</span>
+          <span>{t("Working hours")}</span>
           <select
             value={draft.hours ? "set" : "all"}
             onChange={(ev) => setDraft((d) => ({ ...d, hours: ev.target.value === "all" ? null : [9, 22] }))}
           >
-            <option value="all">All day</option>
-            <option value="set">Between…</option>
+            <option value="all">{t("All day")}</option>
+            <option value="set">{t("Between…")}</option>
           </select>
         </label>
         {draft.hours && (
           <>
             <label>
-              <span>From</span>
+              <span>{t("From")}</span>
               <select value={draft.hours[0]} onChange={(ev) => setDraft((d) => ({ ...d, hours: [Number(ev.target.value), d.hours![1]] }))}>
                 {HOURS.map((h) => (
                   <option key={h} value={h}>
@@ -799,7 +806,7 @@ function SettingsPane({
               </select>
             </label>
             <label>
-              <span>To</span>
+              <span>{t("To")}</span>
               <select value={draft.hours[1]} onChange={(ev) => setDraft((d) => ({ ...d, hours: [d.hours![0], Number(ev.target.value)] }))}>
                 {HOURS.map((h) => (
                   <option key={h} value={h}>
@@ -812,13 +819,13 @@ function SettingsPane({
         )}
       </div>
       <div className="emp-form-row">
-        <NumberField label="Heartbeat, min" value={draft.heartbeat_min} onChange={(n) => setDraft((d) => ({ ...d, heartbeat_min: n }))} />
-        <NumberField label="Shortest sleep, min" value={draft.min_gap_min} onChange={(n) => setDraft((d) => ({ ...d, min_gap_min: n }))} />
-        <NumberField label="Longest turn, min" value={draft.max_turn_min} onChange={(n) => setDraft((d) => ({ ...d, max_turn_min: n }))} />
+        <NumberField label={t("Heartbeat, min")} value={draft.heartbeat_min} onChange={(n) => setDraft((d) => ({ ...d, heartbeat_min: n }))} />
+        <NumberField label={t("Shortest sleep, min")} value={draft.min_gap_min} onChange={(n) => setDraft((d) => ({ ...d, min_gap_min: n }))} />
+        <NumberField label={t("Longest turn, min")} value={draft.max_turn_min} onChange={(n) => setDraft((d) => ({ ...d, max_turn_min: n }))} />
       </div>
       <div className="emp-form-row">
         <label>
-          <span>Weekly report</span>
+          <span>{t("Weekly report")}</span>
           <select
             value={draft.weekly_report?.day}
             onChange={(ev) => setDraft((d) => ({ ...d, weekly_report: { ...d.weekly_report!, day: Number(ev.target.value) } }))}
@@ -831,7 +838,7 @@ function SettingsPane({
           </select>
         </label>
         <label>
-          <span>at</span>
+          <span>{t("at")}</span>
           <input
             type="time"
             value={draft.weekly_report?.time}
@@ -839,12 +846,12 @@ function SettingsPane({
           />
         </label>
       </div>
-      <small className="emp-dim">Times are Beijing time (UTC+8).</small>
+      <small className="emp-dim">{t("Times are Beijing time (UTC+8).")}</small>
 
-      <h2 className="emp-section">Agent, model and budget</h2>
+      <h2 className="emp-section">{t("Agent, model and budget")}</h2>
       <div className="emp-form-row">
         <label>
-          <span>Agent</span>
+          <span>{t("Agent")}</span>
           <input value={BACKENDS.find((b) => b.id === e.backend)?.label ?? e.backend} disabled />
         </label>
         <ModelField backend={e.backend} value={draft.model} onChange={(model) => setDraft((d) => ({ ...d, model }))} />
@@ -852,69 +859,73 @@ function SettingsPane({
       </div>
       <small className="emp-dim">
         {e.budget_unit === "usd"
-          ? "Spent, it stops and asks you; what you approve on top counts for that day only."
-          : `${BACKENDS.find((b) => b.id === e.backend)?.label} reports no cost, so the budget is turns a day; past it, it stops and asks you, and what you approve counts for that day only.`}{" "}
-        The agent is for good; a model change applies once its sessions restart.
+          ? t(
+              "Spent, it stops and asks you; what you approve on top counts for that day only. The agent is for good; a model change applies once its sessions restart.",
+            )
+          : t(
+              "{agent} reports no cost, so the budget is turns a day; past it, it stops and asks you, and what you approve counts for that day only. The agent is for good; a model change applies once its sessions restart.",
+              { agent: BACKENDS.find((b) => b.id === e.backend)?.label ?? e.backend },
+            )}
       </small>
 
-      <h2 className="emp-section">Ask me first before</h2>
+      <h2 className="emp-section">{t("Ask me first before")}</h2>
       <textarea
         rows={5}
         value={(draft.ask_first ?? []).join("\n")}
         onChange={(ev) => setDraft((d) => ({ ...d, ask_first: ev.target.value.split("\n") }))}
       />
-      <small className="emp-dim">One per line. It asks with an urgent update, and waits.</small>
+      <small className="emp-dim">{t("One per line. It asks with an urgent update, and waits.")}</small>
 
-      <h2 className="emp-section">Permissions</h2>
+      <h2 className="emp-section">{t("Permissions")}</h2>
       <p className="emp-permissions">
         {e.permissions ? (
           <>
             <Lock /> {e.permissions.summary}
           </>
         ) : (
-          "Every tool, like any chat."
+          t("Every tool, like any chat.")
         )}
       </p>
       <small className="emp-dim">
         {e.permissions
-          ? "Hard, for its work: Claude Code itself refuses anything else there, and refusals show in Updates. Its chat with you is not limited. "
-          : "Hard limits — only some tools, only some commands — are set in conversation. "}
+          ? t("Hard, for its work: Claude Code itself refuses anything else there, and refusals show in Updates. Its chat with you is not limited.")
+          : t("Hard limits — only some tools, only some commands — are set in conversation.")}{" "}
         <button type="button" className="text-btn emp-inline-btn" onClick={onSetupChat}>
-          Change in a chat
+          {t("Change in a chat")}
         </button>
       </small>
 
-      <h2 className="emp-section">Workspace</h2>
+      <h2 className="emp-section">{t("Workspace")}</h2>
       <code className="project-path">{e.workspace}</code>
 
       <button type="button" className="emp-section emp-advanced" onClick={() => setAdvanced((a) => !a)}>
-        Advanced {advanced ? <ChevronDown /> : <ChevronRight />}
+        {t("Advanced")} {advanced ? <ChevronDown /> : <ChevronRight />}
       </button>
       {advanced && (
         <>
           <div className="emp-form-row">
             <label>
-              <span>Workstation</span>
+              <span>{t("Workstation")}</span>
               <select
                 value={draft.workstation ?? ""}
                 onChange={(ev) => setDraft((d) => ({ ...d, workstation: ev.target.value || null }))}
               >
-                <option value="">This server</option>
+                <option value="">{t("This server")}</option>
                 {devices.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.name}
-                    {d.online ? "" : " (offline)"}
+                    {d.online ? d.name : t("{name} (offline)", { name: d.name })}
                   </option>
                 ))}
                 {e.workstation && !devices.some((d) => d.id === e.workstation) && (
-                  <option value={e.workstation}>{e.workstation_name ?? "?"} (removed)</option>
+                  <option value={e.workstation}>{t("{name} (removed)", { name: e.workstation_name ?? "?" })}</option>
                 )}
               </select>
             </label>
           </div>
           <small className="emp-dim">
-            Its chats and memory stay on this server; what it does — commands, files, browsing, the web — happens on
-            the workstation. While that is offline it does not work, and costs nothing.
+            {t(
+              "Its chats and memory stay on this server; what it does — commands, files, browsing, the web — happens on the workstation. While that is offline it does not work, and costs nothing.",
+            )}
           </small>
         </>
       )}
@@ -922,18 +933,20 @@ function SettingsPane({
       {error && <div className="device-error">{error}</div>}
       <div className="confirm-actions emp-settings-actions">
         <button type="button" className="text-btn danger project-delete" onClick={() => setAsking(true)}>
-          Let go
+          {t("Let go")}
         </button>
         <button type="submit" className="text-btn primary">
-          {saved ? "Saved" : "Save"}
+          {saved ? t("Saved") : t("Save")}
         </button>
       </div>
 
       {asking && (
         <Confirm
-          title={`Let ${e.name} go?`}
-          detail={`Its chat and updates, its KPIs and reports, and the workspace ${e.workspace}. This cannot be undone.`}
-          action="Let go"
+          title={t("Let {name} go?", { name: e.name })}
+          detail={t("Its chat and updates, its KPIs and reports, and the workspace {workspace}. This cannot be undone.", {
+            workspace: e.workspace,
+          })}
+          action={t("Let go")}
           onYes={async () => {
             await deleteEmployee(e.id)
             onDeleted()
@@ -978,30 +991,30 @@ function ProfileFields({
     <>
       <div className="emp-form-row">
         <label>
-          <span>Name</span>
-          <input value={draft.name ?? ""} onChange={(ev) => setDraft((d) => ({ ...d, name: ev.target.value }))} placeholder="e.g. 小研" />
+          <span>{t("Name")}</span>
+          <input value={draft.name ?? ""} onChange={(ev) => setDraft((d) => ({ ...d, name: ev.target.value }))} placeholder={t("e.g. 小研")} />
         </label>
         <label>
-          <span>Role</span>
-          <input value={draft.role ?? ""} onChange={(ev) => setDraft((d) => ({ ...d, role: ev.target.value }))} placeholder="e.g. researcher, developer" />
+          <span>{t("Role")}</span>
+          <input value={draft.role ?? ""} onChange={(ev) => setDraft((d) => ({ ...d, role: ev.target.value }))} placeholder={t("e.g. researcher, developer")} />
         </label>
       </div>
       <label>
-        <span>How it should work</span>
+        <span>{t("How it should work")}</span>
         <textarea
           rows={4}
           value={draft.persona ?? ""}
           onChange={(ev) => setDraft((d) => ({ ...d, persona: ev.target.value }))}
-          placeholder="e.g. Careful and thorough. Every conclusion with its sources. Prefer small, tested changes."
+          placeholder={t("e.g. Careful and thorough. Every conclusion with its sources. Prefer small, tested changes.")}
         />
       </label>
       <label>
-        <span>Writes to you in</span>
+        <span>{t("Writes to you in")}</span>
         <input value={draft.language ?? ""} onChange={(ev) => setDraft((d) => ({ ...d, language: ev.target.value }))} />
       </label>
       <div className="emp-field">
-        <span className="emp-field-label">Projects it may work in</span>
-        {projects.length === 0 && <div className="emp-dim">No projects yet; it has its own workspace either way.</div>}
+        <span className="emp-field-label">{t("Projects it may work in")}</span>
+        {projects.length === 0 && <div className="emp-dim">{t("No projects yet; it has its own workspace either way.")}</div>}
         <div className="emp-chips">
           {projects.map((p) => {
             const on = ids.includes(p.id)
@@ -1023,7 +1036,7 @@ function ProfileFields({
             )
           })}
         </div>
-        <small className="emp-dim">Soft: it is told to stay in these, and nothing else stops it.</small>
+        <small className="emp-dim">{t("Soft: it is told to stay in these, and nothing else stops it.")}</small>
       </div>
     </>
   )
@@ -1068,7 +1081,7 @@ export function HireDialog({
   const [busy, setBusy] = useState(false)
 
   return (
-    <Modal title="Hire a virtual employee" onClose={onClose} wide>
+    <Modal title={t("Hire a virtual employee")} onClose={onClose} wide>
       <form
         className="project-form"
         onSubmit={async (ev) => {
@@ -1093,14 +1106,14 @@ export function HireDialog({
         >
           <MessageCircle />
           <span>
-            <strong>Describe it in a chat</strong>
-            <small className="emp-dim">Say what you need; the agent sets it up, permissions included, once you agree.</small>
+            <strong>{t("Describe it in a chat")}</strong>
+            <small className="emp-dim">{t("Say what you need; the agent sets it up, permissions included, once you agree.")}</small>
           </span>
           <ChevronRight />
         </button>
-        <div className="emp-hire-or emp-dim">or fill in the form</div>
+        <div className="emp-hire-or emp-dim">{t("or fill in the form")}</div>
         <div className="emp-field">
-          <span className="emp-field-label">Agent</span>
+          <span className="emp-field-label">{t("Agent")}</span>
           <div className="emp-chips">
             {BACKENDS.map((b) => (
               <button
@@ -1114,7 +1127,9 @@ export function HireDialog({
               </button>
             ))}
           </div>
-          <small className="emp-dim">{BACKENDS.find((b) => b.id === backend)?.hint} For good, as for any session.</small>
+          <small className="emp-dim">
+            {t("{hint} For good, as for any session.", { hint: BACKENDS.find((b) => b.id === backend)?.hint ?? "" })}
+          </small>
         </div>
         <ProfileFields draft={draft} setDraft={setDraft} projects={projects} />
         <div className="emp-form-row">
@@ -1122,16 +1137,17 @@ export function HireDialog({
           <BudgetField backend={backend} draft={draft} setDraft={setDraft} />
         </div>
         <small className="emp-dim">
-          It starts at once: looks around, then sleeps until there is work. Wakes every 2 hours and writes a weekly report on
-          Fridays; all of it can be changed later.
+          {t(
+            "It starts at once: looks around, then sleeps until there is work. Wakes every 2 hours and writes a weekly report on Fridays; all of it can be changed later.",
+          )}
         </small>
         {error && <div className="device-error">{error}</div>}
         <div className="confirm-actions">
           <button type="button" className="text-btn" onClick={onClose}>
-            Cancel
+            {t("Cancel")}
           </button>
           <button type="submit" className="text-btn primary" disabled={!draft.name?.trim() || busy}>
-            Hire
+            {t("Hire")}
           </button>
         </div>
       </form>
@@ -1145,7 +1161,7 @@ function Modal({ title, onClose, wide = false, children }: { title: string; onCl
       <div className={"modal project-dialog emp-modal" + (wide ? " wide" : "")} role="dialog" aria-label={title}>
         <div className="modal-head">
           <span>{title}</span>
-          <button className="icon-btn" onClick={onClose} title="Close">
+          <button className="icon-btn" onClick={onClose} title={t("Close")}>
             <X />
           </button>
         </div>
@@ -1159,9 +1175,9 @@ function Modal({ title, onClose, wide = false, children }: { title: string; onCl
 // ── Agents ─────────────────────────────────────────────────────────────────
 
 const BACKENDS: { id: AgentBackend; label: string; hint: string }[] = [
-  { id: "claude_code", label: "Claude Code", hint: "Reports what each turn cost, so its budget is in dollars." },
-  { id: "kiro", label: "Kiro", hint: "Kiro CLI, on your Kiro login. It reports no cost, so its budget is turns a day." },
-  { id: "codex", label: "Codex", hint: "Needs `codex` on the server. It reports no cost, so its budget is turns a day." },
+  { id: "claude_code", label: "Claude Code", hint: t("Reports what each turn cost, so its budget is in dollars.") },
+  { id: "kiro", label: "Kiro", hint: t("Kiro CLI, on your Kiro login. It reports no cost, so its budget is turns a day.") },
+  { id: "codex", label: "Codex", hint: t("Needs `codex` on the server. It reports no cost, so its budget is turns a day.") },
 ]
 
 // Each agent's models, its best first: what an employee starts on.
@@ -1174,9 +1190,9 @@ const MODELS: Record<AgentBackend, [string, string][]> = {
     ["claude-opus-5.5", "Claude Opus 5.5"],
     ["claude-opus-5", "Claude Opus 5"],
     ["claude-sonnet-5", "Claude Sonnet 5"],
-    ["auto", "Auto (Kiro picks)"],
+    ["auto", t("Auto (Kiro picks)")],
   ],
-  codex: [["", "Codex's default"]],
+  codex: [["", t("Codex's default")]],
 }
 
 function ModelField({ backend, value, onChange }: { backend: AgentBackend; value: string | undefined; onChange: (model: string) => void }) {
@@ -1184,7 +1200,7 @@ function ModelField({ backend, value, onChange }: { backend: AgentBackend; value
   const known = options.some(([id]) => id === value)
   return (
     <label>
-      <span>Model</span>
+      <span>{t("Model")}</span>
       <select value={value ?? ""} onChange={(ev) => onChange(ev.target.value)} disabled={options.length === 1}>
         {!known && value && <option value={value}>{value}</option>}
         {options.map(([id, label]) => (
@@ -1208,9 +1224,9 @@ function BudgetField({
   setDraft: (f: (d: EmployeeSettings) => EmployeeSettings) => void
 }) {
   return backend === "claude_code" ? (
-    <NumberField label="Budget a day, $" value={draft.budget_usd} onChange={(n) => setDraft((d) => ({ ...d, budget_usd: n }))} />
+    <NumberField label={t("Budget a day, $")} value={draft.budget_usd} onChange={(n) => setDraft((d) => ({ ...d, budget_usd: n }))} />
   ) : (
-    <NumberField label="Turns a day" value={draft.budget_turns} onChange={(n) => setDraft((d) => ({ ...d, budget_turns: Math.round(n) }))} />
+    <NumberField label={t("Turns a day")} value={draft.budget_turns} onChange={(n) => setDraft((d) => ({ ...d, budget_turns: Math.round(n) }))} />
   )
 }
 
@@ -1221,7 +1237,7 @@ const pad = (n: number) => String(n).padStart(2, "0")
 export const money = (n: number) => n.toFixed(2)
 /** An amount in the employee's budget unit: "$12.40", or "12 turns". */
 export const amount = (e: Pick<Employee, "budget_unit">, n: number) =>
-  e.budget_unit === "turns" ? `${Math.round(n)} turns` : `$${money(n)}`
+  e.budget_unit === "turns" ? t("{n} turns", { n: Math.round(n) }) : `$${money(n)}`
 /** The same, short, where the unit is said beside it. */
 export const short = (e: Pick<Employee, "budget_unit">, n: number) =>
   e.budget_unit === "turns" ? `${Math.round(n)}` : `$${money(n)}`
@@ -1235,6 +1251,6 @@ function clock(ms: number) {
 function when(ms: number) {
   const d = new Date(ms)
   const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false })
-  if (d.toDateString() === new Date().toDateString()) return `today ${time}`
+  if (d.toDateString() === new Date().toDateString()) return t("today {time}", { time })
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " + time
 }

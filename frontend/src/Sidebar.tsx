@@ -26,8 +26,10 @@ import {
 } from "lucide-react"
 import { useEffect, useState, type MouseEvent } from "react"
 import { HOST_DEVICE, type AgentBackend, type AgentInfo, type Device, type Employee, type Notice, type Project } from "./api"
+import { t } from "./i18n"
 import { Avatar, BudgetRing, short, STATUS, StatusIcon } from "./Employees"
 import { BackendIcon } from "./BackendIcon"
+import { BrandMark } from "./BrandMark"
 import { BellButton } from "./Notices"
 import { RenameInput } from "./Confirm"
 import { DeviceIcon, deviceIcon } from "./DeviceIcon"
@@ -286,13 +288,13 @@ export function Sidebar({
       }
       onClick={() => onSelect(s.id)}
       // Outside its project, which one it is in: on hover here, and in its menu.
-      title={projectName(s) ? `in ${projectName(s)}` : undefined}
+      title={projectName(s) ? t("in {name}", { name: projectName(s) ?? "" }) : undefined}
     >
       {/* In front, as on every row. A two-line Working row puts both lines
           after it, so the title and the line under it start together. */}
-      <span className={"dot " + s.status} title={s.status} />
+      <span className={"dot " + s.status} title={t(s.status)} />
       <BackendIcon backend={s.backend} title={s.backend_label} />
-      {s.kind === "incognito" && <HatGlasses className="session-incognito" aria-label="Incognito" />}
+      {s.kind === "incognito" && <HatGlasses className="session-incognito" aria-label={t("Incognito")} />}
       {s.id === renamingId ? (
         <RenameInput value={s.title ?? s.id} stem={false} onDone={(title) => onRenamed(s.id, title)} />
       ) : working && !narrow ? (
@@ -304,18 +306,18 @@ export function Sidebar({
         <span className="session-label">{s.title ?? s.id}</span>
       )}
       {s.queued > 0 && (
-        <span className="session-queued" title="queued messages">
+        <span className="session-queued" title={t("queued messages")}>
           {s.queued}
         </span>
       )}
-      {unread(s) && <span className="session-unread" title="Unread: a reply not yet read on any device" />}
-      <span className="session-when" title={"last active " + new Date(lastActive(s)).toLocaleString()}>
+      {unread(s) && <span className="session-unread" title={t("Unread: a reply not yet read on any device")} />}
+      <span className="session-when" title={t("last active {time}", { time: new Date(lastActive(s)).toLocaleString() })}>
         {when(lastActive(s))}
       </span>
       {working && !narrow && (
         <button
           className="session-del session-more"
-          title="Done: move it down to Recents"
+          title={t("Done: move it down to Recents")}
           onClick={(e) => {
             e.stopPropagation()
             void onDone(s.id)
@@ -329,7 +331,7 @@ export function Sidebar({
       {s.kind === "incognito" && s.pinned && (
         <button
           className="session-del session-more session-unpin"
-          title="Unpin: back to Settings → Incognito only"
+          title={t("Unpin: back to Settings → Incognito only")}
           onClick={(e) => {
             e.stopPropagation()
             void onPin(s.id, false)
@@ -340,7 +342,7 @@ export function Sidebar({
       )}
       <button
         className="session-del session-more"
-        title="Rename, pin, move to a project, delete"
+        title={t("Rename, pin, move to a project, delete")}
         onClick={(e) => {
           e.stopPropagation()
           const anchor = e.currentTarget.getBoundingClientRect()
@@ -355,15 +357,18 @@ export function Sidebar({
   return (
     <aside className="sidebar">
       <div className="sidebar-head">
-        <span className="brand">loom</span>
+        <span className="brand">
+          <BrandMark />
+          loom
+        </span>
         <span className="sidebar-actions">
           <BellButton notices={notices} onClick={onOpenBell} />
-          <button className="icon-btn search-btn" onClick={() => setSearching(true)} title="Search chats (⌘K)">
+          <button className="icon-btn search-btn" onClick={() => setSearching(true)} title={t("Search chats (⌘K)")}>
             <Search />
           </button>
           {/* A phone's drawer is put away by a swipe or a tap beside it. */}
           {!narrow && (
-            <button className="icon-btn" onClick={onCollapse} title="Hide sidebar">
+            <button className="icon-btn" onClick={onCollapse} title={t("Hide sidebar")}>
               <PanelLeft />
             </button>
           )}
@@ -375,11 +380,11 @@ export function Sidebar({
         {!narrow && (
           <div className="nav-item nav-new" role="button" onClick={() => onCreate(defaultBackend)}>
             <SquarePen className="nav-icon" />
-            <span className="nav-label">New chat</span>
+            <span className="nav-label">{t("New chat")}</span>
             <button
               className={"nav-new-more" + (newMenu ? " open" : "")}
               onClick={toggleNewMenu}
-              title="Incognito, or another engine"
+              title={t("Incognito, or another engine")}
             >
               <ChevronRight className="nav-chevron" />
             </button>
@@ -393,7 +398,7 @@ export function Sidebar({
           onClick={() => onToggle(PROJECTS_SECTION)}
         >
           <Folder className="nav-icon" />
-          <span className="nav-label">Projects</span>
+          <span className="nav-label">{t("Projects")}</span>
           <ChevronRight className="nav-chevron" />
         </div>
         {open(PROJECTS_SECTION) && (
@@ -422,14 +427,14 @@ export function Sidebar({
                     onOpen={() => onOpenDream(project.id)}
                   />
                 )}
-                {inside.some(unread) && <span className="session-unread" title="Unread replies" />}
+                {inside.some(unread) && <span className="session-unread" title={t("Unread replies")} />}
                 {inside.length > 0 && <span className="nav-count">{inside.length}</span>}
               </div>
             ))}
             {/* New goes last, inside: the heading carries nothing but its name. */}
             <button className="project-row project-new-row" onClick={() => onEditProject(null)}>
               <FolderPlus className="project-icon" />
-              <span className="session-label">New project</span>
+              <span className="session-label">{t("New project")}</span>
             </button>
           </div>
         )}
@@ -442,7 +447,7 @@ export function Sidebar({
           onClick={() => onToggle(EMPLOYEES_SECTION)}
         >
           <Users className="nav-icon" />
-          <span className="nav-label">Employees</span>
+          <span className="nav-label">{t("Employees")}</span>
           <ChevronRight className="nav-chevron" />
         </div>
         {open(EMPLOYEES_SECTION) && (
@@ -454,13 +459,13 @@ export function Sidebar({
                   key={e.id}
                   className={"emp-row" + (e.id === activeEmployeeId ? " active" : "")}
                   onClick={() => onOpenEmployee(e.id)}
-                  title={`${e.role ? `${e.name} — ${e.role}` : e.name}\n${status.label} · ${short(e, e.spent_today)} of ${short(e, e.cap_today)}${e.budget_unit === "turns" ? " turns" : ""}`}
+                  title={`${e.role ? `${e.name} — ${e.role}` : e.name}\n${t(status.label)} · ${t(e.budget_unit === "turns" ? "{spent} of {cap} turns" : "{spent} of {cap}", { spent: short(e, e.spent_today), cap: short(e, e.cap_today) })}`}
                 >
                   <Avatar employee={e} size="sm" />
                   <span className="emp-row-name">
                     {e.name}
                     {e.workstation && <span className="emp-row-station"> · {e.workstation_name}</span>}
-                    {e.permissions && <span className="emp-row-station"> · Restricted</span>}
+                    {e.permissions && <span className="emp-row-station"> · {t("Restricted")}</span>}
                   </span>
                   <StatusIcon status={e.status} />
                   <BudgetRing employee={e} />
@@ -469,7 +474,7 @@ export function Sidebar({
             })}
             <button className="project-row project-new-row" onClick={onHire}>
               <UserPlus className="project-icon" />
-              <span className="session-label">Hire an employee</span>
+              <span className="session-label">{t("Hire an employee")}</span>
             </button>
           </div>
         )}
@@ -477,7 +482,7 @@ export function Sidebar({
         {/* Another top-level entry: a page of its own, not a list. */}
         <div className={"nav-item" + (tasksOpen ? " current" : "")} role="button" onClick={onOpenTasks}>
           <Clock className="nav-icon" />
-          <span className="nav-label">Tasks</span>
+          <span className="nav-label">{t("Tasks")}</span>
         </div>
 
         {/* The Claude Code and Codex sessions on a device: pick the device. */}
@@ -486,10 +491,10 @@ export function Sidebar({
           role="button"
           aria-expanded={open(DEVICE_SESSIONS_SECTION)}
           onClick={() => onToggle(DEVICE_SESSIONS_SECTION)}
-          title="Claude Code and Codex sessions on your devices"
+          title={t("Claude Code and Codex sessions on your devices")}
         >
           <MessagesSquare className="nav-icon" />
-          <span className="nav-label">Device sessions</span>
+          <span className="nav-label">{t("Device sessions")}</span>
           <ChevronRight className="nav-chevron" />
         </div>
         {open(DEVICE_SESSIONS_SECTION) && (
@@ -499,12 +504,12 @@ export function Sidebar({
               className={"project-row device-session-row" + (sessionsOf === HOST_DEVICE.id ? " current" : "")}
               role="button"
               onClick={() => setSessionsOf(HOST_DEVICE.id)}
-              title="Sessions on the server Loom runs on, Loom's own among them"
+              title={t("Sessions on the server Loom runs on, Loom's own among them")}
             >
               <span className="project-icon device-session-icon">
                 <DeviceIcon icon="linux" />
               </span>
-              <span className="session-label">This server</span>
+              <span className="session-label">{t("This server")}</span>
               <span className="dot online" />
             </div>
             {devices.map((d) => {
@@ -518,7 +523,7 @@ export function Sidebar({
                   role="button"
                   aria-disabled={!usable}
                   onClick={() => usable && setSessionsOf(d.id)}
-                  title={unsupported ? "Sessions are read on macOS and Linux only" : d.online ? `Sessions on ${d.name}` : `${d.name} is offline`}
+                  title={unsupported ? t("Sessions are read on macOS and Linux only") : d.online ? t("Sessions on {name}", { name: d.name }) : t("{name} is offline", { name: d.name })}
                 >
                   <span className="project-icon device-session-icon">
                     <DeviceIcon icon={deviceIcon(d)} />
@@ -528,33 +533,36 @@ export function Sidebar({
                 </div>
               )
             })}
-            <button className="project-row project-new-row" onClick={() => setDevicesOpen(true)}>
-              <MonitorSmartphone className="project-icon" />
-              <span className="session-label">{devices.length ? "Manage devices" : "Add a device"}</span>
+            <button className="project-row project-new-row device-session-row" onClick={() => setDevicesOpen(true)}>
+              {/* In the same box as the devices' icons above, so the names line up. */}
+              <span className="project-icon device-session-icon">
+                <MonitorSmartphone />
+              </span>
+              <span className="session-label">{devices.length ? t("Manage devices") : t("Add a device")}</span>
             </button>
           </div>
         )}
 
         {pinned.length > 0 && (
           <>
-            <Heading label="Pinned" open={open(PINNED_SECTION)} onToggle={() => onToggle(PINNED_SECTION)} />
+            <Heading label={t("Pinned")} open={open(PINNED_SECTION)} onToggle={() => onToggle(PINNED_SECTION)} />
             {open(PINNED_SECTION) && pinned.map((s) => row(s))}
           </>
         )}
 
         {working.length > 0 && (
           <>
-            <Heading label="Working" open={open(WORKING_SECTION)} onToggle={() => onToggle(WORKING_SECTION)} />
+            <Heading label={t("Working")} open={open(WORKING_SECTION)} onToggle={() => onToggle(WORKING_SECTION)} />
             {open(WORKING_SECTION) && working.map((s) => row(s, true))}
           </>
         )}
 
-        <Heading label="Recents" open={open(SESSIONS_SECTION)} onToggle={() => onToggle(SESSIONS_SECTION)} />
+        <Heading label={t("Recents")} open={open(SESSIONS_SECTION)} onToggle={() => onToggle(SESSIONS_SECTION)} />
         {open(SESSIONS_SECTION) &&
           (recent.length ? (
             recent.map((s) => row(s))
           ) : (
-            <div className="session-empty">{pinned.length ? "Nothing else yet." : "No sessions yet."}</div>
+            <div className="session-empty">{pinned.length ? t("Nothing else yet.") : t("No sessions yet.")}</div>
           ))}
       </div>
 
@@ -585,11 +593,11 @@ export function Sidebar({
           <button
             className={"devices-btn push-btn" + (vim.on ? " on" : "")}
             onClick={vim.toggle}
-            title={vim.on ? "Vim mode is on; ? lists the keys. Click to turn it off." : "Turn on Vim mode: keys for the panes, ? lists them"}
+            title={vim.on ? t("Vim mode is on; ? lists the keys. Click to turn it off.") : t("Turn on Vim mode: keys for the panes, ? lists them")}
           >
             {vim.on ? <Keyboard /> : <KeyboardOff />}
-            <span>Vim mode</span>
-            <span className="devices-count">{vim.on ? "on" : "off"}</span>
+            <span>{t("Vim mode")}</span>
+            <span className="devices-count">{vim.on ? t("on") : t("off")}</span>
           </button>
         )}
 
@@ -600,22 +608,22 @@ export function Sidebar({
         <button
           className={"devices-btn push-btn" + (browserOpen ? " on" : "")}
           onClick={onToggleBrowser}
-          title="Loom's browser: log in to a site, or get past a check for the agents"
+          title={t("Loom's browser: log in to a site, or get past a check for the agents")}
         >
           <Globe />
-          <span>Browser</span>
-          <span className="devices-count">{browserOpen ? "open" : ""}</span>
+          <span>{t("Browser")}</span>
+          <span className="devices-count">{browserOpen ? t("open") : ""}</span>
         </button>
 
         {/* The user's own machines, reachable by agents through loom-node. */}
         <button
           className={"devices-btn push-btn" + (online > 0 ? " on" : "")}
           onClick={() => setDevicesOpen(true)}
-          title="Devices"
+          title={t("Devices")}
         >
           {/* An icon like the two above, so the labels line up; lit while any is online. */}
           <MonitorSmartphone />
-          <span>Devices</span>
+          <span>{t("Devices")}</span>
           <span className="devices-count">
             {online}/{devices.length}
           </span>
@@ -628,24 +636,24 @@ export function Sidebar({
           label="Dream"
           dream={homeDream}
           active={homeDream?.id === activeId}
-          what=" — sessions outside any project"
+          what={" — " + t("sessions outside any project")}
           onOpen={() => onOpenDream("home")}
         />
         {/* This device's preferences: appearance, and the agent "+" starts.
             The fold at the end of its row, where the row is empty. */}
         <div className="foot-last">
-          <button className="devices-btn push-btn" onClick={onOpenSettings} title="Settings">
+          <button className="devices-btn push-btn" onClick={onOpenSettings} title={t("Settings")}>
             <Settings />
-            <span>Settings</span>
+            <span>{t("Settings")}</span>
           </button>
           <button
             className="devices-btn foot-fold"
             onClick={() => onToggle(FOOT_SECTION)}
             aria-expanded={open(FOOT_SECTION)}
-            title={open(FOOT_SECTION) ? "Fold to icons" : "Unfold"}
+            title={open(FOOT_SECTION) ? t("Fold to icons") : t("Unfold")}
           >
             {open(FOOT_SECTION) ? <ChevronDown /> : <ChevronUp />}
-            <span className="fold-tip">Unfold</span>
+            <span className="fold-tip">{t("Unfold")}</span>
           </button>
         </div>
       </div>
@@ -654,9 +662,9 @@ export function Sidebar({
           <div className="new-chat-split">
             <button className="new-chat" onClick={() => onCreate(defaultBackend)}>
               <SquarePen />
-              New chat
+              {t("New chat")}
             </button>
-            <button className="new-chat-more" onClick={toggleNewMenu} title="Incognito, or another engine">
+            <button className="new-chat-more" onClick={toggleNewMenu} title={t("Incognito, or another engine")}>
               <ChevronDown />
             </button>
           </div>
@@ -664,7 +672,7 @@ export function Sidebar({
             className="dial-btn"
             onClick={() => onToggle(FOOT_SECTION)}
             aria-expanded={open(FOOT_SECTION)}
-            title={open(FOOT_SECTION) ? "Close" : "Notifications, Browser, Devices, Dream, Settings"}
+            title={open(FOOT_SECTION) ? t("Close") : t("Notifications, Browser, Devices, Dream, Settings")}
           >
             {open(FOOT_SECTION) ? <X /> : <ChevronUp />}
           </button>
@@ -723,10 +731,10 @@ function Heading({ label, open, onToggle }: { label: string; open: boolean; onTo
 }
 
 const PUSH_HINT: Record<Push["state"], string> = {
-  on: "This device is notified when a turn ends. Click to stop.",
-  off: "Get a notification on this device when a turn ends",
-  denied: "Notifications are blocked for this site in the browser's settings",
-  unsupported: "On an iPhone, add Loom to the Home Screen and open it from there to get notifications",
+  on: t("This device is notified when a turn ends. Click to stop."),
+  off: t("Get a notification on this device when a turn ends"),
+  denied: t("Notifications are blocked for this site in the browser's settings"),
+  unsupported: t("On an iPhone, add Loom to the Home Screen and open it from there to get notifications"),
 }
 
 /** Notifications for this device, on or off; see `usePush`. */
@@ -741,9 +749,9 @@ function PushButton({ push }: { push: Push }) {
       title={push.error ?? PUSH_HINT[push.state]}
     >
       <Icon />
-      <span>Notifications</span>
+      <span>{t("Notifications")}</span>
       <span className="devices-count">
-        {push.error ? "failed" : push.busy ? "…" : on ? "on" : push.state === "off" ? "off" : "n/a"}
+        {push.error ? t("failed") : push.busy ? "…" : on ? t("on") : push.state === "off" ? t("off") : t("n/a")}
       </span>
     </button>
   )
@@ -759,9 +767,9 @@ export function unread(s: AgentInfo): boolean {
 
 export function when(ms: number): string {
   const mins = Math.floor((Date.now() - ms) / 60000)
-  if (mins < 1) return "now"
-  if (mins < 60) return `${mins}m`
+  if (mins < 1) return t("now")
+  if (mins < 60) return t("{n}m", { n: mins })
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h`
-  return `${Math.floor(hours / 24)}d`
+  if (hours < 24) return t("{n}h", { n: hours })
+  return t("{n}d", { n: Math.floor(hours / 24) })
 }

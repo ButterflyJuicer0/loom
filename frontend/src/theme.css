@@ -19,7 +19,7 @@
   /* What was neon green is ChatGPT's white: selection, the active row, the
      caret. Colour is kept for meaning only — green for working, red for
      stopped or failed, blue for links. */
-  --accent: #ececec;
+  --loom-accent: #ececec;
   --green: #10a37f;
   --blue: #66b5ff;
   /* The unread mark: the system's own blue, brighter than a link's. */
@@ -527,6 +527,290 @@ pre.code {
   font-style: normal;
 }
 
+/* ── The agent's steps: tool cards, thinking, working ────────────────────
+   Quiet chips rather than boxed rows, and they move a little: a step fades
+   in, a running one shimmers and spins, a finished one's check pops, the
+   chevron turns, an opened card's steps slide down. All of it stops under
+   "reduce motion" (the end of this section). */
+
+.tool,
+.thinking,
+.working[role="status"] {
+  animation: step-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* The steps inside an opened card came in with the card. */
+.group-steps .tool,
+.group-steps .thinking {
+  animation: none;
+}
+
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* A folded stretch of calls: a soft chip, no outline. */
+.tool.group {
+  border-color: transparent;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.tool.group:hover,
+.tool.group.open {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+
+.tool.group.open {
+  border-color: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+.tool.group.running {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+.tool.group > .tool-head {
+  gap: 10px;
+  padding: 9px 12px 9px 10px;
+}
+
+.tool.group > .tool-head:hover {
+  background: transparent;
+}
+
+.tool-head:active {
+  transform: scale(0.995);
+}
+
+/* Its mark, in a round of its own: a wrench, or a spinner while it runs. */
+.tool-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg-dim);
+  font-size: 0.8125rem;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.tool.group:hover .tool-icon,
+.tool.group.open .tool-icon {
+  color: var(--fg);
+}
+
+.tool.group.running .tool-icon {
+  background: color-mix(in srgb, var(--green) 16%, transparent);
+  color: var(--green);
+}
+
+/* Which tools, a chip each; what does not fit fades out at the edge. */
+.tool-chips {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+
+.tool-chip {
+  flex: 0 0 auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  color: var(--fg-dim);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.tool-state {
+  font-size: 0.9375rem;
+}
+
+/* Done: a check that pops, once. */
+.tool-done {
+  color: var(--green);
+  animation: check-pop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes check-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+.tool-chevron {
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.tool.group.open .tool-chevron {
+  transform: rotate(90deg);
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* An opened card's steps slide down from under its head. */
+.group-steps {
+  border-top-color: color-mix(in srgb, var(--fg) 8%, transparent);
+  animation: steps-open 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-origin: top;
+}
+
+@keyframes steps-open {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* Words that are still coming: a light that passes over them. */
+.shimmer {
+  background: linear-gradient(
+    100deg,
+    var(--fg-dim) 0%,
+    var(--fg-dim) 38%,
+    var(--fg) 50%,
+    var(--fg-dim) 62%,
+    var(--fg-dim) 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: shimmer 1.8s linear infinite;
+}
+
+.tool-name.shimmer {
+  background-image: linear-gradient(100deg, var(--fg) 0%, var(--fg) 38%, var(--fg-dim) 50%, var(--fg) 62%, var(--fg) 100%);
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 110% 0;
+  }
+
+  to {
+    background-position: -110% 0;
+  }
+}
+
+/* Thinking: a spark and the words, the spark twinkling while they come. */
+.thinking {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 0.875rem;
+}
+
+.thinking > svg {
+  flex: 0 0 auto;
+  margin-top: 0.28em;
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+.thinking.live > svg {
+  color: var(--fg);
+  animation: twinkle 1.4s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  50% {
+    opacity: 0.35;
+    transform: scale(0.82) rotate(18deg);
+  }
+}
+
+/* Working: three dots in a wave. */
+.working-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 1em;
+  /* The wave lifts them: start a little low, so it reads as centred. */
+  padding-top: 3px;
+}
+
+.working-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--fg);
+  animation: dot-wave 1.1s ease-in-out infinite;
+}
+
+.working-dots i:nth-child(2) {
+  animation-delay: 0.14s;
+}
+
+.working-dots i:nth-child(3) {
+  animation-delay: 0.28s;
+}
+
+.working.starting .working-dots i {
+  background: var(--fg-dim);
+}
+
+@keyframes dot-wave {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tool,
+  .thinking,
+  .working[role="status"],
+  .group-steps,
+  .tool-done,
+  .spin,
+  .shimmer,
+  .thinking.live > svg,
+  .working-dots i {
+    animation: none;
+  }
+
+  .tool-chevron,
+  .tool.group,
+  .tool-icon {
+    transition: none;
+  }
+
+  .shimmer {
+    -webkit-text-fill-color: currentcolor;
+    background: none;
+    color: inherit;
+  }
+}
+
 .error {
   border-left: 0;
   border-radius: 12px;
@@ -967,7 +1251,7 @@ pre.code,
     --bg-card: #2f2f2f;
     --fg: #ffffff;
     --fg-dim: #8e8e8e;
-    --accent: #ffffff;
+    --loom-accent: #ffffff;
     --line: color-mix(in srgb, var(--fg) 14%, transparent);
   }
 
@@ -1089,7 +1373,7 @@ pre.code,
   --line: #0000001a;
   --fg: #0d0d0d;
   --fg-dim: #5d5d5d;
-  --accent: #0d0d0d;
+  --loom-accent: #0d0d0d;
   --blue: #2964aa;
   --unread: #007aff;
   --red: #d03b3b;
@@ -1138,7 +1422,25 @@ pre.code,
 .settings-body {
   display: flex;
   flex-direction: column;
+  /* The dialog is no taller than the window (.modal), so what is longer —
+     the themes — scrolls here, under the dialog's head. */
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 4px 16px 12px;
+}
+
+/* The themes are many: a wider dialog, three to a row where there is room. */
+.modal.settings-dialog.wide {
+  width: min(46rem, 100%);
+}
+
+/* Light or dark stays in reach above the themes as they scroll. */
+.settings-sticky {
+  position: sticky;
+  top: -4px;
+  z-index: 1;
+  background: var(--surface-modal);
 }
 
 .settings-row {
@@ -1542,7 +1844,29 @@ body.sidebar-resizing iframe {
 .sidebar .brand {
   font-size: 1.5rem;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  /* The name in capitals, opened a little, as capitals set tight look cramped. */
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32em;
+}
+
+/* The mark beside the name (BrandMark.tsx): a weave in two leather browns.
+   The one fixed colour in the interface — it is Loom's own, so it stays the
+   same under every theme, and only lifts to cognac where the page is dark,
+   since dark leather would not show there. */
+.brand-mark {
+  --brand-a: #3d2212;
+  --brand-b: #8a5230;
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+}
+
+:root[data-theme="dark"] .brand-mark {
+  --brand-a: #8c5630;
+  --brand-b: #cf9a68;
 }
 
 .sidebar .nav-item,
@@ -2003,22 +2327,63 @@ body.sidebar-resizing iframe {
   color: var(--fg-dim);
 }
 
-/* On a desktop the "…" holds the model and the rest, beside the terminal and
-   canvas chips and in their look, not the phone's glass circle. */
-.chat-header .chip.button.pane-more.desk {
-  width: auto;
-  height: auto;
-  padding: 2px 8px;
-  border: 0;
-  border-radius: 10px;
-  background: var(--bg-card);
-  box-shadow: none;
-  color: var(--fg-dim);
+/* On a desktop the header's actions are each a button of their own, in the
+   terminal and canvas chips' look: quiet until hovered or on. */
+.chat-header .chat-meta {
+  gap: 2px;
 }
 
-.chat-header .chip.button.pane-more.desk svg {
-  width: 1rem;
-  height: 1rem;
+.chip.button.head-btn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg-dim);
+  transition: color 0.12s, background-color 0.12s;
+}
+
+.chip.button.head-btn svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  font-size: inherit;
+}
+
+.chip.button.head-btn:hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+
+.chip.button.head-btn.on {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+}
+
+.chip.button.head-btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* How many shells run: a small figure on the button's corner. */
+.chip.button.head-btn .count {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* A header button's name, under it (Chat.tsx `Tip`). */
+.head-tip {
+  max-width: min(22rem, calc(100vw - 16px));
+  font-family: var(--ui);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  pointer-events: none;
 }
 
 /* New chat creates on a click; the arrow beside it opens NewMenu. On a
