@@ -339,7 +339,10 @@ html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon.lucide-messages-sq
 
 /* By night the things' black edges would be lost in the ground: a pale
    line round each. */
-html[data-style="bunny"][data-theme="dark"] .nav-item > svg.nav-icon {
+html[data-style="bunny"][data-theme="dark"] .nav-item > svg.nav-icon,
+html[data-style="bunny"][data-theme="dark"] .composer-btn.effort-btn > svg,
+html[data-style="bunny"][data-theme="dark"] .emp-spend > svg,
+html[data-style="bunny"][data-theme="dark"] .tool:not(.group) > .tool-head::before {
   filter: drop-shadow(1px 0 0 #6f7c96) drop-shadow(-1px 0 0 #6f7c96) drop-shadow(0 1px 0 #6f7c96) drop-shadow(0 -1px 0 #6f7c96);
 }
 
