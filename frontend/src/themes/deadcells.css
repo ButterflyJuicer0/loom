@@ -172,8 +172,12 @@ html[data-style="deadcells"][data-theme] .sidebar .session-list {
   padding-bottom: 0;
 }
 
+/* A working row is `.working`, which Chat.css starts at the left edge of a
+   flex column for the chat's own status line: keep rows the list's width. */
 html[data-style="deadcells"][data-theme] .sidebar .session-list > * {
   flex: 0 0 auto;
+  align-self: stretch;
+  min-width: 0;
 }
 
 /* Rows' margins met and became one while the list was a block; keep it so. */
