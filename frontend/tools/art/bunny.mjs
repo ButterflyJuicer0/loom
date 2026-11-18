@@ -8,9 +8,12 @@ import { writeSprite } from "./lib.mjs"
 // tuft at each cheek, and a deadpan face: two tall pale eyes with a lash at
 // the top and a mouth like "ʌ". Each doll is the same rabbit dressed as an
 // operator; five of them are here.
-// Around it, what the photographs and the product cards show: the tent, the
-// rug, the mushroom lamp, the clock and the books of the photo set; sparkles,
-// clouds, tags and the orange tab of the cards.
+// Around it, 明日方舟's own: 龙泡泡, the dragon bun of the same plush line
+// (and the buns in their bamboo steamers), drawn after the brand's
+// photographs too; and the game's things, redrawn small after its pictures
+// of them — 合成玉, 至纯源石, 龙门币, 作战记录, 技巧概要, 招聘许可, 寻访凭证,
+// 理智 and its 顶液, a chip, 家具零件, a drone — with the grid, the warning
+// stripes and the corner marks its screens are drawn with.
 
 // ── A canvas of squares ──────────────────────────────────────────────────
 // Larger pictures are built from shapes; small ones are written as grids.
@@ -340,18 +343,16 @@ writeSprite("bunny-mark.svg", HALF, VERSIONS.amiya)
 
 // ── Small: 11 by 16 ──────────────────────────────────────────────────────
 // The whole doll still — ears, face, collar, lapels, arms, feet — for a
-// step's mark, the three at work, a row of them. Its face and its clothes
+// step's mark, the ones at work, a rule. Its face and its clothes
 // by version; the hood's rim (H) only on the Amiya one.
 const SMALL_TOP = ["..OO...OO..", ".OFEO.OEFO.", ".OFEO.OEFO.", ".OFEOOOEFO."]
 const SMALL_FEET = [".OLFdFdFLO.", ".ODDOOODDO.", "..OO...OO.."]
 const SMALL = {
   amiya: [".HFFFFFFFH.", "OFFFFFFFFFH", "OFKFFFFFKFH", "OFWFFFFFWFH", "OFWFFKFFWFH", "OFFFKFKFFFO", ".OSSSSSSSO.", "OFBFFFFFBFO", "OFHBFFFBHFO"],
-  pink: [".OFFFFFFFO.", "OFFFFFFFFFO", "OFFFFFFFFFO", "OKKFFFFFKKO", "OFFFFPFFFFO", "OFFFFFFFFFO", ".OKKKKKKKO.", "OSSFFFFFSSO", "OSsFFhFFsSO"],
   grey: [".OFFFFFFFO.", "OFFFFFFFFFO", "OFKFFFFFKFO", "OFWFFFFFWFO", "OFWFFFFFWFO", "OFFKWKWKFFO", ".OHHHHHHHO.", "OHHgHhHgHHO", "OHHHgFgHHHO"],
 }
 const small = (version, top = SMALL_TOP) => [...top, ...SMALL[version], ...SMALL_FEET]
 writeSprite("bunny-small.svg", small("amiya"), VERSIONS.amiya)
-writeSprite("bunny-small-pink.svg", small("pink"), VERSIONS.pink)
 writeSprite("bunny-small-grey.svg", small("grey"), VERSIONS.grey)
 
 // Turned to the side, and from behind — the hood down its back, the cream
@@ -438,23 +439,383 @@ writeSprite("bunny-face.svg", ["K.......K", "W.......W", "W..KKK..W", "K.K...K.K
 writeSprite("bunny-face-stop.svg", ["K.......K", ".K.....K.", "K..KKK..K", "........."], { K: "#211a1c" })
 writeSprite("bunny-face-off.svg", [".........", "KK.....KK", "....K....", "...K.K..."], { K: "#211a1c" })
 
-// ── The cards' own marks ─────────────────────────────────────────────────
-// The four-pointed sparkle scattered over every product card.
-const SPARKLE = ["....C....", "....C....", "...CCC...", "..CCCCC..", "CCCCCCCCC", "..CCCCC..", "...CCC...", "....C....", "....C...."]
-const SPARK = ["..C..", "..C..", "CCCCC", "..C..", "..C.."]
-writeSprite("bunny-sparkle.svg", SPARKLE, { C: "#ff8f8f" })
-writeSprite("bunny-sparkle-white.svg", SPARKLE, { C: "#ffffff" })
-writeSprite("bunny-sparkle-gold.svg", SPARKLE, { C: "#ffd166" })
-writeSprite("bunny-sparkle-off.svg", SPARKLE, { C: "#bfae9f" })
-// "◆", before a version's name.
-writeSprite("bunny-diamond.svg", ["...C...", "..CCC..", ".CCCCC.", "CCCCCCC", ".CCCCC.", "..CCC..", "...C..."], { C: "#ff8f8f" })
+// ── 龙泡泡 ───────────────────────────────────────────────────────────────
+// The rabbit's sibling in the same plush line: a round bun of a dragon,
+// drawn after the brand's photographs of the 黍 doll — white, wider than it
+// is tall, two forked horns (yellow, going to indigo at the tips), yellow
+// spikes down its back, an indigo tail, four yellow stubs of feet; its face
+// low on the bun: two big square eyes under heavy lids, sage green, a grey
+// dab of a brow over each, a mouth like "ω"; an orange tag hanging from one
+// horn. 50 squares by 44.
+// O its line, F the plush, L its light, D its shade; Y yellow, y its shade;
+// B indigo, b its light; E the eye, e its lower half; K black thread; G the
+// brows; T the tag, t its clip.
+const LPP = { O: "#6a5f5a", F: "#f6f2ec", L: "#ffffff", D: "#dcd3ca", Y: "#f4cb38", y: "#d9a520", B: "#3b4391", b: "#6c74c4", E: "#bcd8c6", e: "#a5c9b3", K: "#211a1c", G: "#b5b9c4", T: "#f0641e", t: "#cfd3d8" }
+function bun() {
+  const c = new Canvas(50, 44)
+  const body = (x, y, grow = 0) => Math.abs((x - 24.5) / (20.6 + grow)) ** 2.4 + Math.abs((y - 26.6) / (16 + grow)) ** 2.4 <= 1
+  // The tail, behind; then the feet, the horns, the spikes; then the body.
+  c.poly([[40, 20], [49, 8], [48, 20], [50, 27], [42, 28]], "B")
+  c.poly([[44, 14], [49, 8], [48, 14]], "b")
+  for (const x of [11, 37.5]) {
+    c.oval(x, 41, 4.2, 2.6, "Y")
+    c.fill((px, py) => ((px - x) / 4.2) ** 2 + ((py - 41) / 2.6) ** 2 <= 1 && py > 41.6, "y")
+  }
+  for (const side of [-1, 1]) {
+    const X = (x) => 24.5 + side * x
+    // A horn: a long prong up and out, a short one to the side.
+    c.poly([[X(8), 18], [X(14.6), 12], [X(21.6), 0], [X(21), 16], [X(15), 23]], "Y")
+    c.poly([[X(15), 22], [X(19), 13.4], [X(25), 11], [X(22), 21]], "Y")
+    c.poly([[X(17.6), 7], [X(21.6), 0], [X(21.3), 8.4]], "B")
+    c.poly([[X(16.2), 9.4], [X(17.6), 7], [X(21.3), 8.4], [X(21.2), 10.6]], "b")
+    c.poly([[X(22.4), 12.2], [X(25), 11], [X(23.8), 14.6]], "B")
+  }
+  for (const [x, h] of [[19.5, 7], [25.5, 9], [31, 6]]) c.poly([[x - 3.2, 12.6], [x + 0.4, 12 - h], [x + 3.4, 12.6]], "Y")
+  c.fill((x, y) => body(x, y), "F")
+  c.fill((x, y) => body(x, y) && !body(x, y - 1.3) && y < 20, "L")
+  c.fill((x, y) => body(x, y) && !body(x, y + 1.6), "D")
+  c.fill((x, y) => body(x, y) && !body(x + 1.4, y + 0.6) && x > 36 && y > 22, "D")
+  // The face: a brow, a lid wider than the eye, the eye square above and
+  // round below.
+  for (const x of [8, 25]) {
+    c.rect(x + 3, 22, 3, 1, "G")
+    c.rect(x - 1, 25, 11, 1, "K")
+    c.put(["KEEEEEEEK", "KEEEEEEEK", "KEEEEEEEK", "KEEEEEEEK", "KeeeeeeeK", "KeeeeeeeK", "KeeeeeeeK", " KeeeeeK ", "  KKKKK  "], x, 26)
+  }
+  c.put(["K K K", " K K "], 19, 33)
+  // The tag, clipped to a horn and hanging over the corner of an eye.
+  c.rect(36, 16, 4, 2, "t").rect(36, 18, 4, 16, "T")
+  return c.outline("O")
+}
+bun().save("bunny-lpp.svg", LPP)
+
+// The same at half the squares (25 by 22), and small (15 by 13): beside the
+// rabbit at each of its sizes.
+const BUN_HALF = [
+  "..OO.................OO..",
+  ".OBBO......O...O....OBBO.",
+  ".OBYO.....OYO.OYO...OYBO.",
+  "..OYYO....OYOOYYO..OYYO..",
+  "OOOYYYO.OOOYOOYYOOOYYYOBO",
+  "OBYYYYOOLLLLLLLLLOOYYYOBO",
+  ".OOYYOLLFFFFFFFFFLLOYOBBO",
+  "..OOOFFFFFFFFFFFFFFFOtOBO",
+  "..OFFFFFFFFFFFFFFFFFFTOO.",
+  ".OFFFFFGFFFFFFFFGFFFFTFO.",
+  ".OFFFFFFFFFFFFFFFFFFFTFO.",
+  ".OFFKKKKKKFFFKKKKKKFFTFO.",
+  ".OFFFKEEKFFFFFKEEKFFFTFO.",
+  ".OFFFKEEKFKFKFKEEKFFFTFO.",
+  ".OFFFKeeKFFKFFKeeKFFFTFO.",
+  ".OFFFFKKFFFFFFFKKFFFFFDO.",
+  ".OFFFFFFFFFFFFFFFFFFFFDO.",
+  "..ODFFFFFFFFFFFFFFFFFDO..",
+  "..OYYDDDDDDDDDDDDDDDYYO..",
+  ".OYYYOOOOOOOOOOOOOOOYYYO.",
+  ".OyyyO..............OyyyO",
+  "..OOO................OOO.",
+].map((row) => row.padEnd(25, ".").slice(0, 25))
+writeSprite("bunny-lpp-half.svg", BUN_HALF, LPP)
+const BUN_SMALL = [
+  ".O...........O.",
+  "OBO...O.O...OBO",
+  "OYO..OYOYO..OYO",
+  ".OYOOOYOYOOOYO.",
+  "OOYOLLLLLLLOYOB",
+  "OYOFFFFFFFFFOTB",
+  ".OFFFFFFFFFFFTO",
+  "OFKKKFFFKKKFFTO",
+  "OFKEKFKFKEKFFTO",
+  "OFFKFFFFFKFFFFO",
+  "OFFFFFFFFFFFFDO",
+  ".OYYDDDDDDDYYO.",
+  "..OO.OOOOO.OO..",
+]
+writeSprite("bunny-lpp-small.svg", BUN_SMALL, LPP)
+// Its face alone, nine squares: a mark beside the rabbit's.
+const BUN_HEAD = ["B.......B", "YO.O.O.OY", "OYOYOYOYO", "OFFFFFFFO", "OKKFFFKKO", "OEEFFFEEO", "OFFKFKFFO", "OFFFFFFFO", ".OOOOOOO."]
+writeSprite("bunny-lpp-head.svg", BUN_HEAD, LPP)
+
+// 小笼泡: the same dragons as soup buns in a bamboo steamer — cream, a knot
+// of pleats on top, a face let into the front, antlers. Two of them, after
+// the photographs: one dark-faced with gold antlers, an orange eye and a
+// wink; one pale-faced with grey antlers and a gold eye under a heavy lid.
+// O line, C cream, c its light, d its shade; m the face; a the antlers.
+const BAO = [
+  "......OOOOOO......",
+  ".a..aOccccccOa..a.",
+  ".aa.aOCCCCCCOa.aa.",
+  "..aaaOOCCCCOOaaa..",
+  "..OaOcccccccccOaO.",
+  ".OccCCCCCCCCCCCCO.",
+  ".OCCCmmmmmmmmCCCO.",
+  "OCCCmmmmmmmmmmCCCO",
+  "OCCmmKKKmmmmmmmCCO",
+  "OCCmmEEEmmKKKmmCCO",
+  "OCCmmmEmmmmmmmmCCO",
+  "OCCCmmmmKmKmmmCCCO",
+  "OdCCCmmmmmmmmCCCdO",
+  ".OddCCCCCCCCCCddO.",
+]
+const BAO_GOLD = { O: "#7a5a3a", C: "#f8edc9", c: "#fffbe6", d: "#e3d0a2", m: "#5d5856", a: "#d7b055", K: "#211a1c", E: "#f0641e" }
+const BAO_GREY = { O: "#7a5a3a", C: "#f8edc9", c: "#fffbe6", d: "#e3d0a2", m: "#cdc8c9", a: "#8b888c", K: "#211a1c", E: "#e2b23c" }
+// The steamer: a hoop of bamboo, a band round it.
+const STEAMER = [
+  ".OOOOOOOOOOOOOOOOOOOOOO.",
+  "OwwwwwwwwwwwwwwwwwwwwwwO",
+  "OWWWWWWWWWWWWWWWWWWWWWWO",
+  "OOOOOOOOOOOOOOOOOOOOOOOO",
+  "OWWWuWWWWWWWWWWWWWWuWWWO",
+  "OWWWuWWWWWWWWWWWWWWuWWWO",
+  "OwwwuwwwwwwwwwwwwwwuwwwO",
+  "OUUUUUUUUUUUUUUUUUUUUUUO",
+  ".OOOOOOOOOOOOOOOOOOOOOO.",
+]
+const WOOD = { O: "#7a5230", W: "#efc793", w: "#f8dcb4", u: "#c4925e", U: "#d5a873" }
+// A bun in its steamer, as one picture: 24 by 21. (Each in its own colours:
+// the bun's letters are renamed.)
+function basket(colours) {
+  const rename = { O: "1", C: "2", c: "3", d: "4", m: "5", a: "6", K: "7", E: "8" }
+  const pal = { ...WOOD }
+  for (const [from, to] of Object.entries(rename)) pal[to] = colours[from]
+  const c = new Canvas(24, 21)
+  c.put(over(BAO), 3, 0, rename).put(over(STEAMER), 0, 12)
+  return { c, pal }
+}
+{
+  const gold = basket(BAO_GOLD)
+  gold.c.save("bunny-bao.svg", gold.pal)
+  const grey = basket(BAO_GREY)
+  grey.c.save("bunny-bao-grey.svg", grey.pal)
+}
+
+// ── The game's own things, fifteen squares each ──────────────────────────
+// Redrawn small after the game's pictures of them. One palette for all:
+// K black, k dark grey, g grey, s silver, W white; R red, r its light, d its
+// dark; A amber, a its light, n its dark; C cyan, c its light, b its deep;
+// Y yellow; G gold; N navy; V circuit green, v its dark; T teal; m steel,
+// M its dark; P violet.
+const ITEM = { K: "#1d1d21", k: "#3a3b40", g: "#8a8d93", s: "#c9ccd1", W: "#ffffff", R: "#e23b3b", r: "#ff9a8f", d: "#9c1f2a", A: "#f08a1c", a: "#ffc266", n: "#7a3f10", C: "#23b1e6", c: "#a8e6fa", b: "#0e6f9c", Y: "#f6cf3a", G: "#d9a441", N: "#1f3a5c", V: "#3f8f5a", v: "#2b6a44", T: "#2f9aa8", m: "#b9a094", M: "#8f7468", P: "#a78bfa" }
+const ITEMS = {
+  // 合成玉: a red crystal held in a frame, a rod off each corner.
+  orundum: [
+    "...............",
+    ".g...........g.",
+    "..g...KKK...g..",
+    "...g.KRrRK.g...",
+    "....KRrrRRK....",
+    "...KRrrRRRdK...",
+    "..KRrrRRRRddK..",
+    "..KRrRRRRdddK..",
+    "..KRRRRRRdddK..",
+    "...KRRRRdddK...",
+    "....KRRdddK....",
+    "...g.KRdRK.g...",
+    "..g...KKK...g..",
+    ".g...........g.",
+    "...............",
+  ],
+  // 至纯源石: a block of amber and black, a square mark in its face.
+  originite: [
+    "...............",
+    "....KKKKKKK....",
+    "...KnnAAAaKK...",
+    "..KnnAAAaaaaK..",
+    ".KnnAAAaaaaaaK.",
+    ".KnAAAKKKaaaaK.",
+    "KnnAAAKaKAaaaAK",
+    "KnAAAAKKKAAAAAK",
+    "KnnAAAAAAAAAAnK",
+    "KnnnAAAAAAAAnnK",
+    ".KnnnAAAAAAnnK.",
+    ".KKnnnAAAAnnKK.",
+    "..KKnnnnnnnKK..",
+    "....KKKKKKK....",
+    "...............",
+  ],
+  // 龙门币: a cyan banknote, a few under it.
+  lmd: [
+    "...............",
+    "...............",
+    ".KKKKKKKKKKKKK.",
+    ".KCCCCCCCCCCCK.",
+    ".KCWcccccccWCK.",
+    ".KCccWcWccccCK.",
+    ".KCcWcWcWcccCK.",
+    ".KCccWcWccccCK.",
+    ".KCWcccccccWCK.",
+    ".KCCCCCCCCCCCK.",
+    ".KKKKKKKKKKKKK.",
+    "..KbbbbbbbbbbbK",
+    "..KKKKKKKKKKKKK",
+    "...............",
+    "...............",
+  ],
+  // 作战记录: a tape, black above with a tower on it, gold below.
+  tape: [
+    "...............",
+    ".KKKKKKKKKKKKK.",
+    ".KkkkkkWkkkkkK.",
+    ".KkkkkWWWkkkkK.",
+    ".KkkkkWWWkkkkK.",
+    ".KkkkWWWWWkkkK.",
+    ".KkkkkkkkkkkkK.",
+    ".KGGGGGGGGGGGK.",
+    ".KGWWGWGWGWWGK.",
+    ".KGWGGGWGGWWGK.",
+    ".KGWWGWGWGWGGK.",
+    ".KGGGGGGGGGGGK.",
+    ".KKKKKKKKKKKKK.",
+    "...............",
+    "...............",
+  ],
+  // 技巧概要: a navy book, a grid of marks on its cover.
+  book: [
+    "...............",
+    "..KKKKKKKKKKK..",
+    "..KNNNNNNNNNKs.",
+    "..KNWWNNNNNNKs.",
+    "..KNWNCCCCCNKs.",
+    "..KNNNNNNNNNKs.",
+    "..KNCNCNCNCNKs.",
+    "..KNNNNNNNNNKs.",
+    "..KNCNCNCNCNKs.",
+    "..KNNNNNNNNNKs.",
+    "..KNCNCNCNCNKs.",
+    "..KNNNNNNNNNKs.",
+    "..KKKKKKKKKKKs.",
+    "...sssssssssss.",
+    "...............",
+  ],
+  // 招聘许可: a silver pouch, black below, a blue mark on it.
+  permit: [
+    "...............",
+    "...KKKKKKKKK...",
+    "..KsssssssssK..",
+    "..KsWsssssssK..",
+    "..KssWssssssK..",
+    "..KsssssssssK..",
+    "..KsssssssssK..",
+    "..KKKKKKKKKKK..",
+    "..KkkkkkkkkkK..",
+    "..KkCCCkkkkkK..",
+    "..KkCWCkWWWkK..",
+    "..KkCCCkkkkkK..",
+    "..KkkkkkkkkkK..",
+    "..KKKKKKKKKKK..",
+    "...............",
+  ],
+  // 寻访凭证: a yellow pass on a clip, black down one side.
+  ticket: [
+    "...............",
+    "......KKK......",
+    "......KsK......",
+    ".KKKKKKKKKKKKK.",
+    ".KkkkkYYYYYYYK.",
+    ".KkWkkYKKKKYYK.",
+    ".KkkWkYYYYYYYK.",
+    ".KkWkkYKKKYYYK.",
+    ".KkkkkYYYYYCYK.",
+    ".KkWWkYYYYYCYK.",
+    ".KkkkkYYYYYYYK.",
+    ".KKKKKKKKKKKKK.",
+    "...............",
+    "...............",
+    "...............",
+  ],
+  // 应急理智顶液: a dark pouch, a vial of amber across its corner.
+  potion: [
+    "...............",
+    ".KKKKKKKKKK.K..",
+    ".KkkkkkkkkKKsK.",
+    ".KkkkkkkkKAsK..",
+    ".KkkkkkkKAaK...",
+    ".KkkkkkKAaKkK..",
+    ".KkWkWkKAKkkK..",
+    ".KkkWkkkKkkkK..",
+    ".KkWWWkkkkkkK..",
+    ".KkkWkkkkkkkK..",
+    ".KkWkWkkkWWkK..",
+    ".KkkkkkkkkkkK..",
+    ".KKKKKKKKKKKK..",
+    "...............",
+    "...............",
+  ],
+  // 芯片: a green board, a teal chip on it, a shield on the chip.
+  chip: [
+    "...............",
+    ".KKKKKKKKKKKKK.",
+    ".KVvVVVVVVVvVK.",
+    ".KvKKKKKKKKKvK.",
+    ".KVKTTTTTTTKVK.",
+    ".KVKTWWWWWTKVK.",
+    ".KVKTWTTTWTKVK.",
+    ".KVKTWTTTWTKVK.",
+    ".KVKTTWTWTTKVK.",
+    ".KVKTTTWTTTKVK.",
+    ".KVKTTTTTTTKVK.",
+    ".KvKKKKKKKKKvK.",
+    ".KVvVVVVVVVvVK.",
+    ".KKKKKKKKKKKKK.",
+    "...............",
+  ],
+  // 家具零件: a bolt and a nut.
+  bolt: [
+    "...............",
+    ".........KKKK..",
+    "........KmmmmK.",
+    "..KKKKKKKmmMmK.",
+    ".KmMmMmMKmmMmK.",
+    "..KKKKKKKmmMmK.",
+    "........KmmmmK.",
+    "...KKKK..KKKK..",
+    "..KmmmmK.......",
+    ".KmmKKmmK......",
+    ".KmK..KMK......",
+    ".KmmKKMMK......",
+    "..KmMMMK.......",
+    "...KKKK........",
+    "...............",
+  ],
+  // 无人机: four arms, a rotor on each, a violet light under it.
+  drone: [
+    "...............",
+    "ggg.........ggg",
+    ".ggg.......ggg.",
+    "..kk.......kk..",
+    "...kk.KKK.kk...",
+    "....kKkkkKk....",
+    ".....KkPkK.....",
+    "....kKPPPKk....",
+    ".....KkPkK.....",
+    "....kKkkkKk....",
+    "...kk.KKK.kk...",
+    "..kk.......kk..",
+    ".ggg.......ggg.",
+    "ggg.........ggg",
+    "...............",
+  ],
+}
+for (const [name, rows] of Object.entries(ITEMS)) writeSprite(`bunny-i-${name}.svg`, rows, ITEM)
+// 理智: the faceted head with a bolt through it, nine squares. And the
+// marks the interface is drawn with: a tick, a pointer, a cross of the kind
+// an empty slot wears.
+writeSprite("bunny-sanity.svg", [".KKKKKKK.", "KWWWWWWWK", "KWWWKKWWK", "KWWKKWWWK", "KWKKKKKWK", "KWWWKKWWK", "KWWKKWWWK", "KWWKWWWWK", ".KKKKKKK."], ITEM)
+// Nine squares of 合成玉 (and one with the colour gone, for what is not
+// yet reached), and of 源石: what is unread, what counts, what is done.
+const GEM = ["....K....", "...KRK...", "..KRrRK..", ".KRrRRdK.", "KRrRRRddK", ".KRRRddK.", "..KRddK..", "...KdK...", "....K...."]
+writeSprite("bunny-gem.svg", GEM, ITEM)
+writeSprite("bunny-gem-off.svg", GEM, { K: "#8c8f96", R: "#d6d8dc", r: "#eceef0", d: "#bfc2c8" })
+writeSprite("bunny-ore.svg", ["..KKKKK..", ".KnAAaaK.", "KnAAAaaaK", "KnAKKKaaK", "KnAKaKAaK", "KnAKKKAAK", "KnnAAAAnK", ".KnnnnnK.", "..KKKKK.."], ITEM)
+writeSprite("bunny-tick.svg", ["........C", ".......CC", "......CC.", "C....CC..", "CC..CC...", ".CCCC....", "..CC....."], { C: "#1596c9" })
+writeSprite("bunny-caret.svg", ["C......", "CCC....", "CCCCC..", "CCCCCCC", "CCCCC..", "CCC....", "C......"], { C: "#1596c9" })
 // Down to the latest.
 writeSprite("bunny-arrow.svg", ["OO.....OO", "OOO...OOO", ".OOO.OOO.", "..OOOOO..", "...OOO...", "....O...."], { O: "#5a3418" })
 writeSprite("bunny-arrow-night.svg", ["OO.....OO", "OOO...OOO", ".OOO.OOO.", "..OOOOO..", "...OOO...", "....O...."], { O: "#f1e7da" })
 
-// The round stamp in the corner of a card: a ring, a ring of dashes, and the
-// rabbit's head in the middle of it. (The brand's has its name round the
-// rim; this one has none.)
+// The round stamp in the corner of a product card: a ring, a ring of
+// dashes, and the rabbit's head in the middle of it. (The brand's has its
+// name round the rim; this one has none.)
 {
   const stamp = new Canvas(41, 41)
   const ring = (r0, r1, ch, dash) =>
@@ -465,219 +826,126 @@ writeSprite("bunny-arrow-night.svg", ["OO.....OO", "OOO...OOO", ".OOO.OOO.", "..
   ring(18, 20.5, "M")
   ring(14.4, 15.6, "M", true)
   stamp.put(over(head("plain")).map((row) => row.replace(/[FLDEeWK]/g, "I").replaceAll("O", "M")), 11.5, 11, null, false, 2)
-  stamp.put(over(SPARK), 3, 18, { C: "M" }).put(over(SPARK), 33, 18, { C: "M" })
-  stamp.save("bunny-stamp.svg", { M: "#7fcfc7", I: "#ffffff" })
-  stamp.save("bunny-stamp-night.svg", { M: "#3f6f6e", I: "#2c2523" })
+  stamp.save("bunny-stamp.svg", { M: "#9fb4bd", I: "#ffffff" })
+  stamp.save("bunny-stamp-night.svg", { M: "#4a5560", I: "#2c2523" })
 }
 
-// ── The photo set: lamp, clock, books ────────────────────────────────────
-// M the lamp's cap, m its light, N its shade; T the wooden stem, t, U.
-// P the clock's case, p its shade; c its face. Q, q a pink book; G, g a
-// teal one; Y their pages. I plain white.
-const PROPS = { O: "#5a3418", K: "#211a1c", I: "#ffffff", M: "#8a4030", m: "#b8644a", N: "#6a2c22", T: "#e8b27a", t: "#f6d2a2", U: "#c98d58", P: "#eba58d", p: "#d08670", c: "#fff4e2", Q: "#f2b8b6", q: "#d98f92", G: "#6fa7b0", g: "#4f8690", Y: "#fff4e2" }
-const LAMP = [
-  ".......OO.......",
-  "......OMMO......",
-  "....OOMMMMOO....",
-  "...OMmMMMMMMO...",
-  "..OMmmMMMMMMMO..",
-  ".OMmMMMMMMMMMMO.",
-  ".OMMMMMMMMMMMNO.",
-  "OMMMMMMMMMMMMNNO",
-  "OMMMMMMMMMMMNNNO",
-  "ONNNNNNNNNNNNNNO",
-  ".OOOOOOOOOOOOOO.",
-  "....OTTTTTTO....",
-  "....OtTTTTUO....",
-  "....OtTTTTUO....",
-  "....OtTTTTUO....",
-  "....OtTTTTUO....",
-  "....OtTTTTUO....",
-  "....OtTTTTUO....",
-  "...OtTTTTTTUO...",
-  "...OTTTTTTUUO...",
-  "...OUUUUUUUUO...",
-  "....OOOOOOOO....",
-]
-const CLOCK = [
-  "..OOOOOOOOOOOO..",
-  ".OPPPPPPPPPPPPO.",
-  "OPPOOOOOOOOOOPPO",
-  "OPOccccccccccOPO",
-  "OPOccccKcccccOPO",
-  "OPOccccKcccccOPO",
-  "OPOccccKcccccOPO",
-  "OPOccccKKKKccOPO",
-  "OPOccccccccccOPO",
-  "OPOccccccccccOPO",
-  "OPOccccccccccOPO",
-  "OPPOOOOOOOOOOPPO",
-  "OpPPPPPPPPPPPPpO",
-  ".OppppppppppppO.",
-  "..OOOOOOOOOOOO..",
-  "..OO........OO..",
-]
-const BOOKS = [
-  "...OOOOOOOOOOOO...",
-  "..OQQQQQQQQQQQQO..",
-  "..OqYYYYYYYYYYYO..",
-  "..OQQQQQQQQQQQQO..",
-  ".OOOOOOOOOOOOOOOO.",
-  "OGGGGGGGGGGGGGGGGO",
-  "OgYYYYYYYYYYYYYYYO",
-  "OGGGGGGGGGGGGGGGGO",
-  ".OOOOOOOOOOOOOOOO.",
-]
-writeSprite("bunny-lamp.svg", LAMP, PROPS)
-writeSprite("bunny-clock.svg", CLOCK, PROPS)
-
-// A rule across a reply: the rabbit sitting between sparkles and diamonds.
+// A rule across a reply: the rabbit and the bun side by side, a line of
+// dashes and a crystal out to each side.
 {
-  const rule = new Canvas(111, 16)
-  rule.put(over(small("amiya")), 50, 0)
-  for (const side of [-1, 1]) {
-    const X = (x, w) => (side < 0 ? 55 - x - w : 56 + x)
-    rule.put(over(SPARKLE), X(12, 9), 4, { C: "c" }).put(over(SPARK), X(27, 5), 6, { C: "m" }).put(over(SPARKLE), X(38, 9), 4, { C: "c" })
-    rule.rect(X(51, 4), 8, 4, 1, "m")
+  const rule = new Canvas(121, 16)
+  const rename = Object.fromEntries(Object.keys(LPP).map((k, i) => [k, String.fromCharCode(0x3b1 + i)]))
+  const pal = { ...VERSIONS.amiya, x: "#b9a999", R: ITEM.R, r: ITEM.r, q: ITEM.d, J: ITEM.K }
+  for (const [from, to] of Object.entries(rename)) pal[to] = LPP[from]
+  rule.put(over(small("amiya")), 47, 0).put(over(BUN_SMALL), 60, 3, rename)
+  const gem = ["..J..", ".JRJ.", "JRrqJ", ".JqJ.", "..J.."]
+  for (const [x0, x1, gx] of [[0, 30, 34], [91, 121, 82]]) {
+    for (let x = x0; x < x1; x += 4) rule.rect(x, 9, 2, 1, "x")
+    rule.put(over(gem), gx, 7)
   }
-  rule.save("bunny-rule.svg", { ...VERSIONS.amiya, c: "#ff8f8f", m: "#8ed5cf" })
+  rule.save("bunny-rule.svg", pal)
 }
 
-// ── What a row of the sidebar opens: fifteen squares each ────────────────
+// ── What a row of the sidebar opens ──────────────────────────────────────
+// 新会话 is the rabbit, a cross beside it as on an empty slot of a squad;
+// 员工, the rabbit and the bun; the rest are the game's things (项目 the
+// records, 任务 a recruitment permit, 设备会话 a drone).
 {
   const icon = () => new Canvas(15, 15)
-  // A new chat: the rabbit, and a sparkle.
-  icon().put(over(head("plain")), 0, 6).put(over(SPARK), 9, 0, { C: "c" }).save("bunny-nav-new.svg", { ...VERSIONS.amiya, c: "#ff8f8f" })
-  // Projects: the books.
-  icon()
-    .put(over(["..OOOOOOOOOOO..", ".OQQQQQQQQQQQO.", ".OqYYYYYYYYYYO.", ".OQQQQQQQQQQQO.", "OOOOOOOOOOOOOOO", "OGGGGGGGGGGGGGO", "OgYYYYYYYYYYYYO", "OGGGGGGGGGGGGGO", "OOOOOOOOOOOOOOO", ".OTTTTTTTTTTTO.", ".OtYYYYYYYYYYO.", ".OTTTTTTTTTTTO.", "..OOOOOOOOOOO.."]), 0, 1)
-    .save("bunny-nav-books.svg", PROPS)
-  // Employees: two of the dolls. (Each in its own colours: the second one's
-  // letters are renamed.)
-  {
-    const rename = { O: "o", F: "f", L: "l", D: "x", E: "y", e: "z", W: "w", K: "k", P: "p" }
-    const pal = { ...VERSIONS.grey }
-    for (const [from, to] of Object.entries(rename)) pal[to] = VERSIONS.pink[from]
-    icon().put(over(head("grin")), 6, 0).put(over(head("shut")), 0, 6, rename).save("bunny-nav-pair.svg", pal)
+  icon().put(over(head("plain")), 0, 6).put(over(["..C..", "..C..", "CCCCC", "..C..", "..C.."]), 10, 0, { C: "c" }).save("bunny-nav-new.svg", { ...VERSIONS.amiya, c: "#1596c9" })
+  const rename = Object.fromEntries(Object.keys(LPP).map((k, i) => [k, String.fromCharCode(0x3b1 + i)]))
+  const pal = { ...VERSIONS.amiya }
+  for (const [from, to] of Object.entries(rename)) pal[to] = LPP[from]
+  icon().put(over(BUN_HEAD), 6, 0, rename).put(over(head("plain")), 0, 6).save("bunny-nav-pair.svg", pal)
+}
+
+// ── The ground: a tactical grid ──────────────────────────────────────────
+// What the game's screens are ruled with: fine lines, a cross where they
+// meet. A tile.
+{
+  const grid = new Canvas(24, 24)
+  for (let i = 0; i < 24; i += 2) grid.set(i, 0, "a").set(0, i, "a")
+  grid.put(over([".b.", "bbb", ".b."]), 23, 23).set(0, 0, "b").set(1, 0, "b").set(0, 1, "b")
+  grid.save("bunny-grid.svg", { a: "#b9d6e6", b: "#8dbbd3" })
+  grid.save("bunny-grid-night.svg", { a: "#2a3346", b: "#3b4963" })
+}
+
+// ── The steamers at the end of the sidebar's list ────────────────────────
+// (No rabbit here.) Two of the buns in their steamers, a stack of empty
+// ones, a crystal or two, standing on a strip of the deck's warning stripes.
+function nook() {
+  const c = new Canvas(130, 30)
+  const names = {}
+  const pal = { ...ITEM, ...WOOD, h: "#f6cf3a", H: "#2b2a31" }
+  let next = 0x3b1
+  const place = (rows, colours, x, y) => {
+    const rename = {}
+    for (const k of Object.keys(colours)) {
+      const id = `${colours[k]}`
+      rename[k] = names[id] ??= String.fromCharCode(next++)
+      pal[rename[k]] = colours[k]
+    }
+    c.put(over(rows), x, y, rename)
   }
-  // Tasks: the clock.
-  icon()
-    .put(over([".OOOOOOOOOOO.", "OPPPPPPPPPPPO", "OPOOOOOOOOOPO", "OPOcccKcccOPO", "OPOcccKcccOPO", "OPOcccKcccOPO", "OPOcccKKKcOPO", "OPOcccccccOPO", "OPOcccccccOPO", "OPOOOOOOOOOPO", "OpPPPPPPPPPpO", ".OOOOOOOOOOO.", ".OO.......OO."]), 1, 1)
-    .save("bunny-nav-clock.svg", PROPS)
-  // Device sessions: the tent, a patch of sky through its door.
-  icon()
-    .put(over([".......O.......", "......OAO......", ".....OAAAO.....", ".....OAVAO.....", "....OAAVAAO....", "....OAVVVAO....", "...OAAVVVAAO...", "...OAVVVVVAO...", "..OAAVVVVVAAO..", "..OAVVVvVVVAO..", ".OAAVVvvvVVAAO.", ".OAVVVVVVVVVAO.", "OAAVVVVVVVVVAAO", "OOOOOOOOOOOOOOO"]), 0, 0)
-    .save("bunny-nav-tent.svg", { O: "#5a3418", A: "#f6ecd6", V: "#8cc6ea", v: "#ffffff" })
+  place(BAO, BAO_GOLD, 7, 3)
+  c.put(over(STEAMER), 4, 15)
+  place(BAO, BAO_GREY, 37, 3)
+  c.put(over(STEAMER), 34, 15)
+  c.put(over(STEAMER), 66, 15).put(over(STEAMER), 66, 8).put(over(STEAMER.slice(0, 4)), 66, 5)
+  c.put(over(ITEMS.orundum.slice(1, 14)), 94, 11, null).put(over(ITEMS.originite.slice(1, 14)), 111, 11)
+  // The deck's edge: yellow and black, on the slant.
+  c.fill((x, y) => y >= 25 && y < 29 && Math.floor((x + y) / 4) % 2 === 0, "h", (ch) => ch === ".")
+  c.fill((x, y) => y >= 25 && y < 29, "H", (ch) => ch === ".")
+  c.rect(0, 24, 130, 1, "H").rect(0, 29, 130, 1, "H")
+  return { c, pal }
+}
+{
+  const n = nook()
+  n.c.save("bunny-nook.svg", n.pal)
 }
 
-// ── Clouds, stars, the string of lights ──────────────────────────────────
-// The flat-bottomed clouds of the cards, to drift along the top of the sky.
-{
-  const sky = new Canvas(120, 34)
-  const cloud = (x, y, s) => {
-    sky.oval(x, y, 9 * s, 5 * s, "I").oval(x + 9 * s, y - 2 * s, 8 * s, 6 * s, "I").oval(x + 19 * s, y, 8 * s, 4.4 * s, "I")
-    sky.fill((px, py) => py > y + 2.4 * s && py < y + 6 * s, ".", (ch) => ch === "I")
-    sky.fill((px, py) => py > y + 1.2 * s && py <= y + 2.4 * s, "i", (ch) => ch === "I")
-  }
-  cloud(14, 22, 1.5)
-  cloud(78, 10, 1)
-  sky.save("bunny-clouds.svg", { I: "#ffffff", i: "#eaf6fd" })
-  sky.save("bunny-clouds-night.svg", { I: "#2b3550", i: "#243049" })
-}
-// Night: a few stars.
-{
-  const night = new Canvas(64, 64)
-  for (const [x, y, c] of [[5, 7, "a"], [22, 3, "b"], [40, 12, "a"], [57, 6, "b"], [12, 26, "b"], [31, 31, "a"], [50, 28, "b"], [3, 44, "a"], [24, 50, "b"], [44, 46, "a"], [60, 55, "b"], [15, 60, "a"]]) night.set(x, y, c)
-  night.save("bunny-stars.svg", { a: "#c9c3a4", b: "#5d6d94" })
-}
-// The string of star lights along the tent: a wire that sags, a star hung
-// every so often. Lit, and not.
-{
-  const STAR = [".X.", "XXX", ".X."]
-  const wire = new Canvas(48, 12)
-  for (let x = 0; x < 48; x++) wire.set(x, Math.round(1 + 3 * Math.sin((x / 48) * Math.PI) ** 2), "x")
-  for (const x of [5, 21, 37]) wire.put(over(STAR), x, Math.round(3 + 3 * Math.sin(((x + 1) / 48) * Math.PI) ** 2))
-  wire.save("bunny-lights.svg", { x: "#c9b79f", X: "#fff3d0" })
-  wire.save("bunny-lights-lit.svg", { x: "#5b4a40", X: "#ffd166" })
-}
-
-// The rug's edge: white fluff, scalloped. A tile.
-{
-  const RUG = ["..RRRR....RRRR..", ".RRRRRR..RRRRRR.", "RRRRRRRRRRRRRRRR", "RRRRrRRRRRRRrRRR", "RRRRRRRRRRRRRRRR", "RrRRRRRRRrRRRRRR", "RRRRRRRRRRRRRRRR", "RRRRRRrRRRRRRRrR"]
-  writeSprite("bunny-rug.svg", RUG, { R: "#ffffff", r: "#d3ebf8" })
-  writeSprite("bunny-rug-night.svg", RUG, { R: "#39435c", r: "#2c354b" })
-}
-
-// ── The nook at the foot of the sidebar: lamp, clock, books on the rug ───
-// (No rabbit here.) By night the lamp is lit.
-function nook(night) {
-  const c = new Canvas(130, 44)
-  // The rug along the foot, its edge scalloped.
-  for (let x = 0; x < 130; x += 8) c.oval(x + 4, 37.5, 4, 3, "R")
-  c.rect(0, 37, 130, 7, "R")
-  for (const [x, y] of [[4, 40], [12, 42], [22, 39], [33, 41], [47, 43], [58, 40], [70, 42], [84, 39], [97, 41], [109, 43], [121, 40]]) c.set(x, y, "r")
-  // A corner of the yellow checked blanket, lying on it.
-  c.poly([[72, 37], [126, 30], [130, 31], [130, 44], [80, 44]], "Z")
-  c.fill((x, y) => (Math.floor((x + y) / 3) + Math.floor((x - y + 300) / 3)) % 2 === 0, "z", (ch) => ch === "Z")
-  if (night) c.fill((x, y) => ((x - 14) / 22) ** 2 + ((y - 26) / 16) ** 2 <= 1 && Math.floor(x) % 2 === 0 && (Math.floor(y) + Math.floor(x) / 2) % 2 === 0, "*", (ch) => ch === ".")
-  c.put(over(LAMP), 6, 16).put(over(CLOCK), 27, 22).put(over(BOOKS), 48, 29)
-  return c
-}
-const NOOK = { ...PROPS, R: "#ffffff", r: "#d3ebf8", Z: "#fbe58a", z: "#fff7d6" }
-nook(false).save("bunny-nook.svg", NOOK)
-nook(true).save("bunny-nook-night.svg", { ...NOOK, O: "#17110f", R: "#39435c", r: "#2c354b", Z: "#8a7a3c", z: "#a39552", "*": "#5a5a52", T: "#ffe9a8", t: "#fff6d6", U: "#f6c56a", M: "#6f3326", m: "#94503b", N: "#54231b", P: "#b57e6c", p: "#99624f", c: "#d9cdb8", Q: "#b98a8c", q: "#9a6c70", G: "#4f7a82", g: "#3b6068", Y: "#d9cdb8" })
-
-// ── The photo: the tent, its window, the rug — and a space for the doll ──
-// Where no session is open. Drawn as the brand's photographs are set: the
-// cream tent with a window of sky, a string of star lights, the rug, the
-// checked blanket, the lamp, the clock, the books; an orange tab in the
-// corner. The rabbit itself is laid over it by the stylesheet, so it can
-// breathe. By night the window is dark and the lamp is lit.
-function room(night) {
+// ── Where no session is open: the deck ───────────────────────────────────
+// A hangar of the landship as the game's first screen shows it behind its
+// menu: panelled walls, a strip of light, a shutter edged in warning
+// stripes, an orange rail, the floor marked in yellow; a crate, a steamer.
+// The rabbit and the bun are laid over it by the stylesheet. By night the
+// lights are low and the strip glows cyan.
+function deck() {
   const c = new Canvas(180, 112)
-  // The tent's wall, a seam down it; the window, barred.
-  c.rect(0, 0, 180, 112, "A")
-  for (const x of [44, 136]) c.rect(x, 0, 1, 80, "a")
-  c.poly([[0, 0], [180, 0], [180, 5], [0, 9]], "a")
-  c.oval(90, 34, 34, 27, "O", 3)
-  c.oval(90, 34, 32, 25, "V", 3)
-  c.fill((x, y) => y > 38, "v", (ch) => ch === "V")
-  if (night) {
-    for (const [x, y] of [[66, 14], [78, 22], [101, 13], [112, 24], [70, 36], [96, 30], [116, 42], [84, 48], [106, 50]]) c.set(x, y, "X")
-    c.put(over(SPARK), 104, 18, { C: "X" })
-  } else {
-    c.oval(74, 22, 8, 4, "I").oval(81, 19.6, 6, 4.6, "I").oval(89, 22.4, 6, 3.4, "I")
-    c.oval(106, 40, 7, 3.4, "I").oval(112, 38, 5, 4, "I")
-  }
-  c.rect(89, 9, 2, 50, "A").rect(58, 33, 64, 2, "A")
-  c.fill((x, y) => Math.abs((x - 90) / 34) ** 3 + Math.abs((y - 34) / 27) ** 3 > 1 && Math.abs((x - 90) / 36) ** 3 + Math.abs((y - 34) / 29) ** 3 <= 1, "a", (ch) => ch === "A")
-  // The lights, strung across.
-  for (let x = 0; x < 180; x++) c.set(x, Math.round(10 + 6 * Math.sin((x / 60) * Math.PI) ** 2), "x")
-  for (const x of [12, 34, 54, 126, 146, 168]) c.put(over([".X.", "XXX", ".X."]), x - 1, Math.round(12 + 6 * Math.sin((x / 60) * Math.PI) ** 2))
-  // The lamp's light on the wall, by night.
-  if (night) c.fill((x, y) => ((x - 22) / 40) ** 2 + ((y - 56) / 36) ** 2 <= 1 && (Math.floor(x) + Math.floor(y)) % 2 === 0, "*", (ch) => ch === "A" || ch === "a")
-  // The rug, scalloped, and the blanket on it.
-  for (let x = 0; x < 180; x += 10) c.oval(x + 5, 84, 5.4, 4, "R")
-  c.rect(0, 84, 180, 28, "R")
-  for (let i = 0; i < 46; i++) c.set((i * 37 + 11) % 180, 87 + ((i * 13) % 22), "r")
-  c.poly([[0, 92], [52, 86], [70, 98], [58, 112], [0, 112]], "Z")
-  c.fill((x, y) => (Math.floor((x + y) / 4) + Math.floor((x - y + 400) / 4)) % 2 === 0, "z", (ch) => ch === "Z")
-  // Lamp and clock to one side, books to the other.
-  c.put(over(CLOCK), 34, 58, null, false, 2).put(over(LAMP), 6, 44, null, false, 2).put(over(BOOKS), 132, 76, null, false, 2)
-  // Where the doll sits: its shadow on the rug.
-  c.oval(90, 101, 24, 3.4, "r")
-  // The orange tab in the corner of every photograph, and the strip along
-  // the foot.
-  c.rect(0, 108, 180, 4, "J")
-  c.fill((x, y) => y >= 109 && y < 111 && Math.floor(x / 3) % 2 === 0 && x > 60, "j")
-  c.poly([[0, 98], [40, 98], [46, 104], [40, 110], [0, 110]], "J")
-  for (const x of [5, 11, 17]) c.put(over(["I..", ".I.", "..I", ".I.", "I.."]), x, 102)
-  c.rect(25, 103, 12, 1, "I").rect(25, 105, 8, 1, "I")
+  // Wall panels, their seams; a strip of light along the top.
+  c.rect(0, 0, 180, 84, "A")
+  for (let x = 0; x < 180; x += 30) c.rect(x, 0, 1, 84, "a")
+  c.rect(0, 30, 180, 1, "a").rect(0, 6, 180, 3, "I").rect(0, 9, 180, 1, "a")
+  // The shutter: slats, a frame of warning stripes.
+  c.rect(52, 16, 76, 68, "H")
+  c.fill((x, y) => x >= 52 && x < 128 && y >= 16 && y < 84 && (x < 57 || x >= 123 || y < 21) && Math.floor((x + y) / 5) % 2 === 0, "Y")
+  c.rect(57, 21, 66, 63, "S")
+  for (let y = 24; y < 84; y += 5) c.rect(57, y, 66, 1, "s")
+  // A window in it: the sky going by.
+  c.rect(72, 28, 36, 14, "H").rect(73, 29, 34, 12, "V")
+  c.oval(84, 36, 6, 2.4, "I").oval(90, 34.6, 4, 2.6, "I").oval(99, 38, 4, 1.6, "I")
+  // Pipes down the wall; a rail.
+  c.rect(14, 0, 3, 84, "p").rect(15, 0, 1, 84, "P").rect(160, 0, 4, 84, "p").rect(161, 0, 1, 84, "P")
+  for (const y of [22, 58]) c.rect(13, y, 5, 2, "H").rect(159, y, 6, 2, "H")
+  for (let x = 2; x < 50; x += 12) c.rect(x, 64, 2, 20, "O")
+  for (let x = 132; x < 180; x += 12) c.rect(x, 64, 2, 20, "O")
+  c.rect(0, 62, 50, 2, "O").rect(130, 62, 50, 2, "O").rect(0, 72, 50, 1, "o").rect(130, 72, 50, 1, "o")
+  // The floor: plates, a yellow line, a hatched bay where the dolls sit.
+  c.rect(0, 84, 180, 28, "F").rect(0, 84, 180, 1, "f")
+  for (let x = 10; x < 180; x += 40) c.rect(x, 85, 1, 27, "f")
+  c.rect(0, 96, 180, 1, "f")
+  c.rect(36, 88, 108, 2, "Y").rect(36, 108, 108, 2, "Y").rect(36, 88, 2, 22, "Y").rect(142, 88, 2, 22, "Y")
+  c.oval(74, 103, 22, 3, "f").oval(118, 103, 22, 3, "f")
+  // A supply crate, a crystal marked on it.
+  c.rect(150, 84, 26, 22, "H").rect(151, 85, 24, 20, "K").rect(151, 85, 24, 3, "k").rect(151, 94, 24, 1, "H")
+  c.put(over(["..R..", ".RrR.", "RrRRR", ".RRR.", "..R.."]), 160, 97)
+  // Corner marks, as on every screen of the game.
+  for (const [x, y, dx, dy] of [[3, 3, 1, 1], [176, 3, -1, 1], [3, 108, 1, -1], [176, 108, -1, -1]]) for (let i = 0; i < 7; i++) c.set(x + dx * i, y, "I").set(x, y + dy * i, "I")
   return c
 }
-const ROOM = { ...PROPS, ...NOOK, A: "#f6ecd6", a: "#e6d7b8", V: "#8cc6ea", v: "#b9def4", x: "#b9a78d", X: "#fff3d0", J: "#f0934c", j: "#ffc58f" }
-room(false).save("bunny-room.svg", ROOM)
-room(true).save("bunny-room-night.svg", { ...ROOM, O: "#17110f", A: "#4a3d3a", a: "#3d312f", V: "#1b2440", v: "#232e50", x: "#2c2321", X: "#ffd166", "*": "#7a6040", R: "#39435c", r: "#2c354b", Z: "#8a7a3c", z: "#a39552", T: "#ffe9a8", t: "#fff6d6", U: "#f6c56a", M: "#6f3326", m: "#94503b", N: "#54231b", P: "#b57e6c", p: "#99624f", c: "#d9cdb8", Q: "#b98a8c", q: "#9a6c70", G: "#4f7a82", g: "#3b6068", Y: "#d9cdb8", J: "#c9703a", j: "#e59a62", I: "#f1e7da" })
+const DECK = { A: "#c7ccd3", a: "#aeb4bd", I: "#ffffff", H: "#2b2a31", Y: "#f6cf3a", S: "#dfe3e8", s: "#bfc5cd", V: "#8cc6ea", p: "#8f96a1", P: "#c9ced6", O: "#f0871c", o: "#c96a12", F: "#e7e9ec", f: "#c5cad1", K: "#3d4048", k: "#565a64", R: "#e23b3b", r: "#ff9a8f" }
+deck().save("bunny-deck.svg", DECK)
+deck().save("bunny-deck-night.svg", { ...DECK, A: "#353a45", a: "#272b34", I: "#7fe0ff", S: "#444a57", s: "#343945", V: "#16203a", p: "#22262f", P: "#4b5160", O: "#b9651a", o: "#8a4a12", F: "#2c303a", f: "#20232b", Y: "#c9a52c", H: "#121317", K: "#1b1d22", k: "#2c2f37" })
 
 // ── Frames: soft corners in squares ──────────────────────────────────────
 // Nine-slice pictures for `border-image`: a line round a fill, the corners

@@ -1,16 +1,21 @@
 /* ── 山山兔 (Shanshan Rabbit) ─────────────────────────────────────────────
    A tribute to the plush rabbit of 明日方舟's merchandise brand, drawn after
-   the brand's own photographs of it. The doll sits: on the composer while
-   you type, in its tent where no session is open, five of them (each
-   dressed as a different operator) in a row where you sign in. A step's
-   mark is the rabbit, turning while the step runs; three of them hop while
-   the agent works. Around it, the product cards' own graphics: a black
-   label bar with three mint stripes and a coral shadow for a name or a
-   heading, "◆" before a line, four-pointed sparkles, a checker strip, tags,
-   the orange tab of a photograph; and the photo set — the rug along the
-   foot, the mushroom lamp, the clock, the books, the string of star lights
-   (lit by night, with the lamp). What you say is the collar: pale blue,
-   soft, stitched.
+   the brand's own photographs of it, and round it the game's own things.
+   The doll sits: on the composer while you type, on the landship's deck
+   where no session is open, five of them (each dressed as a different
+   operator) in a row where you sign in. Beside it 龙泡泡, the dragon bun of
+   the same plush line: an employee, one of the three that hop while the
+   agent works, an Agent's mark; and two of the buns in their bamboo
+   steamers at the end of the sidebar's list. A step's mark is the rabbit,
+   turning while the step runs.
+   Everything else is from the game: what a row of the sidebar opens and
+   what a tool is are its things (作战记录, 技巧概要, 招聘许可, 寻访凭证, a
+   chip, a drone, 家具零件); what is unread is a crystal of 合成玉, what is
+   done a block of 源石; how full the context is, 理智 — the mark, the number
+   over its bar; names and headings are its label bars (black, slashes of
+   cyan, an orange line under); the ground is ruled as its screens are, with
+   warning stripes where a floor ends. What you say is the rabbit's collar:
+   pale blue, soft, stitched.
    Colours and corners are tokens (tools/themes/bunny.json); the pictures
    are Loom's own, drawn by tools/art/bunny.mjs.
 
@@ -28,11 +33,8 @@ html[data-style="bunny"] {
   --sb-blue: url("./art/bunny-f-blue.svg");
   --sb-field: url("./art/bunny-f-field.svg");
   --sb-tag: url("./art/bunny-f-tag.svg");
-  --sb-nook: url("./art/bunny-nook.svg");
-  --sb-rug: url("./art/bunny-rug.svg");
-  --sb-clouds: url("./art/bunny-clouds.svg");
-  --sb-lights: url("./art/bunny-lights.svg");
-  --sb-room: url("./art/bunny-room.svg");
+  --sb-grid: url("./art/bunny-grid.svg");
+  --sb-deck: url("./art/bunny-deck.svg");
   --sb-arrow: url("./art/bunny-arrow.svg");
   --sb-stamp: url("./art/bunny-stamp.svg");
   /* The doll's own colours, and the cards'. */
@@ -47,18 +49,17 @@ html[data-style="bunny"] {
   --sb-sky: #d6eefb;
   --sb-blue-fill: #cfe6f7;
   --sb-blue-ink: #1d3442;
-  --sb-rug-fill: #ffffff;
-  --sb-coral: #ff8f8f;
-  --sb-pink: #fbb5b7;
-  --sb-mint: #8ed5cf;
-  --sb-yellow: #fbe58a;
-  --sb-yellow-pale: #fff7d6;
+  --sb-floor: #e7e9ec;
+  /* The game's two accents, and its warning yellow. */
+  --sb-cyan: #1596c9;
+  --sb-orange: #f0871c;
+  --sb-yellow: #f6cf3a;
   --sb-label: #3a3a40;
   --sb-label-ink: #ffffff;
   --sb-drop: rgb(90 52 24 / 20%);
-  /* The label bar's three stripes; a strip of checks. */
-  --sb-stripes: repeating-linear-gradient(to bottom, var(--sb-mint) 0 2px, transparent 2px 5px);
-  --sb-checks: repeating-conic-gradient(var(--sb-pink) 0 25%, var(--sb-white) 0 50%);
+  /* A label bar's slashes; the warning stripes where a floor ends. */
+  --sb-stripes: repeating-linear-gradient(115deg, var(--sb-cyan) 0 2px, transparent 2px 5px);
+  --sb-hazard: repeating-linear-gradient(-45deg, var(--sb-yellow) 0 6px, #2b2a31 6px 12px);
 }
 
 html[data-style="bunny"][data-theme="dark"] {
@@ -72,11 +73,8 @@ html[data-style="bunny"][data-theme="dark"] {
   --sb-blue: url("./art/bunny-f-blue-night.svg");
   --sb-field: url("./art/bunny-f-field-night.svg");
   --sb-tag: url("./art/bunny-f-tag-night.svg");
-  --sb-nook: url("./art/bunny-nook-night.svg");
-  --sb-rug: url("./art/bunny-rug-night.svg");
-  --sb-clouds: url("./art/bunny-clouds-night.svg");
-  --sb-lights: url("./art/bunny-lights-lit.svg");
-  --sb-room: url("./art/bunny-room-night.svg");
+  --sb-grid: url("./art/bunny-grid-night.svg");
+  --sb-deck: url("./art/bunny-deck-night.svg");
   --sb-arrow: url("./art/bunny-arrow-night.svg");
   --sb-stamp: url("./art/bunny-stamp-night.svg");
   --sb-line: #130e0d;
@@ -90,12 +88,10 @@ html[data-style="bunny"][data-theme="dark"] {
   --sb-sky: #1a2133;
   --sb-blue-fill: #2c4a61;
   --sb-blue-ink: #e8f3fb;
-  --sb-rug-fill: #39435c;
-  --sb-coral: #ff9d94;
-  --sb-pink: #7a4a52;
-  --sb-mint: #7cc7bd;
-  --sb-yellow: #8a7a3c;
-  --sb-yellow-pale: #a39552;
+  --sb-floor: #2c303a;
+  --sb-cyan: #35b6e6;
+  --sb-orange: #f0871c;
+  --sb-yellow: #c9a52c;
   --sb-label: #15110f;
   --sb-label-ink: #ffffff;
   --sb-drop: rgb(0 0 0 / 38%);
@@ -167,67 +163,27 @@ html[data-style="bunny"][data-theme] :is(img, video, canvas) {
   }
 }
 
-@keyframes bunny-glow {
-  50% {
-    opacity: 0.45;
-  }
-}
-
-@keyframes bunny-drift {
-  to {
-    translate: -240px 0;
-  }
-}
-
-/* ── The sky, and the nook at its foot ──────────────────────────────── */
+/* ── The ground: ruled, as the game's screens are ───────────────────── */
 
 html[data-style="bunny"][data-theme] .sidebar {
   /* Positioned already: beside the page on a desktop, a drawer on a phone. */
   isolation: isolate;
   border-right: 0;
   background:
-    var(--sb-nook) left bottom / 260px 88px no-repeat,
-    var(--sb-rug) left bottom 72px / 32px 16px repeat-x,
-    linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 74px no-repeat,
-    var(--sb-clouds) left top 48px / 240px 68px repeat-x,
+    var(--sb-grid) 0 0 / 48px 48px repeat,
     var(--sb-sky);
 }
 
-html[data-style="bunny"][data-theme="dark"] .sidebar {
-  background:
-    var(--sb-nook) left bottom / 260px 88px no-repeat,
-    var(--sb-rug) left bottom 72px / 32px 16px repeat-x,
-    linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 74px no-repeat,
-    url("./art/bunny-stars.svg") 0 0 / 128px 128px repeat,
-    var(--sb-clouds) left top 48px / 240px 68px repeat-x,
-    var(--sb-sky);
-}
-
-/* Quiet text on the sky: a shade darker than the mix, so it reads. */
+/* Quiet text on it: a shade darker than the mix, so it reads. */
 html[data-style="bunny"][data-theme="light"] .sidebar {
   --fg-dim: #4c5f6d;
 }
 
 @media (min-width: 641px) {
-  /* On a desktop the sky runs behind everything, the page set into it; the
-     rug along the whole foot of the window, the nook standing on it above
-     the foot's buttons. */
+  /* On a desktop the ground runs behind everything, the page set into it. */
   html[data-style="bunny"][data-theme] .app {
     background:
-      var(--sb-nook) left var(--desktop-inset) bottom 46px / 260px 88px no-repeat,
-      var(--sb-rug) left bottom 58px / 32px 16px repeat-x,
-      linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 60px no-repeat,
-      var(--sb-clouds) left top 56px / 240px 68px repeat-x,
-      var(--sb-sky);
-  }
-
-  html[data-style="bunny"][data-theme="dark"] .app {
-    background:
-      var(--sb-nook) left var(--desktop-inset) bottom 46px / 260px 88px no-repeat,
-      var(--sb-rug) left bottom 58px / 32px 16px repeat-x,
-      linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 60px no-repeat,
-      url("./art/bunny-stars.svg") 0 0 / 128px 128px repeat,
-      var(--sb-clouds) left top 56px / 240px 68px repeat-x,
+      var(--sb-grid) 0 0 / 48px 48px repeat,
       var(--sb-sky);
   }
 
@@ -245,84 +201,57 @@ html[data-style="bunny"][data-theme="light"] .sidebar {
   }
 }
 
-/* The list stops above the lamp, so no title is written on the nook. */
+/* The steamers are the end of the list: two of the buns in theirs, a stack
+   of empty ones, a crystal and a block of 源石, on a strip of warning
+   stripes. They stand on the foot when the sessions leave room, and come
+   after the last of them when they do not — never over a title, never in a
+   row's place. (No rabbit here.) */
 html[data-style="bunny"][data-theme] .sidebar .session-list {
-  margin-bottom: 96px;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
 }
 
-@media (max-width: 640px) {
-  /* A phone's drawer has no row of buttons at its foot: "New chat" floats
-     over the rug instead. */
-  html[data-style="bunny"][data-theme] .sidebar .session-list,
-  html[data-style="bunny"][data-theme] .drawer .sidebar .session-list {
-    margin-bottom: 190px;
-    padding-bottom: 8px;
-  }
-
-  /* The nook stands clear of it. */
-  html[data-style="bunny"][data-theme] .sidebar {
-    background-position:
-      left bottom 62px,
-      left bottom 134px,
-      left bottom,
-      left top 48px,
-      0 0;
-    background-size:
-      260px 88px,
-      32px 16px,
-      100% 136px,
-      240px 68px,
-      auto;
-  }
-
-  html[data-style="bunny"][data-theme="dark"] .sidebar {
-    background-position:
-      left bottom 62px,
-      left bottom 134px,
-      left bottom,
-      0 0,
-      left top 48px,
-      0 0;
-    background-size:
-      260px 88px,
-      32px 16px,
-      100% 136px,
-      128px 128px,
-      240px 68px,
-      auto;
-  }
+/* (A row that is at work asks to start at the left, which in a column
+   would also make it as wide as its text: every row is the list's width.) */
+html[data-style="bunny"][data-theme] .sidebar .session-list > * {
+  flex: 0 0 auto;
+  align-self: stretch;
+  min-width: 0;
 }
 
-/* The string of star lights over the nook: lit by night, and twinkling. */
-html[data-style="bunny"][data-theme] .sidebar::after {
+html[data-style="bunny"][data-theme] .sidebar .session-list::after {
   content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 106px;
-  z-index: -1;
-  height: 24px;
-  background: var(--sb-lights) 0 0 / 96px 24px repeat-x;
+  flex: 0 0 auto;
+  height: 72px;
+  margin: auto -6px 0;
+  background:
+    url("./art/bunny-nook.svg") left 6px bottom / 260px 60px no-repeat,
+    var(--sb-hazard) left bottom 2px / 100% 8px no-repeat,
+    linear-gradient(#2b2a31, #2b2a31) left bottom / 100% 12px no-repeat;
   pointer-events: none;
 }
 
-html[data-style="bunny"][data-theme="dark"] .sidebar::after {
-  animation: bunny-glow 2.4s steps(3, jump-none) infinite;
-}
-
 @media (max-width: 640px) {
-  html[data-style="bunny"][data-theme] .sidebar::after {
-    bottom: 160px;
+  /* A phone's drawer has no foot, only the floating "New chat": the deck it
+     floats over is the end of the list too. */
+  html[data-style="bunny"][data-theme] .drawer .sidebar .session-list::after {
+    height: calc(150px + env(safe-area-inset-bottom, 0px));
+    margin: auto -12px 0;
+    background:
+      url("./art/bunny-nook.svg") left 10px bottom calc(78px + env(safe-area-inset-bottom, 0px)) / 260px 60px no-repeat,
+      var(--sb-hazard) left bottom calc(80px + env(safe-area-inset-bottom, 0px)) / 100% 8px no-repeat,
+      linear-gradient(#2b2a31, #2b2a31) left bottom calc(78px + env(safe-area-inset-bottom, 0px)) / 100% 12px no-repeat,
+      linear-gradient(var(--sb-floor), var(--sb-floor)) left bottom / 100% calc(78px + env(safe-area-inset-bottom, 0px)) no-repeat;
   }
 }
 
-/* The foot's buttons stand on the rug. */
 html[data-style="bunny"][data-theme] .sidebar-foot {
   border-top: 0;
 }
 
 html[data-style="bunny"][data-theme] .sidebar-foot .devices-btn {
-  color: var(--sb-ink);
+  color: var(--sidebar-foreground);
 }
 
 html[data-style="bunny"][data-theme] .sidebar-foot .devices-btn:hover {
@@ -332,7 +261,7 @@ html[data-style="bunny"][data-theme] .sidebar-foot .devices-btn:hover {
 
 /* Unfolded, it is a list with words: on a plain ground, so they read. */
 html[data-style="bunny"][data-theme] .sidebar-foot:not(.folded):not(.dial) {
-  background: var(--sb-rug-fill);
+  background: var(--sb-sky);
   box-shadow: 0 -2px 0 0 var(--sb-line);
 }
 
@@ -348,17 +277,17 @@ html[data-style="bunny"][data-theme] .sidebar .brand {
   font-weight: 800;
   letter-spacing: 0.12em;
   line-height: 1.6;
-  box-shadow: -3px 3px 0 0 var(--sb-coral);
+  box-shadow: 0 3px 0 0 var(--sb-orange);
 }
 
 html[data-style="bunny"][data-theme] .brand-mark {
   --brand-a: #a55824;
-  --brand-b: #ff8f8f;
+  --brand-b: #f0871c;
 }
 
 html[data-style="bunny"][data-theme="dark"] .brand-mark {
   --brand-a: #eba56c;
-  --brand-b: #ff9d94;
+  --brand-b: #f0871c;
 }
 
 html[data-style="bunny"][data-theme] .sidebar-head .icon-btn {
@@ -374,12 +303,14 @@ html[data-style="bunny"][data-theme] :is(.nav-item, .list-heading, .modal-head, 
   font-weight: 700;
 }
 
-/* What a row opens, each a thing from the photographs: the rabbit and a
-   sparkle, the books, two of the dolls, the clock, the tent. */
+/* What a row opens: a new chat is the rabbit, a cross beside it as on an
+   empty place in a squad; projects, the records of operations; employees,
+   the rabbit and the bun; tasks, a recruitment permit; device sessions, a
+   drone. */
 html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon {
   width: 30px;
   height: 30px;
-  background: url("./art/bunny-nav-books.svg") center / 30px 30px no-repeat;
+  background: url("./art/bunny-i-tape.svg") center / 30px 30px no-repeat;
 }
 
 html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon > * {
@@ -391,7 +322,7 @@ html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon:is(.lucide-square-
 }
 
 html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon.lucide-folder {
-  background-image: url("./art/bunny-nav-books.svg");
+  background-image: url("./art/bunny-i-tape.svg");
 }
 
 html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon.lucide-users {
@@ -399,11 +330,20 @@ html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon.lucide-users {
 }
 
 html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon.lucide-clock {
-  background-image: url("./art/bunny-nav-clock.svg");
+  background-image: url("./art/bunny-i-permit.svg");
 }
 
 html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon.lucide-messages-square {
-  background-image: url("./art/bunny-nav-tent.svg");
+  background-image: url("./art/bunny-i-drone.svg");
+}
+
+/* By night the things' black edges would be lost in the ground: a pale
+   line round each. */
+html[data-style="bunny"][data-theme="dark"] .nav-item > svg.nav-icon,
+html[data-style="bunny"][data-theme="dark"] .composer-btn.effort-btn > svg,
+html[data-style="bunny"][data-theme="dark"] .emp-spend > svg,
+html[data-style="bunny"][data-theme="dark"] .tool:not(.group) > .tool-head::before {
+  filter: drop-shadow(1px 0 0 #6f7c96) drop-shadow(-1px 0 0 #6f7c96) drop-shadow(0 1px 0 #6f7c96) drop-shadow(0 -1px 0 #6f7c96);
 }
 
 html[data-style="bunny"][data-theme] .nav-item:hover > svg.nav-icon {
@@ -421,7 +361,7 @@ html[data-style="bunny"][data-theme] :is(.nav-item.current, .project-row.current
     0 3px 0 0 var(--sb-drop);
 }
 
-/* A heading in the list: the label's three stripes before it. */
+/* A heading in the list: a label's slashes before it. */
 html[data-style="bunny"][data-theme] .sidebar .list-heading {
   color: var(--sidebar-foreground);
   letter-spacing: 0.1em;
@@ -432,7 +372,7 @@ html[data-style="bunny"][data-theme] .sidebar .list-heading::before {
   flex: 0 0 auto;
   width: 10px;
   height: 12px;
-  background: repeating-linear-gradient(to bottom, var(--sidebar-foreground) 0 2px, transparent 2px 5px);
+  background: var(--sb-stripes);
 }
 
 /* ── Rows ───────────────────────────────────────────────────────────── */
@@ -442,7 +382,7 @@ html[data-style="bunny"][data-theme] .sidebar .session {
   padding-left: 24px;
 }
 
-/* "◆" before the row under the cursor, and before the open one. */
+/* A pointer before the row under the cursor, and before the open one. */
 html[data-style="bunny"][data-theme] .sidebar .session:is(:hover, .active)::before {
   content: "";
   position: absolute;
@@ -451,7 +391,7 @@ html[data-style="bunny"][data-theme] .sidebar .session:is(:hover, .active)::befo
   width: 14px;
   height: 14px;
   margin-top: -7px;
-  background: url("./art/bunny-diamond.svg") center / 14px 14px no-repeat;
+  background: url("./art/bunny-caret.svg") center / 14px 14px no-repeat;
   pointer-events: none;
 }
 
@@ -505,12 +445,12 @@ html[data-style="bunny"][data-theme] .dot.interrupted {
   background-image: url("./art/bunny-head-oops.svg");
 }
 
-/* Not read yet: a sparkle. */
+/* Not read yet: a crystal of 合成玉. */
 html[data-style="bunny"][data-theme] .session-unread {
   width: 18px;
   height: 18px;
   border-radius: 0;
-  background: url("./art/bunny-sparkle.svg") center / 18px 18px no-repeat;
+  background: url("./art/bunny-gem.svg") center / 18px 18px no-repeat;
   animation: bunny-twinkle 1.4s steps(4, jump-none) infinite;
 }
 
@@ -545,7 +485,7 @@ html[data-style="bunny"][data-theme] :is(.placeholder, .loading) {
 }
 
 /* In the corner of the page, behind what is read: the round stamp of a
-   product card, a little askew, and two sparkles. A desktop only. */
+   product card (the rabbit's head in it), a little askew. A desktop only. */
 @media (min-width: 900px) {
   html[data-style="bunny"][data-theme] .main::after {
     content: "";
@@ -553,12 +493,9 @@ html[data-style="bunny"][data-theme] :is(.placeholder, .loading) {
     right: 10px;
     bottom: 96px;
     z-index: -1;
-    width: 100px;
-    height: 150px;
-    background:
-      var(--sb-stamp) right bottom / 82px 82px no-repeat,
-      url("./art/bunny-sparkle.svg") left 6px top 30px / 18px 18px no-repeat,
-      url("./art/bunny-sparkle.svg") right 18px top 0 / 9px 9px no-repeat;
+    width: 82px;
+    height: 82px;
+    background: var(--sb-stamp) right bottom / 82px 82px no-repeat;
     opacity: 0.5;
     rotate: -10deg;
     pointer-events: none;
@@ -566,12 +503,13 @@ html[data-style="bunny"][data-theme] :is(.placeholder, .loading) {
 }
 
 @media (min-width: 641px) {
-  /* The head of the page, and a strip of checks under it. */
+  /* The head of the page: a line under it, its first stretch orange, as
+     under a tile of the game's menu. */
   html[data-style="bunny"][data-theme] .chat-header {
-    padding-bottom: 14px;
+    padding-bottom: 10px;
     border-bottom: 0;
     background:
-      var(--sb-checks) left bottom / 8px 8px repeat-x,
+      linear-gradient(to right, var(--sb-orange) 0 96px, var(--sb-line) 96px) left bottom / 100% 2px no-repeat,
       var(--background);
   }
 
@@ -667,7 +605,7 @@ html[data-style="bunny"][data-theme] .bubble.user a {
 
 /* ── The reply ──────────────────────────────────────────────────────── */
 
-/* A heading is a label bar: black, three mint stripes, a coral shadow. */
+/* A heading is a label bar: black, slashes of cyan, an orange line under. */
 html[data-style="bunny"][data-theme] :is(h1, h2).md-h {
   width: fit-content;
   max-width: 100%;
@@ -678,18 +616,13 @@ html[data-style="bunny"][data-theme] :is(h1, h2).md-h {
     var(--sb-stripes) left 10px center / 10px 12px no-repeat,
     var(--sb-label);
   color: var(--sb-label-ink);
-  box-shadow: -3px 3px 0 0 var(--sb-coral);
+  box-shadow: 0 3px 0 0 var(--sb-orange);
 }
 
-/* A smaller one: "◆" before it, as before a version's name. */
-html[data-style="bunny"][data-theme] :is(h3, h4).md-h::before {
-  content: "";
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  margin-right: 0.4em;
-  vertical-align: -0.02em;
-  background: url("./art/bunny-diamond.svg") center / 14px 14px no-repeat;
+/* A smaller one: a bar of cyan down its side. */
+html[data-style="bunny"][data-theme] :is(h3, h4).md-h {
+  padding-left: 9px;
+  border-left: 4px solid var(--sb-cyan);
 }
 
 /* A box ticked, a box not. */
@@ -704,7 +637,7 @@ html[data-style="bunny"][data-theme] .md-check {
 }
 
 html[data-style="bunny"][data-theme] .md-check:has(.lucide-square-check) {
-  background: url("./art/bunny-sparkle.svg") center / 18px 18px no-repeat var(--sb-white);
+  background: url("./art/bunny-tick.svg") center / 18px 14px no-repeat var(--sb-white);
 }
 
 html[data-style="bunny"][data-theme] .md-check > svg {
@@ -727,13 +660,13 @@ html[data-style="bunny"][data-theme] ul.md-list > li:not(.md-task)::before {
   background: url("./art/bunny-head.svg") center / 18px 18px no-repeat;
 }
 
-/* Inside a list, a sparkle. */
+/* Inside a list, a square of cyan. */
 html[data-style="bunny"][data-theme] ul.md-list ul.md-list > li:not(.md-task)::before {
-  top: 0.46em;
-  left: -1.2em;
-  width: 9px;
-  height: 9px;
-  background: url("./art/bunny-sparkle.svg") center / 9px 9px no-repeat;
+  top: 0.56em;
+  left: -1.1em;
+  width: 6px;
+  height: 6px;
+  background: var(--sb-cyan);
 }
 
 html[data-style="bunny"][data-theme] ol.md-list > li::marker {
@@ -741,28 +674,28 @@ html[data-style="bunny"][data-theme] ol.md-list > li::marker {
   font-weight: 800;
 }
 
-/* A rule: the rabbit sitting between sparkles. */
+/* A rule: the rabbit and the bun side by side, a crystal out to each side. */
 html[data-style="bunny"][data-theme] .md-hr {
-  width: min(100%, 222px);
+  width: min(100%, 242px);
   height: 32px;
   margin: 1.1em auto;
   border: 0;
-  background: url("./art/bunny-rule.svg") center / 222px 32px no-repeat;
+  background: url("./art/bunny-rule.svg") center / 242px 32px no-repeat;
 }
 
-/* A quote: a note on the checked blanket. */
+/* A quote: a note, a bar of cyan down its side. */
 html[data-style="bunny"][data-theme] .md-quote {
-  padding: 8px 14px 8px 22px;
+  padding: 8px 14px 8px 20px;
   border: 2px solid var(--sb-line);
   border-radius: 6px;
   background:
-    repeating-conic-gradient(var(--sb-yellow) 0 25%, var(--sb-yellow-pale) 0 50%) left top / 8px 8px repeat-y,
+    linear-gradient(var(--sb-cyan), var(--sb-cyan)) left top / 6px 100% no-repeat,
     var(--sb-paper);
   color: var(--foreground);
   box-shadow: 0 3px 0 0 var(--sb-drop);
 }
 
-/* A table: a product sheet — its head a label bar. */
+/* A table: its head a label bar. */
 html[data-style="bunny"][data-theme] .md-table {
   border: 2px solid var(--sb-line);
   box-shadow: 0 3px 0 0 var(--sb-drop);
@@ -842,14 +775,13 @@ html[data-style="bunny"][data-theme] .code-copy:hover {
   color: var(--sb-label-ink);
 }
 
-/* A file: a tag, a hole punched in its end. */
+/* A file: a card, a corner of it black, as an operator's is. */
 html[data-style="bunny"][data-theme] .file-card {
-  padding-left: 16px;
   border: 4px solid transparent;
   border-image: var(--sb-tag) 2 / 4px stretch;
   border-radius: 0;
   background:
-    radial-gradient(circle, var(--background) 0 2.5px, var(--sb-line) 2.5px 4.5px, transparent 5px) left 3px center / 10px 10px no-repeat,
+    linear-gradient(135deg, var(--sb-label) 0 8px, transparent 8px) left top / 16px 16px no-repeat,
     var(--sb-paper);
   background-clip: padding-box;
   box-shadow: 0 2px 0 0 var(--sb-drop);
@@ -901,27 +833,68 @@ html[data-style="bunny"][data-theme] .tool-name {
   color: var(--sb-ink);
 }
 
-/* Each kind of call, a small tag. */
+/* Each kind of call, a small tag, the thing it is before its name. */
 html[data-style="bunny"][data-theme] .tool-chip {
-  padding: 0 6px;
+  padding: 0 6px 0 21px;
   border: 4px solid transparent;
   border-image: var(--sb-tag) 2 / 4px stretch;
   border-radius: 0;
-  background: var(--sb-white);
+  background: var(--sb-tool, url("./art/bunny-i-originite.svg")) left 2px center / 15px 15px no-repeat var(--sb-white);
   background-clip: padding-box;
   color: var(--sb-ink);
   font-weight: 600;
+}
+
+/* What a tool is, in the game's things: reading is the records of
+   operations, editing a skill summary, writing a recruitment permit, the
+   shell a chip, searching a headhunting pass, the web a drone sent out, an
+   agent the bun, a server's tool a bolt and a nut; anything else, 源石. */
+html[data-style="bunny"][data-theme] :is(.tool, .tool-chip)[data-tool="Read"] {
+  --sb-tool: url("./art/bunny-i-tape.svg");
+}
+
+html[data-style="bunny"][data-theme] :is(.tool, .tool-chip):is([data-tool="Edit"], [data-tool="MultiEdit"], [data-tool="NotebookEdit"]) {
+  --sb-tool: url("./art/bunny-i-book.svg");
+}
+
+html[data-style="bunny"][data-theme] :is(.tool, .tool-chip)[data-tool="Write"] {
+  --sb-tool: url("./art/bunny-i-permit.svg");
+}
+
+html[data-style="bunny"][data-theme] :is(.tool, .tool-chip):is([data-tool="Bash"], [data-tool="BashOutput"], [data-tool="KillShell"]) {
+  --sb-tool: url("./art/bunny-i-chip.svg");
+}
+
+html[data-style="bunny"][data-theme] :is(.tool, .tool-chip):is([data-tool="Grep"], [data-tool="Glob"], [data-tool="ToolSearch"]) {
+  --sb-tool: url("./art/bunny-i-ticket.svg");
+}
+
+html[data-style="bunny"][data-theme] :is(.tool, .tool-chip):is([data-tool="WebSearch"], [data-tool="WebFetch"]) {
+  --sb-tool: url("./art/bunny-i-drone.svg");
+}
+
+html[data-style="bunny"][data-theme] :is(.tool, .tool-chip):is([data-tool="Agent"], [data-tool="Task"]) {
+  --sb-tool: url("./art/bunny-lpp-small.svg");
+  --sb-tool-size: 15px 13px;
+}
+
+html[data-style="bunny"][data-theme] :is(.tool, .tool-chip)[data-tool^="mcp__"] {
+  --sb-tool: url("./art/bunny-i-bolt.svg");
+}
+
+html[data-style="bunny"][data-theme] .tool-chip:is([data-tool="Agent"], [data-tool="Task"]) {
+  background-size: 15px 13px;
 }
 
 html[data-style="bunny"][data-theme] .tool-state {
   color: var(--sb-ink);
 }
 
-/* Done: a sparkle. Failed: its eyes screwed shut. */
+/* Done: a block of 源石. Failed: its eyes screwed shut. */
 html[data-style="bunny"][data-theme] .tool-state > svg.tool-done {
   width: 18px;
   height: 18px;
-  background: url("./art/bunny-sparkle.svg") center / 18px 18px no-repeat;
+  background: url("./art/bunny-ore.svg") center / 18px 18px no-repeat;
 }
 
 html[data-style="bunny"][data-theme] .tool-state > svg.lucide-x {
@@ -971,9 +944,9 @@ html[data-style="bunny"][data-theme] .tool.failed {
 html[data-style="bunny"][data-theme] .tool:not(.group) > .tool-head::before {
   content: "";
   flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  background: url("./art/bunny-diamond.svg") center / 14px 14px no-repeat;
+  width: 15px;
+  height: 15px;
+  background: var(--sb-tool, url("./art/bunny-i-originite.svg")) center / var(--sb-tool-size, 15px 15px) no-repeat;
 }
 
 html[data-style="bunny"][data-theme] :is(.tool-input, .tool-output) {
@@ -1002,7 +975,7 @@ html[data-style="bunny"][data-theme] .thinking.live > svg {
   animation: bunny-breathe 0.8s steps(2, jump-none) infinite;
 }
 
-/* Three of the dolls in a row, hopping in turn. */
+/* Three of them in a row, hopping in turn: the rabbit, the bun, a rabbit. */
 html[data-style="bunny"][data-theme] .working-dots {
   gap: 3px;
   height: 34px;
@@ -1020,7 +993,9 @@ html[data-style="bunny"][data-theme] .working-dots i {
 }
 
 html[data-style="bunny"][data-theme] .working-dots i:nth-child(2) {
-  background-image: url("./art/bunny-small-pink.svg");
+  width: 30px;
+  height: 26px;
+  background: url("./art/bunny-lpp-small.svg") center / 30px 26px no-repeat;
   animation-delay: 0.2s;
 }
 
@@ -1038,14 +1013,16 @@ html[data-style="bunny"][data-theme] .working[role="status"] {
   font-weight: 700;
 }
 
-/* The end of a turn: a tag, the rabbit's head on it. */
+/* The end of a turn: 理智, as the game shows it — its mark, the number,
+   and under the number a bar as full as the context is. */
 html[data-style="bunny"][data-theme] .turn-line {
-  padding: 0 10px 0 26px;
+  padding: 0 10px 5px 27px;
   border: 4px solid transparent;
   border-image: var(--sb-tag) 2 / 4px stretch;
   border-radius: 0;
   background:
-    url("./art/bunny-head.svg") left 3px center / 18px 18px no-repeat,
+    url("./art/bunny-sanity.svg") left 3px top 2px / 18px 18px no-repeat,
+    linear-gradient(to right, var(--sb-cyan) 0 calc(var(--usage, 0) * 100%), color-mix(in srgb, var(--sb-ink) 22%, transparent) 0) left 27px bottom 1px / calc(100% - 37px) 3px no-repeat,
     var(--sb-paper);
   background-clip: padding-box;
   color: var(--sb-ink);
@@ -1097,11 +1074,11 @@ html[data-style="bunny"][data-theme] .composer-btn {
   color: var(--sb-ink);
 }
 
-/* How hard to think: a sparkle. */
+/* How hard to think: a dose of 应急理智顶液. */
 html[data-style="bunny"][data-theme] .composer-btn.effort-btn > svg {
-  width: 18px;
-  height: 18px;
-  background: url("./art/bunny-sparkle-gold.svg") center / 18px 18px no-repeat;
+  width: 30px;
+  height: 30px;
+  background: url("./art/bunny-i-potion.svg") center / 30px 30px no-repeat;
 }
 
 html[data-style="bunny"][data-theme] .composer-btn.effort-btn > svg > * {
@@ -1260,7 +1237,7 @@ html[data-style="bunny"][data-theme="dark"] {
   --sb-field-fill: #1d1716;
 }
 
-/* A box to tick: a sparkle in it. */
+/* A box to tick. */
 html[data-style="bunny"][data-theme] input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
@@ -1275,7 +1252,7 @@ html[data-style="bunny"][data-theme] input[type="checkbox"] {
 }
 
 html[data-style="bunny"][data-theme] input[type="checkbox"]:checked {
-  background: url("./art/bunny-sparkle.svg") center / 18px 18px no-repeat var(--sb-white);
+  background: url("./art/bunny-tick.svg") center / 18px 14px no-repeat var(--sb-white);
 }
 
 /* A slider: the collar for a track, the rabbit's head for its knob. */
@@ -1379,11 +1356,11 @@ html[data-style="bunny"][data-theme] .command-menu li {
   font-weight: 600;
 }
 
-/* The line under the cursor: the collar's blue, "◆" at its end. */
+/* The line under the cursor: the collar's blue, a pointer at its end. */
 html[data-style="bunny"][data-theme] :is(.session-menu, .backend-menu, .plus-pop, .pane-menu) button:hover:not(:disabled),
 html[data-style="bunny"][data-theme] .command-menu li:is(.on, :hover),
 html[data-style="bunny"][data-theme] .search-row:hover {
-  background: url("./art/bunny-diamond.svg") right 8px center / 14px 14px no-repeat var(--sb-blue-fill);
+  background: url("./art/bunny-caret.svg") right 8px center / 14px 14px no-repeat var(--sb-blue-fill);
   color: var(--sb-blue-ink);
 }
 
@@ -1425,7 +1402,7 @@ html[data-style="bunny"][data-theme] .modal-head {
     var(--sb-stripes) left 12px center / 10px 12px no-repeat,
     var(--sb-label);
   color: var(--sb-label-ink);
-  box-shadow: 0 4px 0 0 var(--sb-coral);
+  box-shadow: 0 3px 0 0 var(--sb-orange);
 }
 
 html[data-style="bunny"][data-theme] .modal-head :is(.icon-btn, .settings-back) {
@@ -1504,7 +1481,7 @@ html[data-style="bunny"][data-theme] .reply {
 
 /* The answer under the cursor. */
 html[data-style="bunny"][data-theme] .reply:is(:hover, .on) {
-  background: url("./art/bunny-diamond.svg") left 8px center / 14px 14px no-repeat var(--sb-blue-fill);
+  background: url("./art/bunny-caret.svg") left 8px center / 14px 14px no-repeat var(--sb-blue-fill);
   color: var(--sb-blue-ink);
 }
 
@@ -1533,10 +1510,10 @@ html[data-style="bunny"][data-theme] .error {
 
 /* ── Pages and cards ────────────────────────────────────────────────── */
 
-/* A notice: a card, a sparkle in its corner (the lower one: its rank sits
+/* A notice: a card, a crystal in its corner (the lower one: its rank sits
    in the upper) when it matters. */
 html[data-style="bunny"][data-theme] .bell-card.important {
-  background: url("./art/bunny-sparkle.svg") right 10px bottom 12px / 18px 18px no-repeat var(--sb-white);
+  background: url("./art/bunny-i-orundum.svg") right 6px bottom 8px / 30px 30px no-repeat var(--sb-white);
   background-clip: padding-box;
 }
 
@@ -1545,11 +1522,11 @@ html[data-style="bunny"][data-theme] .bell-band {
 }
 
 html[data-style="bunny"][data-theme] .bell-band::before {
-  width: 14px;
+  width: 4px;
   height: 14px;
   border: 0;
   border-radius: 0;
-  background: url("./art/bunny-diamond.svg") center / 14px 14px no-repeat;
+  background: var(--sb-cyan);
 }
 
 html[data-style="bunny"][data-theme] .bell-p {
@@ -1559,7 +1536,8 @@ html[data-style="bunny"][data-theme] .bell-p {
   box-shadow: inset 0 0 0 2px var(--sb-line);
 }
 
-/* The tasks page: its name on a label, the clock beside what is planned. */
+/* The tasks page: its name on a label, the bun and a steamer under what is
+   planned. */
 html[data-style="bunny"][data-theme] .tasks-head h1 {
   padding: 0 0.7em 0 1.7em;
   background:
@@ -1568,7 +1546,7 @@ html[data-style="bunny"][data-theme] .tasks-head h1 {
   color: var(--sb-label-ink);
   font-weight: 800;
   line-height: 1.7;
-  box-shadow: -3px 3px 0 0 var(--sb-coral);
+  box-shadow: 0 3px 0 0 var(--sb-orange);
 }
 
 html[data-style="bunny"][data-theme] .tasks-section {
@@ -1580,20 +1558,20 @@ html[data-style="bunny"][data-theme] .tasks-section {
 
 html[data-style="bunny"][data-theme] .tasks-section::before {
   content: "";
-  width: 14px;
+  width: 4px;
   height: 14px;
-  background: url("./art/bunny-diamond.svg") center / 14px 14px no-repeat;
+  background: var(--sb-cyan);
 }
 
 html[data-style="bunny"][data-theme] .tasks-column::after {
   content: "";
   display: block;
-  width: 80px;
+  width: 108px;
   height: 44px;
   margin: 14px 12px 0 auto;
   background:
-    url("./art/bunny-clock.svg") right bottom / 32px 32px no-repeat,
-    url("./art/bunny-lamp.svg") left bottom / 32px 44px no-repeat;
+    url("./art/bunny-lpp-half.svg") left bottom / 50px 44px no-repeat,
+    url("./art/bunny-bao.svg") right bottom / 48px 42px no-repeat;
 }
 
 html[data-style="bunny"][data-theme] .tasks-round {
@@ -1668,7 +1646,7 @@ html[data-style="bunny"][data-theme] .emp-bar {
   background: var(--background);
 }
 
-/* An employee is one of the dolls: five of them, in turn. */
+/* An employee is one of the dolls: the rabbits and the bun, in turn. */
 html[data-style="bunny"][data-theme] .emp-avatar {
   border-radius: 6px;
   background: url("./art/bunny-head.svg") center / 18px 18px no-repeat var(--sb-blue-fill);
@@ -1676,36 +1654,51 @@ html[data-style="bunny"][data-theme] .emp-avatar {
   box-shadow: inset 0 0 0 2px var(--sb-line);
 }
 
-html[data-style="bunny"][data-theme] .emp-row:nth-child(5n + 2) .emp-avatar {
+html[data-style="bunny"][data-theme] .emp-row:nth-child(6n + 2) .emp-avatar {
+  background-image: url("./art/bunny-lpp-head.svg");
+}
+
+html[data-style="bunny"][data-theme] .emp-row:nth-child(6n + 3) .emp-avatar {
   background-image: url("./art/bunny-head-pink.svg");
 }
 
-html[data-style="bunny"][data-theme] .emp-row:nth-child(5n + 3) .emp-avatar {
+html[data-style="bunny"][data-theme] .emp-row:nth-child(6n + 4) .emp-avatar {
   background-image: url("./art/bunny-head-grey.svg");
 }
 
-html[data-style="bunny"][data-theme] .emp-row:nth-child(5n + 4) .emp-avatar {
+html[data-style="bunny"][data-theme] .emp-row:nth-child(6n + 5) .emp-avatar {
   background-image: url("./art/bunny-head-slate.svg");
 }
 
-html[data-style="bunny"][data-theme] .emp-row:nth-child(5n) .emp-avatar {
+html[data-style="bunny"][data-theme] .emp-row:nth-child(6n) .emp-avatar {
   background-image: url("./art/bunny-head-king.svg");
 }
 
-/* How a KPI stands: sparkles, ten of them. */
+/* How a KPI stands: crystals of 合成玉, ten of them. */
 html[data-style="bunny"][data-theme] .kpi-progress .kpi-track {
   flex: 0 0 180px;
   height: 18px;
   border-radius: 0;
-  background: url("./art/bunny-sparkle-off.svg") 0 0 / 18px 18px repeat-x;
+  background: url("./art/bunny-gem-off.svg") 0 0 / 18px 18px repeat-x;
 }
 
 html[data-style="bunny"][data-theme] .kpi-progress .kpi-fill {
   border-radius: 0;
-  background: url("./art/bunny-sparkle.svg") 0 0 / 18px 18px repeat-x;
+  background: url("./art/bunny-gem.svg") 0 0 / 18px 18px repeat-x;
 }
 
-/* What was spent: a length of the collar. */
+/* What an employee has spent: 龙门币. */
+html[data-style="bunny"][data-theme] .emp-spend > svg {
+  width: 15px;
+  height: 15px;
+  background: url("./art/bunny-i-lmd.svg") center / 15px 15px no-repeat;
+}
+
+html[data-style="bunny"][data-theme] .emp-spend > svg > * {
+  visibility: hidden;
+}
+
+/* What was spent: 龙门币's cyan. */
 html[data-style="bunny"][data-theme] .emp-spend-row .kpi-track {
   height: 10px;
   border: 2px solid var(--sb-line);
@@ -1715,11 +1708,11 @@ html[data-style="bunny"][data-theme] .emp-spend-row .kpi-track {
 
 html[data-style="bunny"][data-theme] .emp-spend-row .kpi-fill {
   border-radius: 3px;
-  background: #9dcdee;
+  background: var(--sb-cyan);
 }
 
 html[data-style="bunny"][data-theme] .emp-spend-row .kpi-fill.over {
-  background: #ff8f8f;
+  background: #e23b3b;
 }
 
 html[data-style="bunny"][data-theme] .emp-stat-value {
@@ -1735,11 +1728,11 @@ html[data-style="bunny"][data-theme] .dsess-card.on {
 
 html[data-style="bunny"][data-theme] .switcher-card.active {
   box-shadow:
-    0 0 0 2px var(--sb-coral),
+    0 0 0 2px var(--sb-orange),
     0 3px 0 0 var(--sb-drop);
 }
 
-/* ── No session open: the photograph — the doll in its tent ─────────── */
+/* ── No session open: the deck — the rabbit and the bun on it ───────── */
 
 html[data-style="bunny"][data-theme] .placeholder::before {
   content: "";
@@ -1749,13 +1742,15 @@ html[data-style="bunny"][data-theme] .placeholder::before {
   height: 224px;
   border: 2px solid var(--sb-line);
   border-radius: 8px;
-  /* The rabbit sits on the rug in the middle of the photograph, and
-     breathes. (Both pictures are painted with the box, on whole pixels;
-     moved as a layer of its own the doll would land between them and
-     blur. A narrower screen crops the photograph's sides.) */
+  /* The rabbit and the bun sit in the marked bay, a bun in its steamer
+     beside them, and breathe in turn. (All painted with the box, on whole
+     pixels; moved as layers of their own they would land between them and
+     blur. A narrower screen crops the deck's sides.) */
   background:
-    url("./art/bunny-sit.svg") center top 77px / 92px 126px no-repeat,
-    var(--sb-room) center top / 360px 224px no-repeat;
+    url("./art/bunny-sit.svg") left calc(50% - 30px) top 80px / 92px 126px no-repeat,
+    url("./art/bunny-lpp.svg") left calc(50% + 58px) top 118px / 100px 88px no-repeat,
+    url("./art/bunny-bao-grey.svg") left calc(50% - 118px) top 164px / 48px 42px no-repeat,
+    var(--sb-deck) center top / 360px 224px no-repeat;
   box-shadow: 0 4px 0 0 var(--sb-drop);
   animation: bunny-sit 1.8s steps(2, jump-none) infinite;
 }
@@ -1763,12 +1758,14 @@ html[data-style="bunny"][data-theme] .placeholder::before {
 @keyframes bunny-sit {
   50% {
     background-position:
-      center top 75px,
+      left calc(50% - 30px) top 78px,
+      left calc(50% + 58px) top 120px,
+      left calc(50% - 118px) top 164px,
       center top;
   }
 }
 
-/* The line under it: a label bar, as under every product. */
+/* The line under it: a label bar. */
 html[data-style="bunny"][data-theme] .placeholder > p {
   margin: 0;
   padding: 2px 14px 2px 28px;
@@ -1778,7 +1775,7 @@ html[data-style="bunny"][data-theme] .placeholder > p {
   color: var(--sb-label-ink);
   font-family: var(--ui);
   font-weight: 800;
-  box-shadow: -3px 3px 0 0 var(--sb-coral);
+  box-shadow: 0 3px 0 0 var(--sb-orange);
 }
 
 /* Connecting: the doll on a turntable. */
@@ -1796,7 +1793,8 @@ html[data-style="bunny"][data-theme] .loading::before {
   }
 }
 
-/* ── Signing in: five of them in a row, under the sky ───────────────── */
+/* ── Signing in: five of them in a row on the deck, the bun and the
+      steamers beside them ─────────────────────────────────────────── */
 
 html[data-style="bunny"][data-theme] .login {
   position: relative;
@@ -1808,13 +1806,14 @@ html[data-style="bunny"][data-theme] .login {
     url("./art/bunny-sit-grey.svg") left calc(50% + 112px) bottom 34px / 92px 126px no-repeat,
     url("./art/bunny-sit-king.svg") left calc(50% - 224px) bottom 34px / 92px 126px no-repeat,
     url("./art/bunny-sit-slate.svg") left calc(50% + 224px) bottom 34px / 92px 126px no-repeat,
-    var(--sb-rug) left bottom 62px / 32px 16px repeat-x,
-    linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 64px no-repeat,
-    url("./art/bunny-sparkle-white.svg") 12% 30% / 18px 18px no-repeat,
-    url("./art/bunny-sparkle.svg") 86% 22% / 18px 18px no-repeat,
-    url("./art/bunny-sparkle-white.svg") 78% 58% / 9px 9px no-repeat,
-    url("./art/bunny-sparkle.svg") 20% 62% / 9px 9px no-repeat,
-    linear-gradient(to bottom, #a9dcf5 0%, #d6eefb 55%, #f4fbff 100%);
+    url("./art/bunny-lpp.svg") left calc(50% - 340px) bottom 34px / 100px 88px no-repeat,
+    url("./art/bunny-bao.svg") left calc(50% + 324px) bottom 34px / 48px 42px no-repeat,
+    url("./art/bunny-bao-grey.svg") left calc(50% + 376px) bottom 34px / 48px 42px no-repeat,
+    var(--sb-hazard) left bottom 56px / 100% 8px no-repeat,
+    linear-gradient(#2b2a31, #2b2a31) left bottom 54px / 100% 12px no-repeat,
+    linear-gradient(var(--sb-floor), var(--sb-floor)) left bottom / 100% 60px no-repeat,
+    var(--sb-grid) 0 0 / 48px 48px repeat,
+    linear-gradient(to bottom, #bfe2f4 0%, #d6eefb 55%, #f4fbff 100%);
 }
 
 html[data-style="bunny"][data-theme="dark"] .login {
@@ -1824,50 +1823,41 @@ html[data-style="bunny"][data-theme="dark"] .login {
     url("./art/bunny-sit-grey.svg") left calc(50% + 112px) bottom 34px / 92px 126px no-repeat,
     url("./art/bunny-sit-king.svg") left calc(50% - 224px) bottom 34px / 92px 126px no-repeat,
     url("./art/bunny-sit-slate.svg") left calc(50% + 224px) bottom 34px / 92px 126px no-repeat,
-    var(--sb-rug) left bottom 62px / 32px 16px repeat-x,
-    linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 64px no-repeat,
-    url("./art/bunny-lights-lit.svg") left top 18px / 96px 24px repeat-x,
-    url("./art/bunny-stars.svg") 0 0 / 128px 128px repeat,
+    url("./art/bunny-lpp.svg") left calc(50% - 340px) bottom 34px / 100px 88px no-repeat,
+    url("./art/bunny-bao.svg") left calc(50% + 324px) bottom 34px / 48px 42px no-repeat,
+    url("./art/bunny-bao-grey.svg") left calc(50% + 376px) bottom 34px / 48px 42px no-repeat,
+    var(--sb-hazard) left bottom 56px / 100% 8px no-repeat,
+    linear-gradient(#2b2a31, #2b2a31) left bottom 54px / 100% 12px no-repeat,
+    linear-gradient(var(--sb-floor), var(--sb-floor)) left bottom / 100% 60px no-repeat,
+    var(--sb-grid) 0 0 / 48px 48px repeat,
     linear-gradient(to bottom, #0f1424 0%, #1a2133 60%, #2a3550 100%);
 }
 
 @media (max-width: 640px) {
-  /* A phone has room for three. */
+  /* A phone has room for three: the rabbit between the bun and another. */
   html[data-style="bunny"][data-theme] .login {
     background:
       url("./art/bunny-sit.svg") left 50% bottom 34px / 92px 126px no-repeat,
-      url("./art/bunny-sit-pink.svg") left calc(50% - 112px) bottom 34px / 92px 126px no-repeat,
+      url("./art/bunny-lpp.svg") left calc(50% - 112px) bottom 34px / 100px 88px no-repeat,
       url("./art/bunny-sit-grey.svg") left calc(50% + 112px) bottom 34px / 92px 126px no-repeat,
-      var(--sb-rug) left bottom 62px / 32px 16px repeat-x,
-      linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 64px no-repeat,
-      linear-gradient(to bottom, #a9dcf5 0%, #d6eefb 55%, #f4fbff 100%);
+      var(--sb-hazard) left bottom 56px / 100% 8px no-repeat,
+      linear-gradient(#2b2a31, #2b2a31) left bottom 54px / 100% 12px no-repeat,
+      linear-gradient(var(--sb-floor), var(--sb-floor)) left bottom / 100% 60px no-repeat,
+      var(--sb-grid) 0 0 / 48px 48px repeat,
+      linear-gradient(to bottom, #bfe2f4 0%, #d6eefb 55%, #f4fbff 100%);
   }
 
   html[data-style="bunny"][data-theme="dark"] .login {
     background:
       url("./art/bunny-sit.svg") left 50% bottom 34px / 92px 126px no-repeat,
-      url("./art/bunny-sit-pink.svg") left calc(50% - 112px) bottom 34px / 92px 126px no-repeat,
+      url("./art/bunny-lpp.svg") left calc(50% - 112px) bottom 34px / 100px 88px no-repeat,
       url("./art/bunny-sit-grey.svg") left calc(50% + 112px) bottom 34px / 92px 126px no-repeat,
-      var(--sb-rug) left bottom 62px / 32px 16px repeat-x,
-      linear-gradient(var(--sb-rug-fill), var(--sb-rug-fill)) left bottom / 100% 64px no-repeat,
-      url("./art/bunny-lights-lit.svg") left top 18px / 96px 24px repeat-x,
-      url("./art/bunny-stars.svg") 0 0 / 128px 128px repeat,
+      var(--sb-hazard) left bottom 56px / 100% 8px no-repeat,
+      linear-gradient(#2b2a31, #2b2a31) left bottom 54px / 100% 12px no-repeat,
+      linear-gradient(var(--sb-floor), var(--sb-floor)) left bottom / 100% 60px no-repeat,
+      var(--sb-grid) 0 0 / 48px 48px repeat,
       linear-gradient(to bottom, #0f1424 0%, #1a2133 60%, #2a3550 100%);
   }
-}
-
-/* Clouds, drifting. */
-html[data-style="bunny"][data-theme] .login::before {
-  content: "";
-  position: absolute;
-  top: 9%;
-  left: 0;
-  right: -240px;
-  z-index: -1;
-  height: 68px;
-  background: var(--sb-clouds) 0 0 / 240px 68px repeat-x;
-  animation: bunny-drift 80s linear infinite;
-  pointer-events: none;
 }
 
 html[data-style="bunny"][data-theme] .login-box {
@@ -1890,7 +1880,7 @@ html[data-style="bunny"][data-theme] .login-title {
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  box-shadow: -3px 3px 0 0 var(--sb-coral);
+  box-shadow: 0 3px 0 0 var(--sb-orange);
 }
 
 html[data-style="bunny"][data-theme] .login-input {
@@ -2023,7 +2013,7 @@ html[data-style="bunny"][data-theme] .app-oops {
 
 html[data-style="bunny"][data-theme] .bell-count {
   border-radius: 4px;
-  background: var(--sb-coral);
+  background: var(--sb-orange);
   color: #33190a;
   font-weight: 800;
   box-shadow: 0 0 0 2px var(--sb-line);
@@ -2035,7 +2025,7 @@ html[data-style="bunny"][data-theme] .bell-dot {
   width: 9px;
   height: 9px;
   border-radius: 0;
-  background: url("./art/bunny-sparkle.svg") center / 9px 9px no-repeat;
+  background: url("./art/bunny-gem.svg") center / 9px 9px no-repeat;
 }
 
 html[data-style="bunny"][data-theme] ::selection {
@@ -2056,7 +2046,6 @@ html[data-style="bunny"][data-theme] .spin {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-style="bunny"][data-theme] .sidebar::after,
   html[data-style="bunny"][data-theme] .nav-item:hover > svg.nav-icon,
   html[data-style="bunny"][data-theme] .dot,
   html[data-style="bunny"][data-theme] .dot.running::before,
@@ -2067,7 +2056,6 @@ html[data-style="bunny"][data-theme] .spin {
   html[data-style="bunny"][data-theme] .working-dots i,
   html[data-style="bunny"][data-theme] .placeholder::before,
   html[data-style="bunny"][data-theme] .loading::before,
-  html[data-style="bunny"][data-theme] .login::before,
   html[data-style="bunny"][data-theme] .to-bottom {
     animation: none;
   }
