@@ -28,8 +28,11 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   **山山兔**: the Arknights plush rabbit, drawn sitting after the product
   photographs — it hops up to sit on the composer while you type, turns on
   a running tool card, and is a list's dots; other operator versions hop
-  while the agent works; label bars, sparkles and the photo set's lamp,
-  clock and rug around it.
+  while the agent works. Beside it 龙泡泡 (the 黍 doll) and the 小笼泡 buns in
+  their steamers, after the brand's photographs, and the game's own things
+  for everything else: 作战记录, 招聘许可 and a drone in the sidebar, an item
+  per tool, 合成玉 for unread, 源石 for done, 理智 as the context gauge, the
+  home screen's black label bars with cyan slashes.
   **蔚蓝 (Celeste)**: the game's dialogue box with a portrait for what you
   say, checkpoint plaques, dash crystals, crystal hearts, a zip mover for a
   running tool, the cabin by night and Golden Ridge's dusk by day.
