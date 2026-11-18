@@ -114,6 +114,11 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   as one line.
 
 ### Fixed
+- **Themes: a square choice no longer sits in a round track**: in Settings'
+  switches (language, appearance, engine) of 死亡细胞, 小丑牌 and 山山兔 the
+  track was a pill while what was chosen was square; tags, file cards, menu
+  rows and tool cards had the same mismatch in places. Loom's shared shape
+  rules outweighed the theme's own; they no longer do.
 - **蔚蓝 and 死亡细胞: the picture at the sidebar's foot no longer covers the
   list**: it kept two or three rows' worth of the list for itself, and in
   死亡细胞 it grew with a wider sidebar until it lay over the last titles.
