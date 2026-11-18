@@ -159,14 +159,33 @@ html[data-style="deadcells"][data-theme="dark"] .sidebar-foot:not(.dial) {
   color: #c9d3e6;
 }
 
-html[data-style="deadcells"][data-theme] .sidebar-foot:not(.dial)::before {
+html[data-style="deadcells"][data-theme] .sidebar-foot:not(.dial) .devices-btn:hover {
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
+}
+
+/* The scene is the end of the list: it stands on the foot when the sessions
+   leave room, and comes after the last of them when they do not — it never
+   lies over a title, and never takes a row's place. */
+html[data-style="deadcells"][data-theme] .sidebar .session-list {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+}
+
+html[data-style="deadcells"][data-theme] .sidebar .session-list > * {
+  flex: 0 0 auto;
+}
+
+/* Rows' margins met and became one while the list was a block; keep it so. */
+html[data-style="deadcells"][data-theme] .sidebar .session-list > .session {
+  margin-bottom: 0;
+}
+
+html[data-style="deadcells"][data-theme] .sidebar .session-list::after {
   content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 100%;
-  z-index: -1;
+  flex: 0 0 auto;
   aspect-ratio: 130 / 83;
+  margin: auto -6px 0;
   background: var(--dc-scene-top) center bottom / 100% auto no-repeat;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 42%);
   mask-image: linear-gradient(to bottom, transparent 0%, #000 42%);
@@ -174,41 +193,19 @@ html[data-style="deadcells"][data-theme] .sidebar-foot:not(.dial)::before {
   pointer-events: none;
 }
 
-html[data-style="deadcells"][data-theme="dark"] .sidebar-foot:not(.dial)::before {
+html[data-style="deadcells"][data-theme="dark"] .sidebar .session-list::after {
   aspect-ratio: 130 / 86;
 }
 
-html[data-style="deadcells"][data-theme] .sidebar-foot:not(.dial) .devices-btn:hover {
-  background: color-mix(in srgb, var(--fg) 14%, transparent);
-}
-
-/* On a phone the foot is a dial that floats; the whole scene, floor and all,
-   lies along the drawer's own foot. */
-html[data-style="deadcells"][data-theme] .sidebar:not(:has(.sidebar-foot:not(.dial)))::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: -1;
-  aspect-ratio: 130 / 96;
-  background: var(--dc-scene) center bottom / 100% auto no-repeat;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 40%);
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 40%);
-  image-rendering: pixelated;
-  pointer-events: none;
-}
-
-/* The list stops above the window, so no title is written on the light. */
-html[data-style="deadcells"][data-theme] .sidebar .session-list {
-  margin-bottom: 8.4rem;
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
-}
-
 @media (max-width: 640px) {
-  html[data-style="deadcells"][data-theme] .sidebar .session-list {
-    margin-bottom: 12.5rem;
+  /* On a phone the foot is a dial that floats: the whole scene, floor and
+     all, is the end of the list, and "New chat" floats over its floor. */
+  html[data-style="deadcells"][data-theme] .sidebar .session-list::after {
+    aspect-ratio: 130 / 96;
+    margin: auto -12px 0;
+    background: var(--dc-scene) center bottom / 100% auto no-repeat;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 40%);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 40%);
   }
 }
 

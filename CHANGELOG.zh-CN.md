@@ -45,6 +45,7 @@
   没变化的醒来段落合成一行发。
 
 ### 修复
+- **蔚蓝和死亡细胞：侧边栏底部的画不再挡住会话列表**：之前这幅画固定占掉两三行的位置，死亡细胞里侧边栏变宽时画还会跟着变大，盖住最后几个标题。现在画是列表的结尾：会话少、有空位时它立在底部，会话多时它排在最后一条后面，滚到底才看到。
 - **iPhone 弹窗避开刘海**：iPhone 主屏 App 里，设备等较高的弹窗不再被顶部
   刘海和底部横条挡住。
 - Codex 会话执行的命令里现在有 `LOOM_SESSION_ID`（通过 thread 的 `shell_environment_policy` 传入），`loom-session` 和 `loom-notice` 在 Codex 里也能用了，之前会报「LOOM_SESSION_ID is not set」。

@@ -155,56 +155,55 @@ html[data-style="celeste"][data-theme="light"] .sidebar-foot:not(.dial) {
   color: #ffffff;
 }
 
-html[data-style="celeste"][data-theme] .sidebar-foot:not(.dial)::before {
+/* The scene is the end of the list: it stands on the foot when the sessions
+   leave room, and comes after the last of them when they do not — it never
+   lies over a title, and never takes a row's place. */
+html[data-style="celeste"][data-theme] .sidebar .session-list {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+}
+
+html[data-style="celeste"][data-theme] .sidebar .session-list > * {
+  flex: 0 0 auto;
+}
+
+html[data-style="celeste"][data-theme] .sidebar .session-list::after {
   content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: calc(100% - 2px);
-  height: 92px;
-  z-index: -1;
+  flex: 0 0 auto;
+  height: 100px;
+  margin: auto -6px 0;
   background:
     url("./art/celeste-flags.svg") left bottom / 300px 92px no-repeat,
     url("./art/celeste-ridge.svg") left bottom / 320px 80px repeat-x;
   pointer-events: none;
 }
 
-html[data-style="celeste"][data-theme="dark"] .sidebar-foot:not(.dial)::before {
+html[data-style="celeste"][data-theme="dark"] .sidebar .session-list::after {
   background:
     url("./art/celeste-cabin.svg") left bottom / 300px 92px no-repeat,
     url("./art/celeste-pines.svg") left 60px bottom / 192px 80px repeat-x;
 }
 
-/* The list stops above the scene, so no title is written on it. */
-html[data-style="celeste"][data-theme] .sidebar .session-list {
-  margin-bottom: 92px;
-}
-
 @media (max-width: 640px) {
   /* A phone's drawer has no foot, only the floating "New chat": the ground
-     and the scene are the drawer's own. */
-  html[data-style="celeste"][data-theme] .drawer .sidebar {
+     it floats over is the end of the list too. */
+  html[data-style="celeste"][data-theme] .drawer .sidebar .session-list::after {
+    height: calc(178px + env(safe-area-inset-bottom, 0px));
+    margin: auto -12px 0;
     background:
       var(--c-ledge) left bottom calc(64px + env(safe-area-inset-bottom, 0px)) / 96px 20px repeat-x,
       linear-gradient(var(--c-ground), var(--c-ground)) left bottom / 100% calc(78px + env(safe-area-inset-bottom, 0px)) no-repeat,
       url("./art/celeste-flags.svg") left bottom calc(82px + env(safe-area-inset-bottom, 0px)) / 300px 92px no-repeat,
-      url("./art/celeste-ridge.svg") left bottom calc(82px + env(safe-area-inset-bottom, 0px)) / 320px 80px repeat-x,
-      url("./art/celeste-dusk.svg") left top / 320px 240px repeat-x,
-      var(--c-sky);
+      url("./art/celeste-ridge.svg") left bottom calc(82px + env(safe-area-inset-bottom, 0px)) / 320px 80px repeat-x;
   }
 
-  html[data-style="celeste"][data-theme="dark"] .drawer .sidebar {
+  html[data-style="celeste"][data-theme="dark"] .drawer .sidebar .session-list::after {
     background:
       var(--c-ledge) left bottom calc(64px + env(safe-area-inset-bottom, 0px)) / 96px 20px repeat-x,
       linear-gradient(var(--c-ground), var(--c-ground)) left bottom / 100% calc(78px + env(safe-area-inset-bottom, 0px)) no-repeat,
       url("./art/celeste-cabin.svg") left bottom calc(82px + env(safe-area-inset-bottom, 0px)) / 300px 92px no-repeat,
-      url("./art/celeste-pines.svg") left 60px bottom calc(82px + env(safe-area-inset-bottom, 0px)) / 192px 80px repeat-x,
-      var(--c-sky);
-  }
-
-  html[data-style="celeste"][data-theme] .drawer .sidebar .session-list {
-    margin-bottom: calc(176px + env(safe-area-inset-bottom, 0px));
-    padding-bottom: 8px;
+      url("./art/celeste-pines.svg") left 60px bottom calc(82px + env(safe-area-inset-bottom, 0px)) / 192px 80px repeat-x;
   }
 }
 

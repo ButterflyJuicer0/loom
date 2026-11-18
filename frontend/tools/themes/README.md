@@ -29,3 +29,12 @@ Nothing is taken from a game's files, and no logo or wordmark is reproduced.
   `mcp__…`) — for a picture per tool.
 - `--font-pixel`: Fusion Pixel (bundled, Simplified Chinese included) for
   `"font": "pixel"`.
+
+## A picture at the sidebar's foot
+
+It is the end of the list, not something over it: draw it as
+`.sidebar .session-list::after` with `margin-top: auto` in a list made a
+flex column (see `celeste.css`, `deadcells.css`). It then stands on the foot
+when the sessions leave room and comes after the last of them when they do
+not — it never lies over a title and never takes a row's place. A flex
+column does not let rows' margins meet, so check the rows sit where they did.

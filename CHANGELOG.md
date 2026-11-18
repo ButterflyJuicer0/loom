@@ -114,6 +114,11 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   as one line.
 
 ### Fixed
+- **蔚蓝 and 死亡细胞: the picture at the sidebar's foot no longer covers the
+  list**: it kept two or three rows' worth of the list for itself, and in
+  死亡细胞 it grew with a wider sidebar until it lay over the last titles.
+  Now it is the end of the list: it stands on the foot when the sessions
+  leave room, and comes after the last of them when they do not.
 - **iPhone dialogs clear the notch**: in the iPhone home-screen app, tall
   dialogs such as Devices no longer run under the notch and home indicator.
 - Codex sessions now get `LOOM_SESSION_ID` in their shell commands (through the
