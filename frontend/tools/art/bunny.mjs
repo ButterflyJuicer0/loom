@@ -489,33 +489,7 @@ function bun() {
 }
 bun().save("bunny-lpp.svg", LPP)
 
-// The same at half the squares (25 by 22), and small (15 by 13): beside the
-// rabbit at each of its sizes.
-const BUN_HALF = [
-  "..OO.................OO..",
-  ".OBBO......O...O....OBBO.",
-  ".OBYO.....OYO.OYO...OYBO.",
-  "..OYYO....OYOOYYO..OYYO..",
-  "OOOYYYO.OOOYOOYYOOOYYYOBO",
-  "OBYYYYOOLLLLLLLLLOOYYYOBO",
-  ".OOYYOLLFFFFFFFFFLLOYOBBO",
-  "..OOOFFFFFFFFFFFFFFFOtOBO",
-  "..OFFFFFFFFFFFFFFFFFFTOO.",
-  ".OFFFFFGFFFFFFFFGFFFFTFO.",
-  ".OFFFFFFFFFFFFFFFFFFFTFO.",
-  ".OFFKKKKKKFFFKKKKKKFFTFO.",
-  ".OFFFKEEKFFFFFKEEKFFFTFO.",
-  ".OFFFKEEKFKFKFKEEKFFFTFO.",
-  ".OFFFKeeKFFKFFKeeKFFFTFO.",
-  ".OFFFFKKFFFFFFFKKFFFFFDO.",
-  ".OFFFFFFFFFFFFFFFFFFFFDO.",
-  "..ODFFFFFFFFFFFFFFFFFDO..",
-  "..OYYDDDDDDDDDDDDDDDYYO..",
-  ".OYYYOOOOOOOOOOOOOOOYYYO.",
-  ".OyyyO..............OyyyO",
-  "..OOO................OOO.",
-].map((row) => row.padEnd(25, ".").slice(0, 25))
-writeSprite("bunny-lpp-half.svg", BUN_HALF, LPP)
+// The same small (15 by 13): beside the rabbit at that size.
 const BUN_SMALL = [
   ".O...........O.",
   "OBO...O.O...OBO",
@@ -535,6 +509,155 @@ writeSprite("bunny-lpp-small.svg", BUN_SMALL, LPP)
 // Its face alone, nine squares: a mark beside the rabbit's.
 const BUN_HEAD = ["B.......B", "YO.O.O.OY", "OYOYOYOYO", "OFFFFFFFO", "OKKFFFKKO", "OEEFFFEEO", "OFFKFKFFO", "OFFFFFFFO", ".OOOOOOO."]
 writeSprite("bunny-lpp-head.svg", BUN_HEAD, LPP)
+
+// ── Its siblings ─────────────────────────────────────────────────────────
+// The other dragons of the line, each drawn after the brand's photographs:
+// 年 (cream, red horns, eyes shut in a smile, mouth open), 夕 (dark grey,
+// teal horns, orange eyes under black lids, a frown, a drop of sweat), 令
+// (white going to lilac, blue horns, half-lidded purple eyes, a ":3" and a
+// tongue), 重岳 (charcoal, cream-yellow horns, slanted red eyes rimmed in
+// green, a flat little mouth), 望 (pale grey, grey horns, mustard spikes
+// down its back, eyes rimmed in gold under flat lids, a "^" for a mouth, a
+// string of black and white beads with a tassel). The photographs of the
+// first four are of the small round pendants; the body here is the bun the
+// 黍 and 望 dolls have. The letters are 黍's, and: f the feet, u their
+// shade; s a spike; R the rim of an eye; M inside a mouth; W white.
+const K = "#211a1c"
+const SIBLINGS = {
+  nian: { O: "#8a5a52", F: "#f7e4d8", L: "#fff4ec", D: "#e6c9ba", Y: "#e2262d", y: "#b3161d", B: "#e2262d", b: "#e2262d", f: "#e2262d", u: "#b3161d", s: "#e2262d", G: "#e2262d", M: "#ef6b7c", K },
+  xi: { O: "#2a2b30", F: "#5d5f68", L: "#72747e", D: "#484a52", Y: "#226876", y: "#17505c", B: "#226876", b: "#2f8696", f: "#226876", u: "#17505c", s: "#226876", G: "#35a6b6", E: "#f59a2a", e: "#ee7f12", W: "#e8eef4", K },
+  ling: { O: "#6d6a80", F: "#edebf5", L: "#ffffff", D: "#d2cfe2", Y: "#5b84d8", y: "#3f66b8", B: "#5b84d8", b: "#86a8ec", f: "#5b84d8", u: "#3f66b8", s: "#5b84d8", G: "#5b84d8", E: "#b692e4", e: "#9b76cf", M: "#f0641e", K },
+  chongyue: { O: "#2e2f31", F: "#6c6e70", L: "#808284", D: "#57595b", Y: "#f0da8c", y: "#d6bb62", B: "#f0da8c", b: "#f0da8c", f: "#efe6d2", u: "#d3c7ad", s: "#4a4b4d", G: "#efe0b8", E: "#dc4a40", e: "#c2372f", R: "#1f7a5c", K },
+  wang: { O: "#6a6460", F: "#eae7e2", L: "#faf8f5", D: "#cfcac3", Y: "#7e7c7d", y: "#5f5d5e", B: "#7e7c7d", b: "#9b999a", f: "#f3ddd2", u: "#dcc0b3", s: "#e2a32c", G: "#85858c", E: "#f3ecdf", e: "#e9dfcd", R: "#c9a23a", W: "#ffffff", K },
+}
+// Each one's face, on the full-sized doll; `mirror` lays a grid on the
+// other side too.
+const SIB_FACE = {
+  nian(c, mirror) {
+    c.rect(20, 21, 2, 2, "G").rect(28, 21, 2, 2, "G")
+    mirror(["..KKKKK..", ".K.....K.", "K.......K", "K.......K"], 9, 26)
+    c.put(["KK...KK", ".KKKKK.", ".KMMMK.", ".KMMMK.", "..KMK..", "...K..."], 21, 30)
+  },
+  xi(c, mirror) {
+    mirror(["GG..", ".GGG"], 15, 21)
+    c.rect(8, 20, 1, 3, "W").set(9, 21, "W").rect(23, 22, 4, 1, "K").rect(23, 24, 4, 1, "K")
+    mirror(["KK.........", "KKKKK......", "KEEKKKKK...", "KEEEEEKKKK.", "KEEEEEEEEK.", "KeeeeeeeeK.", "KeeeeeeeeK.", ".KeeeeeeK..", "..KKKKKK..."], 8, 25)
+    c.put([".KKK.", "K...K"], 22, 36)
+  },
+  ling(c, mirror) {
+    mirror(["GGG"], 18, 21)
+    mirror(["KKKKKKKKKKK", "...KEEEEEEK", "...KEEEEEEK", "...KEEEEEEK", "...KeeeeeeK", "...KeeeeeeK", "....KeeeeK.", ".....KKKK.."], 7, 25)
+    c.put(["K..K..K", ".KKMKK.", "..KMK..", "...K..."], 21, 32)
+  },
+  chongyue(c, mirror) {
+    mirror(["G.", "GG", ".G"], 18, 21)
+    mirror(["KK.........", "KKKKK......", ".RKKKKKK...", ".REEEEKKKK.", ".REEEEEEER.", ".ReeeeeeeR.", "..ReeeeeR..", "...RRRRR..."], 8, 25)
+    c.put(["KKKKK"], 22, 35)
+  },
+  wang(c, mirror) {
+    mirror(["GGG", "GGG"], 15, 20)
+    mirror(["KKKKKKKKKK", "KKKKKKKKKK", ".REEEEEER.", ".REEEEEER.", ".REEEEEER.", ".REEEEEER.", ".ReeeeeeR.", ".ReeeeeeR.", "..ReeeeR..", "...RRRR..."], 9, 23)
+    c.put([".KK.", "K..K"], 23, 35)
+    // The beads, off a horn; the tassel under them.
+    for (const [i, ch] of [..."KKWKKWK"].entries()) c.rect(35 + i, 13 + i, 2, 2, ch)
+    for (const x of [42, 44, 46]) c.rect(x, 21, 1, 12 - (x - 42), "G")
+  },
+}
+function sibling(kind) {
+  const c = new Canvas(50, 44)
+  const body = (x, y) => Math.abs((x - 24.5) / 20.6) ** 2.4 + Math.abs((y - 26.6) / 16) ** 2.4 <= 1
+  // 望's tail shows behind it, as 黍's does.
+  if (kind === "wang") c.poly([[40, 20], [49, 10], [48, 20], [50, 27], [42, 28]], "Y")
+  for (const x of [11, 37.5]) {
+    c.oval(x, 41, 4.2, 2.6, "f")
+    c.fill((px, py) => ((px - x) / 4.2) ** 2 + ((py - 41) / 2.6) ** 2 <= 1 && py > 41.6, "u")
+  }
+  for (const side of [-1, 1]) {
+    const X = (x) => 24.5 + side * x
+    c.poly([[X(8), 18], [X(14.6), 12], [X(21.6), 0], [X(21), 16], [X(15), 23]], "Y")
+    c.poly([[X(15), 22], [X(19), 13.4], [X(25), 11], [X(22), 21]], "Y")
+    c.poly([[X(17.6), 7], [X(21.6), 0], [X(21.3), 8.4]], "B")
+    c.poly([[X(16.2), 9.4], [X(17.6), 7], [X(21.3), 8.4], [X(21.2), 10.6]], "b")
+    c.poly([[X(22.4), 12.2], [X(25), 11], [X(23.8), 14.6]], "B")
+    // The under side of each horn, in shade.
+    c.fill((x, y) => side * (x - 24.5) > 14 && y > 16 && y < 23, "y", (ch) => ch === "Y")
+  }
+  // Spikes down the back for 望; one thin one on top for the rest.
+  if (kind === "wang") for (const [x, h] of [[18.5, 8], [25.5, 10], [32, 7]]) c.poly([[x - 3.6, 12.6], [x + 0.4, 12 - h], [x + 3.8, 12.6]], "s")
+  else c.rect(24, 4, 2, 8, "s")
+  c.fill((x, y) => body(x, y), "F")
+  c.fill((x, y) => body(x, y) && !body(x, y - 1.3) && y < 20, "L")
+  c.fill((x, y) => body(x, y) && !body(x, y + 1.6), "D")
+  c.fill((x, y) => body(x, y) && !body(x + 1.4, y + 0.6) && x > 36 && y > 22, "D")
+  const mirror = (rows, x, y) => c.put(over(rows), x, y).put(over(rows), 50 - x - rows[0].length, y, null, true)
+  SIB_FACE[kind](c, mirror)
+  return c.outline("O")
+}
+// Small (15 by 13) and as a face (9 by 9), as 黍 has: the same outline,
+// each one's own three rows of face.
+const SIB_SMALL = {
+  nian: ["FFFFGFGFFFF", "FKKKFFFKKKF", "KFFFKMKFFFK", "FFFFFMFFFFF"],
+  xi: ["FFFGFFFGFFF", "KKKKFFFKKKK", "FKEEFFFEEKF", "FFFFKKKFFFF"],
+  ling: ["FFFGFFFGFFF", "KKKKFFFKKKK", "FFEEKFKEEFF", "FFFFFMFFFFF"],
+  chongyue: ["FFFGFFFGFFF", "KKKFFFFFKKK", "FEEKFFFKEEF", "FFFFKKKFFFF"],
+  wang: ["FFGGFFFGGFF", "FKKKFFFKKKF", "FRERFFFRERF", "FFRFFKFFRFF"],
+}
+const sibSmall = (kind) => [
+  ".O...........O.",
+  kind === "wang" ? "OBO...O.O...OBO" : "OBO....O....OBO",
+  kind === "wang" ? "OYO..OsOsO..OYO" : "OYO...OsO...OYO",
+  kind === "wang" ? ".OYOOOsOsOOOYO." : ".OYOOOOsOOOOYO.",
+  "OOYOLLLLLLLOYOO",
+  "OYOFFFFFFFFFOYO",
+  ".O" + SIB_SMALL[kind][0] + "O.",
+  ...SIB_SMALL[kind].slice(1).map((row) => "OF" + row + "FO"),
+  "OFFFFFFFFFFFFDO",
+  ".OffDDDDDDDffO.",
+  "..OO.OOOOO.OO..",
+]
+const SIB_HEAD = {
+  nian: ["KKFFFKK", "FFFMFFF", "FFFFFFF"],
+  xi: ["KKFFFKK", "EEFFFEE", "FFKKKFF"],
+  ling: ["KKFFFKK", "EEFKFEE", "FFFMFFF"],
+  chongyue: ["KKFFFKK", "EEFFFEE", "FFFKFFF"],
+  wang: ["KKFFFKK", "RRFFFRR", "FFKFKFF"],
+}
+const sibHead = (kind) => ["Y.......Y", kind === "wang" ? "YOs.s.sOY" : "YO..s..OY", kind === "wang" ? "OYOOsOOYO" : "OYOOsOOYO", "OFFFFFFFO", ...SIB_HEAD[kind].map((row) => "O" + row + "O"), "OFFFFFFFO", ".OOOOOOO."]
+for (const kind of Object.keys(SIBLINGS)) {
+  sibling(kind).save(`bunny-lpp-${kind}.svg`, SIBLINGS[kind])
+  writeSprite(`bunny-lpp-${kind}-head.svg`, sibHead(kind), SIBLINGS[kind])
+}
+
+// Several pictures on one sheet, each in its own colours: every letter of
+// each is given a name of its own.
+function sheet(w, h) {
+  const c = new Canvas(w, h)
+  const pal = {}
+  const names = {}
+  let next = 0x3b1
+  const place = (rows, colours, x, y) => {
+    const rename = {}
+    for (const ch of new Set(rows.join(""))) {
+      if (ch === "." || ch === " " || !colours[ch]) continue
+      rename[ch] = names[colours[ch]] ??= String.fromCharCode(next++)
+      pal[rename[ch]] = colours[ch]
+    }
+    c.put(over(rows), x, y, rename)
+    return api
+  }
+  const api = { c, pal, place, save: (name) => c.save(name, pal) }
+  return api
+}
+// The six of them small, side by side: a strip the stylesheet shows one at
+// a time, so the bun among the ones at work is a different sibling each hop.
+{
+  const strip = sheet(90, 13)
+  strip.place(BUN_SMALL, LPP, 0, 0)
+  Object.keys(SIBLINGS).forEach((kind, i) => strip.place(sibSmall(kind), SIBLINGS[kind], 15 * (i + 1), 0))
+  strip.save("bunny-lpp-troupe.svg")
+  // And three of them in a row, for a page's foot.
+  sheet(49, 13).place(sibSmall("nian"), SIBLINGS.nian, 0, 0).place(sibSmall("xi"), SIBLINGS.xi, 17, 0).place(sibSmall("ling"), SIBLINGS.ling, 34, 0).save("bunny-lpp-three.svg")
+}
 
 // 小笼泡: the same dragons as soup buns in a bamboo steamer — cream, a knot
 // of pleats on top, a face let into the front, antlers. Two of them, after
@@ -557,8 +680,23 @@ const BAO = [
   "OdCCCmmmmmmmmCCCdO",
   ".OddCCCCCCCCCCddO.",
 ]
-const BAO_GOLD = { O: "#7a5a3a", C: "#f8edc9", c: "#fffbe6", d: "#e3d0a2", m: "#5d5856", a: "#d7b055", K: "#211a1c", E: "#f0641e" }
-const BAO_GREY = { O: "#7a5a3a", C: "#f8edc9", c: "#fffbe6", d: "#e3d0a2", m: "#cdc8c9", a: "#8b888c", K: "#211a1c", E: "#e2b23c" }
+// The seven of them, as the photograph of them all in one steamer shows:
+// each a face let into the cream, antlers in its own colour. (余 is the one
+// no doll was found for; it is known here only by being the seventh.)
+const BAO_BASE = { O: "#7a5a3a", C: "#f8edc9", c: "#fffbe6", d: "#e3d0a2", K: "#211a1c" }
+const BAOS = {
+  chongyue: { ...BAO_BASE, m: "#5d5856", a: "#d7b055", E: "#f0641e" },
+  wang: { ...BAO_BASE, m: "#cdc8c9", a: "#8b888c", E: "#e2b23c" },
+  nian: { ...BAO_BASE, m: "#f7f1ea", a: "#e2262d", E: "#b692e4", both: true },
+  xi: { ...BAO_BASE, m: "#2f3035", a: "#226876", E: "#f08a1c", both: true },
+  ling: { ...BAO_BASE, m: "#d3e3f4", a: "#5b84d8", E: "#b692e4", both: true },
+  shu: { ...BAO_BASE, m: "#fbf8f2", a: "#f4cb38", E: "#a5c9b3", both: true },
+  yu: { ...BAO_BASE, m: "#27304f", a: "#2b2a31", E: "#7fd6cf" },
+}
+const BAO_GOLD = BAOS.chongyue
+// Both eyes open, where the photograph has them so: the wink becomes a lid
+// and an eye under it.
+const bao = (kind) => (BAOS[kind].both ? BAO.map((row, y) => (y === 8 ? row.slice(0, 10) + "KKK" + row.slice(13) : y === 9 ? row.slice(0, 10) + "EEE" + row.slice(13) : y === 10 ? row.slice(0, 11) + "E" + row.slice(12) : row)) : BAO)
 // The steamer: a hoop of bamboo, a band round it.
 const STEAMER = [
   ".OOOOOOOOOOOOOOOOOOOOOO.",
@@ -585,8 +723,6 @@ function basket(colours) {
 {
   const gold = basket(BAO_GOLD)
   gold.c.save("bunny-bao.svg", gold.pal)
-  const grey = basket(BAO_GREY)
-  grey.c.save("bunny-bao-grey.svg", grey.pal)
 }
 
 // ── The game's own things, fifteen squares each ──────────────────────────
@@ -853,10 +989,7 @@ writeSprite("bunny-arrow-night.svg", ["OO.....OO", "OOO...OOO", ".OOO.OOO.", "..
 {
   const icon = () => new Canvas(15, 15)
   icon().put(over(head("plain")), 0, 6).put(over(["..C..", "..C..", "CCCCC", "..C..", "..C.."]), 10, 0, { C: "c" }).save("bunny-nav-new.svg", { ...VERSIONS.amiya, c: "#1596c9" })
-  const rename = Object.fromEntries(Object.keys(LPP).map((k, i) => [k, String.fromCharCode(0x3b1 + i)]))
-  const pal = { ...VERSIONS.amiya }
-  for (const [from, to] of Object.entries(rename)) pal[to] = LPP[from]
-  icon().put(over(BUN_HEAD), 6, 0, rename).put(over(head("plain")), 0, 6).save("bunny-nav-pair.svg", pal)
+  sheet(15, 15).place(sibHead("nian"), SIBLINGS.nian, 6, 0).place(head("plain"), VERSIONS.amiya, 0, 6).save("bunny-nav-pair.svg")
 }
 
 // ── The ground: a tactical grid ──────────────────────────────────────────
@@ -870,38 +1003,27 @@ writeSprite("bunny-arrow-night.svg", ["OO.....OO", "OOO...OOO", ".OOO.OOO.", "..
   grid.save("bunny-grid-night.svg", { a: "#2a3346", b: "#3b4963" })
 }
 
-// ── The steamers at the end of the sidebar's list ────────────────────────
-// (No rabbit here.) Two of the buns in their steamers, a stack of empty
-// ones, a crystal or two, standing on a strip of the deck's warning stripes.
-function nook() {
-  const c = new Canvas(130, 30)
-  const names = {}
-  const pal = { ...ITEM, ...WOOD, h: "#f6cf3a", H: "#2b2a31" }
-  let next = 0x3b1
-  const place = (rows, colours, x, y) => {
-    const rename = {}
-    for (const k of Object.keys(colours)) {
-      const id = `${colours[k]}`
-      rename[k] = names[id] ??= String.fromCharCode(next++)
-      pal[rename[k]] = colours[k]
-    }
-    c.put(over(rows), x, y, rename)
-  }
-  place(BAO, BAO_GOLD, 7, 3)
-  c.put(over(STEAMER), 4, 15)
-  place(BAO, BAO_GREY, 37, 3)
-  c.put(over(STEAMER), 34, 15)
-  c.put(over(STEAMER), 66, 15).put(over(STEAMER), 66, 8).put(over(STEAMER.slice(0, 4)), 66, 5)
-  c.put(over(ITEMS.orundum.slice(1, 14)), 94, 11, null).put(over(ITEMS.originite.slice(1, 14)), 111, 11)
-  // The deck's edge: yellow and black, on the slant.
-  c.fill((x, y) => y >= 25 && y < 29 && Math.floor((x + y) / 4) % 2 === 0, "h", (ch) => ch === ".")
-  c.fill((x, y) => y >= 25 && y < 29, "H", (ch) => ch === ".")
-  c.rect(0, 24, 130, 1, "H").rect(0, 29, 130, 1, "H")
-  return { c, pal }
+// ── The steamer at the end of the sidebar's list ─────────────────────────
+// (No rabbit here.) All seven buns in one wide steamer, three behind and
+// four in front, as in the photograph; a crystal and a block of 源石 beside
+// it; a strip of the deck's warning stripes under them.
+function steamer(w) {
+  const row = (ends, fill, mark) => ends[0] + Array.from({ length: w - 2 }, (_, i) => (mark && (i + 1) % 16 === 4 ? mark : fill)).join("") + ends[1]
+  return [row("..", "O"), row("OO", "w"), row("OO", "W"), row("OO", "O"), row("OO", "W", "u"), row("OO", "W", "u"), row("OO", "w", "u"), row("OO", "U"), row("..", "O")]
 }
 {
-  const n = nook()
-  n.c.save("bunny-nook.svg", n.pal)
+  const n = sheet(130, 40)
+  ;["yu", "xi", "ling"].forEach((kind, i) => n.place(bao(kind), BAOS[kind], 16 + i * 24, 0))
+  ;["nian", "shu", "chongyue", "wang"].forEach((kind, i) => n.place(bao(kind), BAOS[kind], 3 + i * 24, 8))
+  n.place(steamer(100), WOOD, 0, 21)
+  n.place(ITEMS.orundum.slice(1, 14), ITEM, 99, 17).place(ITEMS.originite.slice(1, 14), ITEM, 112, 17)
+  // The deck's edge: yellow and black, on the slant.
+  n.pal.h = "#f6cf3a"
+  n.pal.H = "#2b2a31"
+  n.c.fill((x, y) => y >= 34 && y < 38 && Math.floor((x + y) / 4) % 2 === 0, "h", (ch) => ch === ".")
+  n.c.fill((x, y) => y >= 34 && y < 38, "H", (ch) => ch === ".")
+  n.c.rect(0, 33, 130, 1, "H").rect(0, 38, 130, 1, "H")
+  n.save("bunny-nook.svg")
 }
 
 // ── Where no session is open: the deck ───────────────────────────────────

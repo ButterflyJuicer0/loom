@@ -3,10 +3,12 @@
    the brand's own photographs of it, and round it the game's own things.
    The doll sits: on the composer while you type, on the landship's deck
    where no session is open, five of them (each dressed as a different
-   operator) in a row where you sign in. Beside it 龙泡泡, the dragon bun of
-   the same plush line: an employee, one of the three that hop while the
-   agent works, an Agent's mark; and two of the buns in their bamboo
-   steamers at the end of the sidebar's list. A step's mark is the rabbit,
+   operator) in a row where you sign in. Beside it 龙泡泡, the dragon buns of
+   the same plush line — 黍, 年, 夕, 令, 重岳 and 望: employees, each a
+   different one; the one of the three that hop while the agent works, a
+   different sibling each time round; an Agent's mark; on the deck and at
+   the door with the rabbits; and all seven as buns in one bamboo steamer
+   at the end of the sidebar's list. A step's mark is the rabbit,
    turning while the step runs.
    Everything else is from the game: what a row of the sidebar opens and
    what a tool is are its things (作战记录, 技巧概要, 招聘许可, 寻访凭证, a
@@ -137,7 +139,7 @@ html[data-style="bunny"][data-theme] :is(img, video, canvas) {
 }
 
 /* A strip of frames behind a window one frame wide, slid a frame at a
-   time: two frames, or four. */
+   time: two frames, four, or six. */
 @keyframes bunny-strip-2 {
   to {
     translate: -50% 0;
@@ -147,6 +149,12 @@ html[data-style="bunny"][data-theme] :is(img, video, canvas) {
 @keyframes bunny-strip-4 {
   to {
     translate: -75% 0;
+  }
+}
+
+@keyframes bunny-strip-6 {
+  to {
+    translate: -83.333% 0;
   }
 }
 
@@ -201,9 +209,8 @@ html[data-style="bunny"][data-theme="light"] .sidebar {
   }
 }
 
-/* The steamers are the end of the list: two of the buns in theirs, a stack
-   of empty ones, a crystal and a block of 源石, on a strip of warning
-   stripes. They stand on the foot when the sessions leave room, and come
+/* The steamer is the end of the list: all seven of the buns in it, a
+   crystal and a block of 源石 beside it, on a strip of warning stripes. They stand on the foot when the sessions leave room, and come
    after the last of them when they do not — never over a title, never in a
    row's place. (No rabbit here.) */
 html[data-style="bunny"][data-theme] .sidebar .session-list {
@@ -223,10 +230,10 @@ html[data-style="bunny"][data-theme] .sidebar .session-list > * {
 html[data-style="bunny"][data-theme] .sidebar .session-list::after {
   content: "";
   flex: 0 0 auto;
-  height: 72px;
+  height: 92px;
   margin: auto -6px 0;
   background:
-    url("./art/bunny-nook.svg") left 6px bottom / 260px 60px no-repeat,
+    url("./art/bunny-nook.svg") left 2px bottom / 260px 80px no-repeat,
     var(--sb-hazard) left bottom 2px / 100% 8px no-repeat,
     linear-gradient(#2b2a31, #2b2a31) left bottom / 100% 12px no-repeat;
   pointer-events: none;
@@ -236,10 +243,10 @@ html[data-style="bunny"][data-theme] .sidebar .session-list::after {
   /* A phone's drawer has no foot, only the floating "New chat": the deck it
      floats over is the end of the list too. */
   html[data-style="bunny"][data-theme] .drawer .sidebar .session-list::after {
-    height: calc(150px + env(safe-area-inset-bottom, 0px));
+    height: calc(170px + env(safe-area-inset-bottom, 0px));
     margin: auto -12px 0;
     background:
-      url("./art/bunny-nook.svg") left 10px bottom calc(78px + env(safe-area-inset-bottom, 0px)) / 260px 60px no-repeat,
+      url("./art/bunny-nook.svg") left 10px bottom calc(78px + env(safe-area-inset-bottom, 0px)) / 260px 80px no-repeat,
       var(--sb-hazard) left bottom calc(80px + env(safe-area-inset-bottom, 0px)) / 100% 8px no-repeat,
       linear-gradient(#2b2a31, #2b2a31) left bottom calc(78px + env(safe-area-inset-bottom, 0px)) / 100% 12px no-repeat,
       linear-gradient(var(--sb-floor), var(--sb-floor)) left bottom / 100% calc(78px + env(safe-area-inset-bottom, 0px)) no-repeat;
@@ -975,7 +982,9 @@ html[data-style="bunny"][data-theme] .thinking.live > svg {
   animation: bunny-breathe 0.8s steps(2, jump-none) infinite;
 }
 
-/* Three of them in a row, hopping in turn: the rabbit, the bun, a rabbit. */
+/* Three of them in a row, hopping in turn: the rabbit, a bun, a rabbit.
+   The bun is each of the six siblings in turn — a strip of them behind a
+   window one wide, moved on a place every hop. */
 html[data-style="bunny"][data-theme] .working-dots {
   gap: 3px;
   height: 34px;
@@ -993,10 +1002,23 @@ html[data-style="bunny"][data-theme] .working-dots i {
 }
 
 html[data-style="bunny"][data-theme] .working-dots i:nth-child(2) {
+  position: relative;
+  overflow: hidden;
   width: 30px;
   height: 26px;
-  background: url("./art/bunny-lpp-small.svg") center / 30px 26px no-repeat;
+  background: none;
   animation-delay: 0.2s;
+}
+
+html[data-style="bunny"][data-theme] .working-dots i:nth-child(2)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 600%;
+  height: 100%;
+  background: url("./art/bunny-lpp-troupe.svg") 0 0 / 100% 100% no-repeat;
+  animation: bunny-strip-6 7.2s steps(6, jump-none) infinite;
 }
 
 html[data-style="bunny"][data-theme] .working-dots i:nth-child(3) {
@@ -1536,8 +1558,8 @@ html[data-style="bunny"][data-theme] .bell-p {
   box-shadow: inset 0 0 0 2px var(--sb-line);
 }
 
-/* The tasks page: its name on a label, the bun and a steamer under what is
-   planned. */
+/* The tasks page: its name on a label, three of the buns and a steamer
+   under what is planned. */
 html[data-style="bunny"][data-theme] .tasks-head h1 {
   padding: 0 0.7em 0 1.7em;
   background:
@@ -1566,11 +1588,11 @@ html[data-style="bunny"][data-theme] .tasks-section::before {
 html[data-style="bunny"][data-theme] .tasks-column::after {
   content: "";
   display: block;
-  width: 108px;
-  height: 44px;
+  width: 156px;
+  height: 42px;
   margin: 14px 12px 0 auto;
   background:
-    url("./art/bunny-lpp-half.svg") left bottom / 50px 44px no-repeat,
+    url("./art/bunny-lpp-three.svg") left bottom / 98px 26px no-repeat,
     url("./art/bunny-bao.svg") right bottom / 48px 42px no-repeat;
 }
 
@@ -1646,7 +1668,8 @@ html[data-style="bunny"][data-theme] .emp-bar {
   background: var(--background);
 }
 
-/* An employee is one of the dolls: the rabbits and the bun, in turn. */
+/* An employee is one of the dolls: a rabbit, a bun, a rabbit, a bun — the
+   five rabbits and the six siblings, each a different one, by its place. */
 html[data-style="bunny"][data-theme] .emp-avatar {
   border-radius: 6px;
   background: url("./art/bunny-head.svg") center / 18px 18px no-repeat var(--sb-blue-fill);
@@ -1654,24 +1677,48 @@ html[data-style="bunny"][data-theme] .emp-avatar {
   box-shadow: inset 0 0 0 2px var(--sb-line);
 }
 
-html[data-style="bunny"][data-theme] .emp-row:nth-child(6n + 2) .emp-avatar {
+html[data-style="bunny"][data-theme] .emp-row:nth-child(12n + 2) .emp-avatar {
   background-image: url("./art/bunny-lpp-head.svg");
 }
 
-html[data-style="bunny"][data-theme] .emp-row:nth-child(6n + 3) .emp-avatar {
+html[data-style="bunny"][data-theme] .emp-row:nth-child(12n + 3) .emp-avatar {
   background-image: url("./art/bunny-head-pink.svg");
 }
 
-html[data-style="bunny"][data-theme] .emp-row:nth-child(6n + 4) .emp-avatar {
+html[data-style="bunny"][data-theme] .emp-row:nth-child(12n + 4) .emp-avatar {
+  background-image: url("./art/bunny-lpp-nian-head.svg");
+}
+
+html[data-style="bunny"][data-theme] .emp-row:nth-child(12n + 5) .emp-avatar {
   background-image: url("./art/bunny-head-grey.svg");
 }
 
-html[data-style="bunny"][data-theme] .emp-row:nth-child(6n + 5) .emp-avatar {
+html[data-style="bunny"][data-theme] .emp-row:nth-child(12n + 6) .emp-avatar {
+  background-image: url("./art/bunny-lpp-xi-head.svg");
+}
+
+html[data-style="bunny"][data-theme] .emp-row:nth-child(12n + 7) .emp-avatar {
   background-image: url("./art/bunny-head-slate.svg");
 }
 
-html[data-style="bunny"][data-theme] .emp-row:nth-child(6n) .emp-avatar {
+html[data-style="bunny"][data-theme] .emp-row:nth-child(12n + 8) .emp-avatar {
+  background-image: url("./art/bunny-lpp-ling-head.svg");
+}
+
+html[data-style="bunny"][data-theme] .emp-row:nth-child(12n + 9) .emp-avatar {
   background-image: url("./art/bunny-head-king.svg");
+}
+
+html[data-style="bunny"][data-theme] .emp-row:nth-child(12n + 10) .emp-avatar {
+  background-image: url("./art/bunny-lpp-chongyue-head.svg");
+}
+
+html[data-style="bunny"][data-theme] .emp-row:nth-child(12n + 11) .emp-avatar {
+  background-image: url("./art/bunny-head-asleep.svg");
+}
+
+html[data-style="bunny"][data-theme] .emp-row:nth-child(12n) .emp-avatar {
+  background-image: url("./art/bunny-lpp-wang-head.svg");
 }
 
 /* How a KPI stands: crystals of 合成玉, ten of them. */
@@ -1732,7 +1779,7 @@ html[data-style="bunny"][data-theme] .switcher-card.active {
     0 3px 0 0 var(--sb-drop);
 }
 
-/* ── No session open: the deck — the rabbit and the bun on it ───────── */
+/* ── No session open: the deck — the rabbit between two of the buns ─── */
 
 html[data-style="bunny"][data-theme] .placeholder::before {
   content: "";
@@ -1742,14 +1789,14 @@ html[data-style="bunny"][data-theme] .placeholder::before {
   height: 224px;
   border: 2px solid var(--sb-line);
   border-radius: 8px;
-  /* The rabbit and the bun sit in the marked bay, a bun in its steamer
-     beside them, and breathe in turn. (All painted with the box, on whole
+  /* The rabbit sits in the marked bay, 年 on one side of it and 黍 on the
+     other, and they breathe in turn. (All painted with the box, on whole
      pixels; moved as layers of their own they would land between them and
      blur. A narrower screen crops the deck's sides.) */
   background:
-    url("./art/bunny-sit.svg") left calc(50% - 30px) top 80px / 92px 126px no-repeat,
-    url("./art/bunny-lpp.svg") left calc(50% + 58px) top 118px / 100px 88px no-repeat,
-    url("./art/bunny-bao-grey.svg") left calc(50% - 118px) top 164px / 48px 42px no-repeat,
+    url("./art/bunny-sit.svg") left 50% top 80px / 92px 126px no-repeat,
+    url("./art/bunny-lpp-nian.svg") left calc(50% - 92px) top 118px / 100px 88px no-repeat,
+    url("./art/bunny-lpp.svg") left calc(50% + 92px) top 118px / 100px 88px no-repeat,
     var(--sb-deck) center top / 360px 224px no-repeat;
   box-shadow: 0 4px 0 0 var(--sb-drop);
   animation: bunny-sit 1.8s steps(2, jump-none) infinite;
@@ -1758,9 +1805,9 @@ html[data-style="bunny"][data-theme] .placeholder::before {
 @keyframes bunny-sit {
   50% {
     background-position:
-      left calc(50% - 30px) top 78px,
-      left calc(50% + 58px) top 120px,
-      left calc(50% - 118px) top 164px,
+      left 50% top 78px,
+      left calc(50% - 92px) top 120px,
+      left calc(50% + 92px) top 120px,
       center top;
   }
 }
@@ -1793,8 +1840,8 @@ html[data-style="bunny"][data-theme] .loading::before {
   }
 }
 
-/* ── Signing in: five of them in a row on the deck, the bun and the
-      steamers beside them ─────────────────────────────────────────── */
+/* ── Signing in: the five rabbits in a row on the deck, three of the
+      buns to each side of them ────────────────────────────────────── */
 
 html[data-style="bunny"][data-theme] .login {
   position: relative;
@@ -1806,9 +1853,12 @@ html[data-style="bunny"][data-theme] .login {
     url("./art/bunny-sit-grey.svg") left calc(50% + 112px) bottom 34px / 92px 126px no-repeat,
     url("./art/bunny-sit-king.svg") left calc(50% - 224px) bottom 34px / 92px 126px no-repeat,
     url("./art/bunny-sit-slate.svg") left calc(50% + 224px) bottom 34px / 92px 126px no-repeat,
-    url("./art/bunny-lpp.svg") left calc(50% - 340px) bottom 34px / 100px 88px no-repeat,
-    url("./art/bunny-bao.svg") left calc(50% + 324px) bottom 34px / 48px 42px no-repeat,
-    url("./art/bunny-bao-grey.svg") left calc(50% + 376px) bottom 34px / 48px 42px no-repeat,
+    url("./art/bunny-lpp-nian.svg") left calc(50% - 332px) bottom 34px / 100px 88px no-repeat,
+    url("./art/bunny-lpp-xi.svg") left calc(50% - 440px) bottom 34px / 100px 88px no-repeat,
+    url("./art/bunny-lpp-chongyue.svg") left calc(50% - 548px) bottom 34px / 100px 88px no-repeat,
+    url("./art/bunny-lpp.svg") left calc(50% + 332px) bottom 34px / 100px 88px no-repeat,
+    url("./art/bunny-lpp-ling.svg") left calc(50% + 440px) bottom 34px / 100px 88px no-repeat,
+    url("./art/bunny-lpp-wang.svg") left calc(50% + 548px) bottom 34px / 100px 88px no-repeat,
     var(--sb-hazard) left bottom 56px / 100% 8px no-repeat,
     linear-gradient(#2b2a31, #2b2a31) left bottom 54px / 100% 12px no-repeat,
     linear-gradient(var(--sb-floor), var(--sb-floor)) left bottom / 100% 60px no-repeat,
@@ -1823,9 +1873,12 @@ html[data-style="bunny"][data-theme="dark"] .login {
     url("./art/bunny-sit-grey.svg") left calc(50% + 112px) bottom 34px / 92px 126px no-repeat,
     url("./art/bunny-sit-king.svg") left calc(50% - 224px) bottom 34px / 92px 126px no-repeat,
     url("./art/bunny-sit-slate.svg") left calc(50% + 224px) bottom 34px / 92px 126px no-repeat,
-    url("./art/bunny-lpp.svg") left calc(50% - 340px) bottom 34px / 100px 88px no-repeat,
-    url("./art/bunny-bao.svg") left calc(50% + 324px) bottom 34px / 48px 42px no-repeat,
-    url("./art/bunny-bao-grey.svg") left calc(50% + 376px) bottom 34px / 48px 42px no-repeat,
+    url("./art/bunny-lpp-nian.svg") left calc(50% - 332px) bottom 34px / 100px 88px no-repeat,
+    url("./art/bunny-lpp-xi.svg") left calc(50% - 440px) bottom 34px / 100px 88px no-repeat,
+    url("./art/bunny-lpp-chongyue.svg") left calc(50% - 548px) bottom 34px / 100px 88px no-repeat,
+    url("./art/bunny-lpp.svg") left calc(50% + 332px) bottom 34px / 100px 88px no-repeat,
+    url("./art/bunny-lpp-ling.svg") left calc(50% + 440px) bottom 34px / 100px 88px no-repeat,
+    url("./art/bunny-lpp-wang.svg") left calc(50% + 548px) bottom 34px / 100px 88px no-repeat,
     var(--sb-hazard) left bottom 56px / 100% 8px no-repeat,
     linear-gradient(#2b2a31, #2b2a31) left bottom 54px / 100% 12px no-repeat,
     linear-gradient(var(--sb-floor), var(--sb-floor)) left bottom / 100% 60px no-repeat,
@@ -1834,12 +1887,12 @@ html[data-style="bunny"][data-theme="dark"] .login {
 }
 
 @media (max-width: 640px) {
-  /* A phone has room for three: the rabbit between the bun and another. */
+  /* A phone has room for three: the rabbit between 年 and 黍. */
   html[data-style="bunny"][data-theme] .login {
     background:
       url("./art/bunny-sit.svg") left 50% bottom 34px / 92px 126px no-repeat,
-      url("./art/bunny-lpp.svg") left calc(50% - 112px) bottom 34px / 100px 88px no-repeat,
-      url("./art/bunny-sit-grey.svg") left calc(50% + 112px) bottom 34px / 92px 126px no-repeat,
+      url("./art/bunny-lpp-nian.svg") left calc(50% - 112px) bottom 34px / 100px 88px no-repeat,
+      url("./art/bunny-lpp.svg") left calc(50% + 112px) bottom 34px / 100px 88px no-repeat,
       var(--sb-hazard) left bottom 56px / 100% 8px no-repeat,
       linear-gradient(#2b2a31, #2b2a31) left bottom 54px / 100% 12px no-repeat,
       linear-gradient(var(--sb-floor), var(--sb-floor)) left bottom / 100% 60px no-repeat,
@@ -1850,8 +1903,8 @@ html[data-style="bunny"][data-theme="dark"] .login {
   html[data-style="bunny"][data-theme="dark"] .login {
     background:
       url("./art/bunny-sit.svg") left 50% bottom 34px / 92px 126px no-repeat,
-      url("./art/bunny-lpp.svg") left calc(50% - 112px) bottom 34px / 100px 88px no-repeat,
-      url("./art/bunny-sit-grey.svg") left calc(50% + 112px) bottom 34px / 92px 126px no-repeat,
+      url("./art/bunny-lpp-nian.svg") left calc(50% - 112px) bottom 34px / 100px 88px no-repeat,
+      url("./art/bunny-lpp.svg") left calc(50% + 112px) bottom 34px / 100px 88px no-repeat,
       var(--sb-hazard) left bottom 56px / 100% 8px no-repeat,
       linear-gradient(#2b2a31, #2b2a31) left bottom 54px / 100% 12px no-repeat,
       linear-gradient(var(--sb-floor), var(--sb-floor)) left bottom / 100% 60px no-repeat,
@@ -2054,6 +2107,7 @@ html[data-style="bunny"][data-theme] .spin {
   html[data-style="bunny"][data-theme] .tool-state > svg.spin,
   html[data-style="bunny"][data-theme] .thinking.live > svg,
   html[data-style="bunny"][data-theme] .working-dots i,
+  html[data-style="bunny"][data-theme] .working-dots i:nth-child(2)::before,
   html[data-style="bunny"][data-theme] .placeholder::before,
   html[data-style="bunny"][data-theme] .loading::before,
   html[data-style="bunny"][data-theme] .to-bottom {
