@@ -81,6 +81,9 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   of Loom's own leaves the sidebar too, into Loom's trash.
 
 ### Changed
+- **GPT-6.2 in the Codex model menu**: a Codex chat's model list now offers
+  GPT-6.2 Astra and GPT-6.2 Sol (`openai.gpt-6.2-astra`, `openai.gpt-6.2-sol`
+  on Bedrock), above the earlier ones.
 - **A theme's stylesheets load when it is chosen**: only the theme in use is
   fetched (the default look fetches none), instead of all nine up front —
   the page's own CSS is back to about 170 KB from 1.5 MB.
