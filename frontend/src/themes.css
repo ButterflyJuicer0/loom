@@ -178,7 +178,12 @@ html[data-style]:not([data-style="default"]) :is(.modal, .session-menu, .backend
 }
 
 /* Rows and buttons. */
-html[data-style]:not([data-style="default"]) :is(.nav-item, .sidebar .session, .project-row, .proj-session, .session-menu button, .backend-menu button, .command-menu li, .pane-menu button, .plus-pop button, .search-row, .text-btn, .chip, .option, .emp-row, .settings-back) {
+/* One selector to a line, never `:is(.a, .b .c)`: `:is()` weighs as much as
+   its heaviest argument, and would then outweigh a theme's own `.a` rule. */
+html[data-style]:not([data-style="default"]) :is(.nav-item, .project-row, .proj-session, .search-row, .text-btn, .chip, .option, .emp-row, .settings-back),
+html[data-style]:not([data-style="default"]) .sidebar .session,
+html[data-style]:not([data-style="default"]) :is(.session-menu, .backend-menu, .pane-menu, .plus-pop) button,
+html[data-style]:not([data-style="default"]) .command-menu li {
   border-radius: var(--r-sm);
 }
 
@@ -186,7 +191,8 @@ html[data-style]:not([data-style="default"]) :is(.icon-btn, .session-del, .pane-
   border-radius: var(--r-xs);
 }
 
-html[data-style]:not([data-style="default"]) :is(.segmented, .segmented button, .composer-btn, .new-chat, .new-chat-more, .jump-btn, .tag) {
+html[data-style]:not([data-style="default"]) :is(.segmented, .composer-btn, .new-chat, .new-chat-more, .jump-btn, .tag),
+html[data-style]:not([data-style="default"]) .segmented button {
   border-radius: var(--pill);
 }
 
@@ -202,7 +208,8 @@ html[data-style]:not([data-style="default"]) .bubble.user {
   color: var(--secondary-foreground);
 }
 
-html[data-style]:not([data-style="default"]) :is(pre.code, .tool, .file-card, .question, .error, .queue-panel, .install-box, .focus-mark + *) {
+html[data-style]:not([data-style="default"]) :is(.tool, .file-card, .question, .error, .queue-panel, .install-box, .focus-mark + *),
+html[data-style]:not([data-style="default"]) pre.code {
   border-radius: var(--r-md);
 }
 
