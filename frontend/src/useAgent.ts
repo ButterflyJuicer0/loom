@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import type { Channel } from "phoenix"
 import { getSocket } from "./socket"
 import { t } from "./i18n"
-import { attachmentUrl, seedBlobUrl, uploadAgentFiles, whenCreated, whenMade } from "./api"
+import { attachmentUrl, seedBlobUrl, uploadAgentFiles, whenCreated, whenMade, type BtwMessage } from "./api"
 import type { LocalFile } from "./useAttachments"
 import {
   addPending,
@@ -121,9 +121,13 @@ export function useAgent(
   // so a reaction to it (opening the canvas) fires once, on the device that
   // was watching, and not again on every reload.
   onLiveEvent?: (event: AgentEvent) => void,
+  // The session's side questions, as the channel tells them; see `useBtw`.
+  onBtw?: (message: BtwMessage) => void,
 ): Agent {
   const onLiveRef = useRef(onLiveEvent)
   onLiveRef.current = onLiveEvent
+  const onBtwRef = useRef(onBtw)
+  onBtwRef.current = onBtw
   // Straight from the cache on the first render, so there is no empty frame.
   const [transcript, setTranscript] = useState<Transcript>(() =>
     sessionId ? withUnsent(cache.get(sessionId) ?? emptyTranscript, sessionId) : emptyTranscript,
@@ -201,6 +205,10 @@ export function useAgent(
 
       channel.on("draft", ({ text }: { text: string }) => {
         if (current()) setDraft({ id: sessionId, text })
+      })
+
+      channel.on("btw", (message: BtwMessage) => {
+        if (current()) onBtwRef.current?.(message)
       })
 
       channel

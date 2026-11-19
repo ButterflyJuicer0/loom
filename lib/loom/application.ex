@@ -34,6 +34,10 @@ defmodule Loom.Application do
        max_restarts: 20,
        max_seconds: 5},
       {Task.Supervisor, name: Loom.Agent.TaskSupervisor},
+      # Side questions (`Loom.Agent.Btw`): one worker per session at a time,
+      # each gone with its answer, so nothing here is restarted.
+      {Registry, keys: :unique, name: Loom.Agent.BtwRegistry},
+      {DynamicSupervisor, strategy: :one_for_one, name: Loom.Agent.BtwSupervisor},
       # Owns the one shared `codex app-server` for the whole node and keeps it
       # running. It respawns the OS process itself, with backoff, rather than
       # dying and being restarted here — a `codex` that fails immediately

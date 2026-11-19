@@ -504,6 +504,49 @@ export function putDraft(id: string, text: string, keepalive = false): Promise<{
   return apiCall(`/api/agents/${id}/draft`, { method: "PUT", body: JSON.stringify({ text }), keepalive })
 }
 
+// ── BTW: side questions (see Loom.Agent.Btw) ──────────────────────────────
+
+/**
+ * One question asked on the side of a session and what a copy of its
+ * conversation answered. `seq` is on one still being answered: how many
+ * chunks of the answer `answer` already holds.
+ */
+export type BtwItem = {
+  id: string
+  question: string
+  answer: string
+  status: "answering" | "done" | "error" | "stopped"
+  error: string | null
+  at: number
+  seq?: number
+}
+
+/** What the session's channel says about them: the list, or the next chunk of an answer. */
+export type BtwMessage =
+  | { type: "items"; items: BtwItem[] }
+  | { type: "text"; id: string; seq: number; text: string }
+
+/** Whether a session's agent can be asked on the side: Kiro's conversation cannot be copied. */
+export const canBtw = (backend: AgentBackend) => backend === "claude_code" || backend === "codex"
+
+export async function listBtw(id: string): Promise<BtwItem[]> {
+  return (await apiCall<{ items: BtwItem[] }>(`/api/agents/${id}/btw`, { method: "GET" })).items
+}
+
+/** Ask; the answer arrives on the session's channel. */
+export async function askBtw(id: string, text: string): Promise<BtwItem[]> {
+  return (await apiCall<{ items: BtwItem[] }>(`/api/agents/${id}/btw`, { method: "POST", body: JSON.stringify({ text }) })).items
+}
+
+/** Stop the answer under way; what it had said stays. */
+export async function stopBtw(id: string): Promise<BtwItem[]> {
+  return (await apiCall<{ items: BtwItem[] }>(`/api/agents/${id}/btw/stop`, { method: "POST" })).items
+}
+
+export async function clearBtw(id: string): Promise<void> {
+  await apiCall(`/api/agents/${id}/btw`, { method: "DELETE" })
+}
+
 // Permanent: the server discards the session's history too, otherwise it would
 // reappear at the next boot when Bootstrap restores everything on disk.
 export async function deleteAgent(id: string): Promise<void> {

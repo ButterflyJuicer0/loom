@@ -120,6 +120,10 @@ export default {
   "Stopped — type to continue": "已停止，输入消息继续",
   "Message the agent…": "发送消息…",
   "Stop the turn": "停止本轮",
+  // BTW, from the composer.
+  "ask on the side — the turn carries on, the conversation is left as it is": "顺便问一句：不打断当前任务，也不进入对话",
+  "A side question is being answered": "上一个顺便问还在回答中",
+  "Ask on the side instead — the turn carries on": "改为顺便问：不打断当前任务",
   "Preparing…": "准备中…",
   Continue: "继续",
   "Send — it reaches the agent mid-turn": "发送（智能体会在本轮进行中收到）",

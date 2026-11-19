@@ -15,6 +15,7 @@ import {
   Inbox,
   Merge,
   LoaderCircle,
+  MessageCircleQuestion,
   MessageSquare,
   Mic,
   Paperclip,
@@ -51,6 +52,8 @@ import { MeetingBar, MeetingDialog, useMeeting } from "./Meeting"
 import { openMeeting, stopMeeting } from "./meeting"
 import { createPortal } from "react-dom"
 import { EffortButton } from "./Effort"
+import { BtwButton, BtwPanel } from "./Btw"
+import { useBtw } from "./useBtw"
 import { ModelList, modelLabel } from "./Model"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./components/ui/tooltip"
 import { Card as NoticeCard } from "./Notices"
@@ -89,6 +92,7 @@ import {
 import {
   attachmentUrl,
   blobUrl,
+  canBtw,
   isThumbnail,
   downloadAgentOutput,
   downloadAgentZip,
@@ -190,6 +194,25 @@ export function Chat({
   recent,
   onOpenSession,
 }: Props) {
+  // BTW: questions asked of a copy of the conversation, beside the turn.
+  const btwOn = canBtw(session.backend)
+  const btw = useBtw(session.id, btwOn)
+  const [btwOpen, setBtwOpen] = useState(false)
+  // The panel's own input; a question that could not be asked comes back to it.
+  const [btwText, setBtwText] = useState("")
+  // Opened by a question already on its way, not to type in.
+  const [btwAsked, setBtwAsked] = useState(false)
+  useEffect(() => {
+    setBtwOpen(false)
+    setBtwText("")
+  }, [session.id])
+  const askOnSide = (text: string) => {
+    setBtwText("")
+    void btw.ask(text).then((asked) => {
+      if (!asked) setBtwText((now) => now || text)
+    })
+  }
+
   const { transcript, joinError, submit, resend, discard, interrupt, dropQueued, steerQueued, rename, draft: remoteDraft } = useAgent(
     session.id,
     (event) => {
@@ -205,6 +228,7 @@ export function Chat({
         if (item) onOpenCanvas(item)
       }
     },
+    btw.feed,
   )
   const busy = isBusy(transcript)
   const thread = earlier ?? session.earlier ?? []
@@ -443,6 +467,20 @@ export function Chat({
         )}
 
         <div className="dock" ref={dockRef} hidden={sharing}>
+        {btwOn && btwOpen && (
+          <BtwPanel
+            items={btw.items}
+            answering={btw.answering}
+            error={btw.error}
+            text={btwText}
+            setText={setBtwText}
+            focus={!btwAsked}
+            onAsk={askOnSide}
+            onStop={btw.stop}
+            onClear={btw.clear}
+            onClose={() => setBtwOpen(false)}
+          />
+        )}
         {transcript.queue.length > 0 && (
           <QueuePanel
             messages={transcript.queue}
@@ -463,7 +501,35 @@ export function Chat({
           recent={(recent ?? []).filter((s) => s.id !== session.id && s.kind == null)}
           onSubmit={send}
           onInterrupt={interrupt}
-          tools={<EffortButton session={session} />}
+          btw={
+            btwOn
+              ? {
+                  answering: btw.answering,
+                  onAsk: (text) => {
+                    // The bare command opens the panel to type in.
+                    setBtwAsked(text !== "")
+                    setBtwOpen(true)
+                    if (text) askOnSide(text)
+                  },
+                }
+              : undefined
+          }
+          tools={
+            <>
+              <EffortButton session={session} />
+              {btwOn && (
+                <BtwButton
+                  open={btwOpen}
+                  count={btw.items.length}
+                  answering={btw.answering}
+                  onToggle={() => {
+                    setBtwAsked(false)
+                    setBtwOpen((open) => !open)
+                  }}
+                />
+              )}
+            </>
+          }
           text={draft}
           setText={setDraft}
           under={onSwitch && <Grabber onOpen={onSwitch} />}
@@ -2262,18 +2328,29 @@ function TwoLines() {
 // ── Composer ───────────────────────────────────────────────────────────────
 
 // What a message can be instead of a prompt. `/compact` goes to the backend
-// (Codex's adapter turns it into an RPC); `/reload` and `/cron` are loom's own.
+// (Codex's adapter turns it into an RPC); `/reload` and `/cron` are loom's own,
+// and `/btw` never leaves the page as a message: what follows it is asked on
+// the side (`Loom.Agent.Btw`).
+const BTW = "/btw"
 const COMMANDS = [
   { name: "/compact", hint: t("summarize the conversation to free up context") },
   { name: "/reload", hint: t("reload Claude Code and Codex config: settings, MCP, skills") },
   { name: "/cron", hint: t("list every scheduled job") },
+  { name: BTW, hint: t("ask on the side — the turn carries on, the conversation is left as it is") },
 ]
 
 // Only a message that *starts* with `/` is a command, and only while the first
 // word is still being typed: a `/` later on is just text.
-function commandMatches(text: string) {
+function commandMatches(text: string, btw: boolean) {
   if (!text.startsWith("/") || /\s/.test(text)) return []
-  return COMMANDS.filter((c) => c.name.startsWith(text))
+  return COMMANDS.filter((c) => c.name.startsWith(text) && (btw || c.name !== BTW))
+}
+
+// `/btw` and what follows it: the question, "" for the bare command, or null
+// for any other text.
+function sideQuestion(text: string): string | null {
+  const m = /^\/btw(?:\s+([\s\S]*))?$/.exec(text.trim())
+  return m ? (m[1] ?? "").trim() : null
 }
 
 function Composer({
@@ -2285,6 +2362,7 @@ function Composer({
   recent,
   onSubmit,
   onInterrupt,
+  btw,
   tools,
   text,
   setText,
@@ -2298,7 +2376,10 @@ function Composer({
   recent: AgentInfo[]
   onSubmit: (text: string) => void
   onInterrupt: () => void
-  // Beside +: the thinking level.
+  // Side questions, where the session's agent can be asked them: `onAsk`
+  // opens the panel, and asks `text` if there is any.
+  btw?: { answering: boolean; onAsk: (text: string) => void }
+  // Beside +: the thinking level, and the side questions.
   tools?: ReactNode
   // Held by the chat, so the suggested replies can fill it in.
   text: string
@@ -2316,7 +2397,7 @@ function Composer({
   // Escape dismisses it (typing anything brings it back).
   const [pick, setPick] = useState(0)
   const [dismissed, setDismissed] = useState<string | null>(null)
-  const matches = dismissed === text ? [] : commandMatches(text)
+  const matches = dismissed === text ? [] : commandMatches(text, btw != null)
   const selected = matches[Math.min(pick, matches.length - 1)]
   const complete = (name: string) => {
     setText(name)
@@ -2370,9 +2451,16 @@ function Composer({
 
   const send = () => {
     if (!sendable) return
-    onSubmit(text.trim())
+    // `/btw …` is asked on the side; attachments stay for the next message.
+    const side = btw ? sideQuestion(text) : null
+    if (side !== null) btw!.onAsk(side)
+    else onSubmit(text.trim())
     setText("")
   }
+
+  // The text as it is, asked on the side instead of sent: offered while a turn
+  // runs, when sending would queue it or steer the turn.
+  const askable = btw != null && busy && text.trim() !== "" && sideQuestion(text) === null
 
   return (
     <div className="composer">
@@ -2528,6 +2616,23 @@ function Composer({
               title={t("Stop the turn")}
             >
               <Square fill="currentColor" />
+            </button>
+          )}
+          {askable && (
+            <button
+              className="composer-btn btw-send"
+              disabled={btw!.answering}
+              title={
+                btw!.answering
+                  ? t("A side question is being answered")
+                  : t("Ask on the side instead — the turn carries on")
+              }
+              onClick={() => {
+                btw!.onAsk(text.trim())
+                setText("")
+              }}
+            >
+              <MessageCircleQuestion />
             </button>
           )}
           {/* While the agent works, an empty box has nothing to send and the

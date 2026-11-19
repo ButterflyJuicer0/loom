@@ -96,6 +96,11 @@ See the [changelog](CHANGELOG.md) for what came in which version.
   composer and goes out as the next turn, as in Claude Code — several at once
   go together. **Send now** puts them into the running turn instead; ✕ drops
   one.
+- **Ask on the side while it works (BTW).** The question-mark bubble in the
+  composer, or `/btw <question>`, asks a copy of the conversation as it
+  stands — "what is it doing now?", "why that file?" — and shows the answer
+  in a panel. The turn is not interrupted or steered, and none of it joins
+  the conversation. Claude Code and Codex.
 - **Turns survive restarts.** A Claude Code or Kiro turn keeps running while
   Loom is down, even after a crash, and is picked up where it was. Only a
   Codex turn is waited for before a restart.

@@ -70,6 +70,30 @@ Some features are told only in the skill that uses them and in
   and `Tip` (desktop), `PaneMenu` (phone) in `frontend/src/Chat.tsx`; the
   tip is shadcn/ui's `components/ui/tooltip.tsx`, styled `.head-tip` in
   `theme.css`.
+- **BTW: a question on the side, while the agent works.** In a chat's
+  composer, the speech-bubble-with-a-question-mark button beside the thinking
+  level opens a small panel above the composer with an input of its own;
+  `/btw <question>` typed in the composer does the same, and while a turn is
+  running a second button appears beside send that asks the typed text on the
+  side instead of sending it. The question goes to a *copy* of the
+  conversation as it stands that moment — the turn under way included — which
+  answers once in the panel and is thrown away. The turn carries on: it is
+  not interrupted or steered, nothing is queued, and neither the question nor
+  the answer joins the conversation (the agent never knows it was asked).
+  Each question is a fresh copy, so a later one sees how far the work has got
+  by then; the earlier questions in the panel go along with it. Limits: Claude
+  Code and Codex sessions only (Kiro's conversation cannot be copied, so the
+  button is not there); one answer at a time per session; the copy cannot
+  act — in Claude Code every tool call is refused, in Codex it is read-only —
+  so it answers from the conversation and what the model knows, and a
+  question that needs something run or looked up belongs in the chat; no
+  attachments; the panel's list is kept with the session (`btw.json` in its
+  directory, 40 items) and shown on every device, until cleared with the
+  bin. It costs a model call each time, read mostly from the session's prompt
+  cache, and is not counted in the session's cost. Code: `Loom.Agent.Btw`
+  and `Loom.Agent.Btw.Worker`, `fork_spec/1` in each backend,
+  `/api/agents/:id/btw`; `frontend/src/Btw.tsx`, `useBtw.ts`; measurements in
+  `docs/backends.md` §6.15.
 - **Language of the interface.** Settings → Language: 中文 or English, per
   device (localStorage), Chinese by default; changing it reloads the page.
   Only the interface is translated — titles, replies and notices show as they

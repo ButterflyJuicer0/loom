@@ -102,6 +102,16 @@ defmodule Loom.Agent.Codex.Server do
     GenServer.call(__MODULE__, {:resume_thread, self(), thread_id, opts}, @start_timeout)
   end
 
+  @doc """
+  Copy a thread as it stands — mid-turn included — and claim the copy for the
+  calling process: a side question's (`Loom.Agent.Btw`). The copy is
+  `ephemeral`, so nothing of it is written to disk, and read-only: it can
+  look, and cannot change what the thread's own turn is working on.
+  """
+  def fork_thread(thread_id, opts \\ []) do
+    GenServer.call(__MODULE__, {:fork_thread, self(), thread_id, opts}, @start_timeout)
+  end
+
   @doc "Start a turn. Returns the turn id, which `interrupt/2` needs."
   def start_turn(thread_id, text, opts \\ []) do
     GenServer.call(__MODULE__, {:start_turn, thread_id, text, opts}, @call_timeout)
@@ -303,6 +313,21 @@ defmodule Loom.Agent.Codex.Server do
 
     {:noreply,
      send_request(state, "thread/resume", params, {:claim_resume, from, owner, thread_id, params})}
+  end
+
+  def handle_call({:fork_thread, owner, thread_id, opts}, from, state) do
+    params =
+      %{
+        "threadId" => thread_id,
+        "ephemeral" => true,
+        "excludeTurns" => true,
+        "sandbox" => "read-only",
+        "approvalPolicy" => "never"
+      }
+      |> maybe_put("cwd", opts[:cwd])
+      |> maybe_put("model", opts[:model])
+
+    {:noreply, send_request(state, "thread/fork", params, {:claim, from, owner})}
   end
 
   # Not claimed here: the app-server was restarted since this thread was

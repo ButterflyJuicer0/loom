@@ -181,6 +181,25 @@ defmodule Loom.Agent.Backend.Codex do
     }
   end
 
+  # A side question (`Loom.Agent.Btw`): `thread/fork` on the shared app-server,
+  # ephemeral and read-only. Measured on 0.170.0, forked 4 s into a turn that
+  # was waiting on `sleep 30`: the copy answered in 1.2 s knowing what the
+  # turn was doing, 13,350 of its 13,467 input tokens from the cache, and the
+  # turn finished as if nothing had happened.
+  @impl Backend
+  def fork_spec(%{thread_id: id} = handle) when is_binary(id) do
+    {:ok,
+     %{
+       engine: :codex,
+       thread_id: id,
+       cwd: cwd(handle),
+       effort: Map.get(handle, :effort),
+       model: Map.get(handle, :model) || configured_model()
+     }}
+  end
+
+  def fork_spec(_handle), do: {:error, "no codex thread"}
+
   @impl Backend
   def set_effort(handle, effort), do: Map.put(handle, :effort, effort)
 

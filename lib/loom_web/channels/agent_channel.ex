@@ -10,6 +10,7 @@ defmodule LoomWeb.AgentChannel do
 
   Server → client:
     - "event" : one transcript event, `%{seq:, at:, kind:, payload:}`
+    - "btw"   : the side questions' list, or a chunk of an answer (`Loom.Agent.Btw`)
 
   Join replies with everything after the client's `since_seq`, so a phone
   opening cold passes 0 and gets the transcript, while a laptop reconnecting
@@ -121,6 +122,12 @@ defmodule LoomWeb.AgentChannel do
   # The composer's draft, written from some device; see `Loom.Agent.Draft`.
   def handle_info({:agent_draft, _id, draft}, socket) do
     push(socket, "draft", draft)
+    {:noreply, socket}
+  end
+
+  # A side question's list, or a chunk of its answer; see `Loom.Agent.Btw`.
+  def handle_info({:agent_btw, _id, payload}, socket) do
+    push(socket, "btw", payload)
     {:noreply, socket}
   end
 

@@ -270,7 +270,28 @@ defmodule Loom.Agent.Backend do
   """
   @callback warm(handle) :: {:ok, handle} | {:error, term()}
 
-  @optional_callbacks detach: 1, adopt: 1, checkpoint: 1, set_effort: 2, set_model: 2, warm: 1
+  @doc """
+  What it takes to ask this conversation a side question without touching it
+  (`Loom.Agent.Btw`): a copy that answers once and is thrown away, made while
+  a turn may be running. The map is read by `Loom.Agent.Btw.Worker`, by its
+  `:engine`:
+
+    * `:claude_code` — `:exe`, `:args`, `:cwd`: a one-off `claude -p` that
+      forks the conversation and keeps nothing;
+    * `:codex` — `:thread_id`, `:cwd`, `:model`, `:effort`: the thread to
+      fork on the shared app-server.
+
+  A backend without it (Kiro, whose ACP has no fork) has no side questions.
+  """
+  @callback fork_spec(handle) :: {:ok, map()} | {:error, term()}
+
+  @optional_callbacks detach: 1,
+                      adopt: 1,
+                      checkpoint: 1,
+                      set_effort: 2,
+                      set_model: 2,
+                      warm: 1,
+                      fork_spec: 1
 
   @doc """
   The thinking levels a backend takes, lowest first; empty for one that has
@@ -306,6 +327,22 @@ defmodule Loom.Agent.Backend do
     if Code.ensure_loaded?(module) and function_exported?(module, :set_model, 2),
       do: module.set_model(handle, model),
       else: handle
+  end
+
+  @doc "`fork_spec/1`, for a backend that has it; `{:error, :unsupported}` otherwise."
+  def fork_spec(kind, handle) do
+    module = impl(kind)
+
+    if Code.ensure_loaded?(module) and function_exported?(module, :fork_spec, 1),
+      do: module.fork_spec(handle),
+      else: {:error, :unsupported}
+  end
+
+  @doc "Whether a session on `kind` can be asked a side question (`Loom.Agent.Btw`)."
+  @spec forkable?(kind) :: boolean()
+  def forkable?(kind) do
+    module = impl(kind)
+    Code.ensure_loaded?(module) and function_exported?(module, :fork_spec, 1)
   end
 
   @doc "Whether a session on `kind` keeps its turn running through a restart."

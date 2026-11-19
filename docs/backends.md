@@ -300,6 +300,40 @@ kept warm, released when idle.
   both run on a FIFO and a file instead of a port (`Loom.Agent.Proc`), and their
   turns carry on through a restart ([architecture.md §2.3](architecture.md)).
 
+### 6.15 BTW: copying a conversation mid-turn
+
+A side question (`Loom.Agent.Btw`) is answered by a copy of the conversation
+made while its turn may be running. Both backends can make one, and neither
+turn notices. Kiro's ACP has no fork.
+
+- **CC** (2.1.317): `claude -p --resume <uuid> --fork-session
+  --no-session-persistence`, the question on stdin as text. Forked while a
+  tool call of the turn was still running — the transcript then ends in a
+  `tool_use` with no result — it answered, correctly, what the turn was in
+  the middle of. Nothing is written: no new `.jsonl`, no line added to the
+  session's own.
+- **The command line has to be the session's own, flag for flag.** The copy's
+  request then starts with the same tools, system prompt and messages, and is
+  read from the prompt cache the session has been writing. Measured on a
+  154K-token conversation: 154,175 tokens read from the cache, 1,304 written,
+  `init` at 1.2 s, first word at 6.8 s, $0.047. Anything that changes the
+  tool list (`--tools ""`, `--disallowedTools`) or the system prompt puts the
+  whole conversation outside the cache.
+- **So tools are refused, not removed**: a `PreToolUse` hook given through
+  `--settings` that exits 2. It holds under `bypassPermissions` (measured: a
+  `Read` the model was told to try came back as a hook error, and the model
+  said so in its answer).
+- **Codex** (0.170.0): `thread/fork` with `ephemeral: true`, `sandbox:
+  "read-only"`, `approvalPolicy: "never"`. Forked 4 s into a turn waiting on
+  `sleep 30`: the copy answered in 1.2 s, 13,350 of 13,467 input tokens
+  cached, and the turn completed as usual. `lastTurnId` is not given — it
+  "cannot be in progress" — so the fork takes the turn as far as it has got.
+  An ephemeral thread cannot be deleted ("not persisted"); `thread/unsubscribe`
+  lets it go.
+- A port's child leads a process group of its own, so stopping an answer
+  kills the tree as it was found and then the group: a `claude` that is
+  still starting spawns its MCP servers after the tree was looked at.
+
 ## 7. Not done: permission prompts
 
 Codex has proper approval requests. CC auto-denies under

@@ -1,0 +1,215 @@
+/* ── BTW: side questions ─────────────────────────────────────────────────
+   A card in the dock, above the queue and the composer, in the conversation's
+   own column. Dashed, so it reads as beside the conversation, not part of it. */
+
+.btw-panel {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: calc(100% - 28px);
+  max-width: var(--measure);
+  margin: 0 auto 6px;
+  box-sizing: border-box;
+  padding: 8px 10px 8px 14px;
+  border: 1px dashed color-mix(in srgb, var(--fg-dim) 55%, var(--line));
+  border-radius: 1rem;
+  background: var(--bg-raised);
+  font-family: var(--ui);
+}
+
+.btw-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--fg-dim);
+  font-size: 0.846rem;
+}
+
+.btw-head > svg {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+}
+
+.btw-title {
+  flex: 0 0 auto;
+  color: var(--fg);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.btw-hint {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btw-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.btw-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.btw-icon:hover {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg);
+}
+
+/* What was asked and answered: its own scroll, so a long answer does not push
+   the conversation off the screen. */
+.btw-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: min(42vh, 26rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 4px 2px 0;
+}
+
+.btw-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.btw-q {
+  align-self: flex-start;
+  max-width: 100%;
+  padding-left: 8px;
+  border-left: 2px solid var(--loom-accent, var(--blue));
+  /* Quieter than the answer, and still read on a theme's darker card. */
+  color: color-mix(in srgb, var(--fg) 70%, var(--bg-raised));
+  font-size: 0.923rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.btw-a {
+  min-width: 0;
+  color: var(--fg);
+  font-size: 0.962rem;
+  overflow-wrap: anywhere;
+}
+
+.btw-note {
+  color: var(--fg-dim);
+  font-size: 0.846rem;
+}
+
+.btw-note.error {
+  color: var(--red);
+  overflow-wrap: anywhere;
+}
+
+.btw-ask {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.btw-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  resize: none;
+  margin: 0;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 1.1rem;
+  background: var(--bg-card);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 1rem;
+  line-height: 1.5;
+  outline: none;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.btw-input:focus {
+  border-color: var(--blue);
+}
+
+.btw-input::placeholder {
+  color: var(--fg-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The composer's own: beside the thinking level. */
+.composer-btn.btw-btn {
+  position: relative;
+}
+
+.composer-btn.btw-btn:hover,
+.composer-btn.btw-btn.set,
+.composer-btn.btw-btn.open {
+  color: var(--fg);
+}
+
+.composer-btn.btw-btn.open {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+.btw-btn-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--loom-accent, var(--blue));
+  animation: working-pulse 1.2s ease-in-out infinite;
+}
+
+/* Beside send while the agent works: the typed text asked on the side. */
+.composer-btn.btw-send {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg);
+}
+
+.composer-btn.btw-send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .btw-hint {
+    display: none;
+  }
+
+  .btw-title {
+    flex: 1 1 auto;
+  }
+
+  .btw-list {
+    max-height: 36vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btw-btn-dot {
+    animation: none;
+  }
+}

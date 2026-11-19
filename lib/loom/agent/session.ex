@@ -295,6 +295,13 @@ defmodule Loom.Agent.Session do
   @doc "The `seq` of the message that started the latest turn, or nil."
   def turn_seq(id), do: GenServer.call(via(id), :turn_seq)
 
+  @doc """
+  What a side question needs to copy this session's conversation as it stands,
+  mid-turn or not (`Loom.Agent.Btw`): `{:ok, spec}`, or `{:error, reason}` on
+  a backend that cannot be copied. Nothing about the session changes.
+  """
+  def fork_spec(id), do: GenServer.call(via(id), :fork_spec)
+
   def topic(id), do: "agent:#{id}"
   def via(id), do: {:via, Registry, {Loom.Agent.Registry, id}}
 
@@ -953,6 +960,12 @@ defmodule Loom.Agent.Session do
   end
 
   def handle_call(:info, _from, state), do: {:reply, meta(state), state}
+
+  def handle_call(:fork_spec, _from, %{handle: nil} = state),
+    do: {:reply, {:error, "the session has no conversation yet"}, state}
+
+  def handle_call(:fork_spec, _from, state),
+    do: {:reply, Backend.fork_spec(state.backend, state.handle), state}
 
   def handle_call(:turn_seq, _from, state),
     do: {:reply, Enum.find_value(state.transcript, &(&1.kind == :user && &1.seq)), state}

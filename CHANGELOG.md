@@ -17,6 +17,15 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **BTW — ask on the side while the agent works**: a button beside the
+  thinking level (or `/btw <question>`, or the second button beside send
+  while a turn runs) puts a question to a copy of the conversation as it
+  stands, turn under way included. The answer shows in a panel above the
+  composer; the turn is neither interrupted nor steered, and nothing of it
+  joins the conversation. Each question is a fresh copy, so a later one sees
+  the progress since. Claude Code and Codex sessions; the copy cannot act
+  (tool calls refused / read-only), and its request is read from the
+  session's prompt cache.
 - **The interface in Chinese**: Settings → Language switches every menu,
   dialog, tooltip and hint between 中文 and English, per device; Chinese is
   the default. What an agent writes, and what is sent to one, is untouched.

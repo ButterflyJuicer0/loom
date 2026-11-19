@@ -261,6 +261,18 @@ defmodule LoomWeb.AgentChannelTest do
       assert_push "delta", %{block_id: "t1", type: :tool_output, chunk: "compiling...\n"}
     end
 
+    test "a side question's list and its answer's chunks reach the client", %{id: id} do
+      {:ok, _snapshot, _socket} = attach(id)
+
+      Phoenix.PubSub.broadcast(
+        Loom.PubSub,
+        Agent.topic(id),
+        {:agent_btw, id, %{type: "text", id: "b_1", seq: 1, text: "Hel"}}
+      )
+
+      assert_push "btw", %{type: "text", id: "b_1", seq: 1, text: "Hel"}
+    end
+
     test "two devices both see every status transition", %{id: id} do
       {:ok, _s1, _one} = attach(id)
       Phoenix.PubSub.subscribe(Loom.PubSub, Agent.topic(id))

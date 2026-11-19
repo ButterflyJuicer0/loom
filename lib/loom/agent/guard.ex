@@ -64,10 +64,20 @@ defmodule Loom.Agent.Guard do
   `--strict-mcp-config` loads no server at all. Every other session runs
   under `bypassPermissions`.
   """
-  def claude_args(session_id) do
+  def claude_args(session_id), do: claude_args(session_id, nil)
+
+  @doc """
+  The same flags with every tool call refused (`:no_tools`), for a side
+  question's copy of the session (`Loom.Agent.Btw`). The tools stay listed —
+  the flags that name them are the session's own, so the copy's request is
+  read from the session's prompt cache — and a hook turns each call down. A
+  hook's refusal holds under `bypassPermissions` too (measured, 2.1.317).
+  """
+  def claude_args(session_id, mode) do
     rules = rules(session_id) || %{}
+
     hook =
-      case claude_settings(rules) do
+      case claude_settings(rules, mode) do
         nil -> []
         settings -> ["--settings", settings]
       end
@@ -130,9 +140,11 @@ defmodule Loom.Agent.Guard do
   (`cache_1h`, an employee whose heartbeat outlasts the 5-minute default, so
   each wake-up reads the cache instead of writing the whole context again).
   """
-  def claude_settings(rules) do
+  def claude_settings(rules, mode \\ nil) do
     %{}
     |> then(&if(rules["workstation"], do: Map.put(&1, :hooks, hooks()), else: &1))
+    # In place of the workstation's: nothing gets as far as its rules.
+    |> then(&if(mode == :no_tools, do: Map.put(&1, :hooks, no_tools()), else: &1))
     |> then(&if(rules["cache_1h"], do: Map.put(&1, :env, @cache_1h_env), else: &1))
     |> case do
       empty when map_size(empty) == 0 -> nil
@@ -142,6 +154,12 @@ defmodule Loom.Agent.Guard do
 
   defp hooks,
     do: %{"PreToolUse" => [%{matcher: "", hooks: [%{type: "command", command: command()}]}]}
+
+  # Exit 2 refuses the call and hands stderr to the model as the reason.
+  @no_tools "echo 'Tools are off in a side question: answer from the conversation and what you know.' >&2; exit 2"
+
+  defp no_tools,
+    do: %{"PreToolUse" => [%{matcher: "", hooks: [%{type: "command", command: @no_tools}]}]}
 
   @doc "A Kiro agent's `hooks`."
   def kiro_hooks, do: %{"preToolUse" => [%{matcher: "*", command: command()}]}

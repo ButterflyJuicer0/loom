@@ -126,6 +126,17 @@ defmodule Loom.Agent.Backend.ClaudeCode do
     "user"
   ]
 
+  # `@base_args` without the stream-json input: see fork_spec/1.
+  @fork_base_args [
+    "-p",
+    "--verbose",
+    "--output-format",
+    "stream-json",
+    "--include-partial-messages",
+    "--setting-sources",
+    "user"
+  ]
+
   # Interrupt and teardown both kill; this is how long we give the tree to
   # actually disappear before saying so in the log. Generous because a 224 MB
   # node process can take a moment, and we only read it to warn.
@@ -276,6 +287,45 @@ defmodule Loom.Agent.Backend.ClaudeCode do
        }}
     end
   end
+
+  # A side question (`Loom.Agent.Btw`): the same command line as the session's
+  # own process, flag for flag, so the copy's request begins with the same
+  # tools, system prompt and messages and is read from the prompt cache the
+  # session has been writing. Measured on a 154K-token conversation, forked
+  # while a tool call of its turn was running: 154,175 tokens read from the
+  # cache, 1,304 written, the first word after 6.8 s. With `--tools ""` in
+  # place of the hook the tool list differs and none of it is cached.
+  #
+  # What differs: `--fork-session` copies the conversation under an id of its
+  # own, `--no-session-persistence` keeps the copy off the disk, the question
+  # arrives on stdin as text rather than as stream-json (the process then
+  # ends with its one turn), and a hook refuses every tool call — another
+  # copy of the agent is at work in the same directory.
+  @impl Backend
+  def fork_spec(handle) do
+    args =
+      @fork_base_args ++
+        model_args(handle) ++
+        effort_args(handle) ++
+        fallback_args() ++
+        fork_session_args(handle) ++
+        instruction_args(handle) ++ Loom.Agent.Guard.claude_args(handle.loom_id, :no_tools)
+
+    with {:ok, exe} <- executable() do
+      {exe, args} = sandboxed(handle, exe, args)
+      {:ok, %{engine: :claude_code, exe: exe, args: args, cwd: handle.cwd}}
+    end
+  end
+
+  # A session with nothing said yet has nothing to copy: the question is then
+  # asked of an empty conversation in the same place.
+  defp fork_session_args(%{started?: true, session_id: id}),
+    do: ["--resume", id, "--fork-session", "--no-session-persistence"]
+
+  defp fork_session_args(%{fork_from: from}) when is_binary(from),
+    do: ["--resume", from, "--fork-session", "--no-session-persistence"]
+
+  defp fork_session_args(_handle), do: ["--no-session-persistence"]
 
   # Its conversation is kept where Claude Code keeps any started in its cwd.
   defp sandboxed(handle, exe, args) do
