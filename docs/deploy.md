@@ -36,6 +36,10 @@ Optional settings:
 - `PORT` (default 4000)
 - `LOOM_BIND` (default 127.0.0.1)
 - `LOOM_HOME` (default `~/.loom`)
+- `LOOM_TRUSTED_PROXIES`: only when two proxies sit in front (a CDN in front
+  of the tunnel). The outer proxy's addresses, as IPs or CIDR blocks separated
+  by commas or spaces, so sign-in notices and the login brake see the visitor
+  and not that proxy. Unset, the last `X-Forwarded-For` hop is the client.
 - `LOOM_WORKSPACE`
 - `LOOM_CLAUDE_CLI` and `LOOM_CODEX_CLI`
 - `LOOM_CLAUDE_FALLBACK_MODEL`: Claude Code's `--fallback-model`, for when

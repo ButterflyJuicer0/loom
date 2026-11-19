@@ -13,6 +13,8 @@ defmodule Loom.Application do
       {Phoenix.PubSub, name: Loom.PubSub},
       # Brute-force brake for POST /api/login.
       Loom.Auth.Throttle,
+      # Passkeys, one login per device, pending password sign-ins.
+      Loom.Auth,
       {Registry, keys: :unique, name: Loom.Terminal.Registry},
       {DynamicSupervisor, strategy: :one_for_one, name: Loom.Terminal.SessionSupervisor},
       Loom.Terminal.Layout,

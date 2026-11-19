@@ -9,6 +9,7 @@ import { themeById } from "./themes"
 import { Slider } from "./Slider"
 import { BossPage, BossRow } from "./Boss"
 import { lastActive } from "./useLobby"
+import { SignInPage } from "./SignIn"
 
 /**
  * The gear at the foot of the sidebar: this device's language, theme,
@@ -40,7 +41,7 @@ export function SettingsDialog({
   onDelete: (id: string) => void
 }) {
   // A page opened from a row, in place of the list, with a way back.
-  const [page, setPage] = useState<"boss" | "archived" | "incognito" | "theme" | null>(null)
+  const [page, setPage] = useState<"boss" | "archived" | "incognito" | "theme" | "signin" | null>(null)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && (page ? setPage(null) : onClose())
     document.addEventListener("keydown", onKey)
@@ -54,7 +55,7 @@ export function SettingsDialog({
           {page ? (
             <button className="settings-back" onClick={() => setPage(null)}>
               <ChevronLeft />
-              {page === "boss" ? t("Boss profile") : page === "archived" ? t("Archived") : page === "theme" ? t("Theme") : t("Incognito")}
+              {page === "boss" ? t("Boss profile") : page === "archived" ? t("Archived") : page === "theme" ? t("Theme") : page === "signin" ? t("Sign-in") : t("Incognito")}
             </button>
           ) : (
             <span>{t("Settings")}</span>
@@ -80,6 +81,10 @@ export function SettingsDialog({
               </Row>
             </div>
             <ThemePicker value={settings.style} appearance={settings.appearance} onChange={(style) => onChange({ style })} />
+          </div>
+        ) : page === "signin" ? (
+          <div className="settings-body">
+            <SignInPage />
           </div>
         ) : page === "incognito" ? (
           <div className="settings-body">
@@ -130,6 +135,12 @@ export function SettingsDialog({
               label={t("Archived")}
               hint={archived.length ? t("{n}, hidden from the lists.", { n: archived.length }) : t("None.")}
               onOpen={() => setPage("archived")}
+            />
+
+            <PageRow
+              label={t("Sign-in")}
+              hint={t("Passkeys, and the devices signed in.")}
+              onOpen={() => setPage("signin")}
             />
 
             <PageRow

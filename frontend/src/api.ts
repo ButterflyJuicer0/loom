@@ -38,8 +38,13 @@ function unauthorized(): UnauthorizedError {
  */
 export async function checkAuth(): Promise<void> {
   if (!getToken()) return
-  const res = await fetch("/api/layout", { headers: authHeaders() }).catch(() => null)
+  const res = await fetch("/api/auth", { headers: authHeaders() }).catch(() => null)
   if (res?.status === 401) unauthorized()
+  // A token from before per-device logins comes back with one of its own.
+  if (res?.ok) {
+    const data: AuthOverview = await res.json()
+    if (data.token) setToken(data.token)
+  }
 }
 
 export function getToken(): string | null {
@@ -64,7 +69,14 @@ export function clearToken() {
   sessionStorage.removeItem(TOKEN_KEY)
 }
 
-export async function login(password: string): Promise<string> {
+/**
+ * The password. `{ token }` when it got in, or `{ pending }` when a device
+ * already signed in has to allow it first (see `Loom.Auth`); wait on that with
+ * `pollLogin`.
+ */
+export type LoginResult = { token: string } | { pending: { id: string; poll: string; expiresIn: number } }
+
+export async function login(password: string): Promise<LoginResult> {
   const res = await fetch("/api/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -74,8 +86,220 @@ export async function login(password: string): Promise<string> {
   if (res.status === 429) throw new Error("too_many_attempts")
   if (!res.ok) throw new Error(`login failed: ${res.status}`)
   const data = await res.json()
+  if (res.status === 202) {
+    return { pending: { id: data.pending, poll: data.poll, expiresIn: data.expires_in } }
+  }
+  setToken(data.token)
+  return { token: data.token }
+}
+
+/** `"ok"` once allowed (the token is kept), `"waiting"`, `"denied"` or `"expired"`. */
+export async function pollLogin(id: string, poll: string): Promise<"ok" | "waiting" | "denied" | "expired"> {
+  const res = await fetch("/api/login/poll", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, poll }),
+  })
+  if (res.status === 202) return "waiting"
+  if (res.status === 403) return "denied"
+  if (res.status === 410) return "expired"
+  if (!res.ok) throw new Error(`poll failed: ${res.status}`)
+  setToken((await res.json()).token)
+  return "ok"
+}
+
+export function cancelLogin(id: string, poll: string): void {
+  fetch("/api/login/cancel", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, poll }),
+  }).catch(() => {})
+}
+
+// ── Passkeys, logins, pending sign-ins; see `Loom.Auth` ─────────────────
+
+export type AuthOptions = { passkey: boolean }
+
+export type Passkey = {
+  id: string
+  name: string
+  rp_id: string
+  created_at: string
+  last_used_at: string | null
+}
+
+export type Login = {
+  id: string
+  name: string
+  method: string
+  ip: string | null
+  created_at: string
+  last_seen_at: string
+}
+
+/** A password sign-in waiting for a signed-in device to allow it. */
+export type PendingSignIn = {
+  id: string
+  name: string
+  ip: string | null
+  requested_at: string
+  expires_in: number
+}
+
+export type AuthOverview = {
+  passkeys: Passkey[]
+  logins: Login[]
+  pending: PendingSignIn[]
+  idle_days: number
+  current: string
+  token?: string
+}
+
+/** What the sign-in page offers. */
+export async function authOptions(): Promise<AuthOptions> {
+  const res = await fetch("/api/auth/options")
+  if (!res.ok) throw new Error(`authOptions failed: ${res.status}`)
+  return res.json()
+}
+
+/** Whether this browser can make or use a passkey at all. */
+export function passkeysSupported(): boolean {
+  return typeof window.PublicKeyCredential === "function"
+}
+
+const b64url = {
+  encode(buf: ArrayBuffer): string {
+    let s = ""
+    for (const b of new Uint8Array(buf)) s += String.fromCharCode(b)
+    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+  },
+  decode(text: string): Uint8Array<ArrayBuffer> {
+    const s = atob(text.replace(/-/g, "+").replace(/_/g, "/"))
+    const out = new Uint8Array(s.length)
+    for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i)
+    return out
+  },
+}
+
+/**
+ * Sign in with a passkey: Face ID, Touch ID, Windows Hello, or a phone nearby.
+ * No list of credentials is sent, so the browser offers whichever passkeys it
+ * has for this site.
+ */
+export async function passkeyLogin(): Promise<string> {
+  const ch = await fetch("/api/auth/passkey/challenge", { method: "POST" })
+  if (!ch.ok) throw new Error(`challenge failed: ${ch.status}`)
+  const { challenge } = await ch.json()
+
+  const cred = (await navigator.credentials.get({
+    publicKey: {
+      challenge: b64url.decode(challenge),
+      rpId: location.hostname,
+      userVerification: "required",
+      timeout: 120_000,
+    },
+  })) as PublicKeyCredential | null
+  if (!cred) throw new Error("cancelled")
+  const response = cred.response as AuthenticatorAssertionResponse
+
+  const res = await fetch("/api/auth/passkey/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id: cred.id,
+      client_data: b64url.encode(response.clientDataJSON),
+      authenticator_data: b64url.encode(response.authenticatorData),
+      signature: b64url.encode(response.signature),
+    }),
+  })
+  if (!res.ok) throw new Error("passkey_refused")
+  const data = await res.json()
   setToken(data.token)
   return data.token
+}
+
+export async function authOverview(): Promise<AuthOverview> {
+  const res = await fetch("/api/auth", { headers: authHeaders() })
+  if (res.status === 401) throw unauthorized()
+  if (!res.ok) throw new Error(`authOverview failed: ${res.status}`)
+  return res.json()
+}
+
+/** Make a passkey on this device (or a phone nearby) and register it. */
+export async function registerPasskey(password: string): Promise<Passkey> {
+  const ch = await fetch("/api/auth/passkeys/challenge", { method: "POST", headers: authHeaders() })
+  if (ch.status === 401) throw unauthorized()
+  if (!ch.ok) throw new Error(`challenge failed: ${ch.status}`)
+  const { challenge, exclude } = (await ch.json()) as { challenge: string; exclude: string[] }
+
+  const cred = (await navigator.credentials.create({
+    publicKey: {
+      challenge: b64url.decode(challenge),
+      rp: { id: location.hostname, name: "Loom" },
+      // One user per Loom, so a fixed handle. A device that already has one
+      // says so, from `excludeCredentials`.
+      user: {
+        id: new TextEncoder().encode("loom"),
+        name: `loom@${location.hostname}`,
+        displayName: "Loom",
+      },
+      pubKeyCredParams: [
+        { type: "public-key", alg: -7 },
+        { type: "public-key", alg: -257 },
+      ],
+      authenticatorSelection: { residentKey: "required", userVerification: "required" },
+      attestation: "none",
+      excludeCredentials: exclude.map((id) => ({ type: "public-key", id: b64url.decode(id) })),
+      timeout: 120_000,
+    },
+  })) as PublicKeyCredential | null
+  if (!cred) throw new Error("cancelled")
+  const response = cred.response as AuthenticatorAttestationResponse
+  const publicKey = response.getPublicKey()
+  if (!publicKey) throw new Error("This browser did not give the passkey's public key")
+
+  const res = await fetch("/api/auth/passkeys", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({
+      id: cred.id,
+      client_data: b64url.encode(response.clientDataJSON),
+      authenticator_data: b64url.encode(response.getAuthenticatorData()),
+      public_key: b64url.encode(publicKey),
+      password,
+    }),
+  })
+  if (res.status === 401) throw new Error("Wrong password")
+  if (res.status === 429) throw new Error("Too many tries — wait a few minutes")
+  if (res.status === 403) throw new Error("Reload Loom first, then try again")
+  if (!res.ok) throw new Error(`Passkey refused: ${(await res.json()).error}`)
+  return (await res.json()).passkey
+}
+
+export async function deletePasskey(id: string): Promise<void> {
+  await authDelete(`/api/auth/passkeys/${encodeURIComponent(id)}`)
+}
+
+export async function revokeLogin(id: string): Promise<void> {
+  await authDelete(`/api/auth/logins/${encodeURIComponent(id)}`)
+}
+
+/** Allow or deny a pending password sign-in from another device. */
+export async function decideSignIn(id: string, allow: boolean): Promise<void> {
+  const res = await fetch(`/api/auth/pending/${encodeURIComponent(id)}/${allow ? "approve" : "deny"}`, {
+    method: "POST",
+    headers: authHeaders(),
+  })
+  if (res.status === 401) throw unauthorized()
+  if (res.status === 410) throw new Error("That request has already expired")
+  if (res.status === 403) throw new Error("Reload Loom first, then try again")
+  if (!res.ok) throw new Error(`decideSignIn failed: ${res.status}`)
+}
+
+async function authDelete(path: string): Promise<void> {
+  const res = await fetch(path, { method: "DELETE", headers: authHeaders() })
+  if (res.status === 401) throw unauthorized()
+  if (!res.ok) throw new Error(`${path} failed: ${res.status}`)
 }
 
 function authHeaders(): Record<string, string> {

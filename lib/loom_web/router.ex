@@ -18,10 +18,23 @@ defmodule LoomWeb.Router do
     pipe_through :api
 
     post "/login", AuthController, :login
+    post "/login/poll", AuthController, :poll
+    post "/login/cancel", AuthController, :cancel
+    get "/auth/options", AuthController, :options
+    post "/auth/passkey/challenge", AuthController, :login_challenge
+    post "/auth/passkey/login", AuthController, :passkey_login
   end
 
   scope "/api", LoomWeb do
     pipe_through :authed_api
+
+    get "/auth", AuthController, :show
+    post "/auth/passkeys/challenge", AuthController, :register_challenge
+    post "/auth/passkeys", AuthController, :register
+    delete "/auth/passkeys/:id", AuthController, :delete_passkey
+    delete "/auth/logins/:id", AuthController, :revoke
+    post "/auth/pending/:id/approve", AuthController, :approve
+    post "/auth/pending/:id/deny", AuthController, :deny
 
     get "/sessions", SessionController, :index
     post "/sessions", SessionController, :create

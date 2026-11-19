@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Channel } from "phoenix"
 import { getSocket } from "./socket"
-import type { AgentInfo, Device, Employee, Notice, Project, Todo } from "./api"
+import type { AgentInfo, Device, Employee, Notice, PendingSignIn, Project, Todo } from "./api"
 import { stillCreating } from "./api"
 
 export type Watching = { endpoint: string; session: string | null }
 
 type Lobby = {
   sessions: AgentInfo[]
+  // Password sign-ins from other devices waiting for this one's yes.
+  authPending: PendingSignIn[]
   // The user's machines, in the order they were added. Online state is pushed
   // as they connect and drop.
   devices: Device[]
@@ -56,6 +58,8 @@ export function useLobby(enabled: boolean, watching: Watching | null = null): Lo
   const [employees, setEmployees] = useState<Map<string, Employee>>(new Map())
   const [notices, setNotices] = useState<Notice[]>([])
   const [todos, setTodos] = useState<Todo[]>([])
+  // Password sign-ins from other devices waiting for a yes (`Loom.Auth`).
+  const [authPending, setAuthPending] = useState<PendingSignIn[]>([])
   // The caller's own answer, before the push: the list comes again anyway.
   const upsertNotice = useCallback(
     (n: Notice) => setNotices((list) => list.map((x) => (x.id === n.id ? n : x))),
@@ -147,6 +151,7 @@ export function useLobby(enabled: boolean, watching: Watching | null = null): Lo
     channel.on("employee_removed", ({ id }: { id: string }) => dropEmployee(id))
     channel.on("notices", ({ notices }: { notices: Notice[] }) => setNotices(notices))
     channel.on("todos", ({ todos }: { todos: Todo[] }) => setTodos(todos))
+    channel.on("auth_pending", ({ pending }: { pending: PendingSignIn[] }) => setAuthPending(pending))
 
     channel
       .join()
@@ -159,6 +164,7 @@ export function useLobby(enabled: boolean, watching: Watching | null = null): Lo
           employees,
           notices,
           todos,
+          auth_pending,
         }: {
           sessions: AgentInfo[]
           nodes: Device[]
@@ -166,6 +172,7 @@ export function useLobby(enabled: boolean, watching: Watching | null = null): Lo
           employees?: Employee[]
           notices?: Notice[]
           todos?: Todo[]
+          auth_pending?: PendingSignIn[]
         }) => {
         joined = true
         if (leaveWhenJoined) {
@@ -183,6 +190,7 @@ export function useLobby(enabled: boolean, watching: Watching | null = null): Lo
         setEmployees(new Map((employees ?? []).map((e) => [e.id, e])))
         setNotices(notices ?? [])
         setTodos(todos ?? [])
+        setAuthPending(auth_pending ?? [])
         setLoaded(true)
         },
       )
@@ -227,6 +235,7 @@ export function useLobby(enabled: boolean, watching: Watching | null = null): Lo
     notices,
     upsertNotice,
     todos,
+    authPending,
     devices: deviceList,
     upsertDevice,
     projects: projectList,

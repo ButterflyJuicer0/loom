@@ -2582,3 +2582,105 @@ body.sidebar-resizing iframe {
   float: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* Settings → Sign-in, and the sign-in request (SignIn.tsx). */
+.signin-page .settings-label {
+  margin: 0;
+}
+
+.signin-gap {
+  margin-top: 16px !important;
+}
+
+.signin-page {
+  gap: 6px;
+  max-height: 65vh;
+}
+
+.signin-page .settings-hint {
+  margin: 0;
+}
+
+.signin-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.signin-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.signin-name,
+.signin-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signin-name {
+  color: var(--fg);
+  font-size: 0.875rem;
+}
+
+.signin-meta {
+  color: var(--fg-dim);
+  font-size: 0.8125rem;
+}
+
+.signin-me {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--fg-dim);
+  font-size: 0.75rem;
+}
+
+.signin-item > button {
+  flex: 0 0 auto;
+}
+
+.signin-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.signin-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.signin-error {
+  color: var(--red);
+  font-size: 0.8125rem;
+}
+
+.signin-request {
+  max-width: 360px;
+}
+
+.signin-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.signin-allow {
+  background: var(--fg);
+  color: var(--bg);
+  border-color: var(--fg);
+}

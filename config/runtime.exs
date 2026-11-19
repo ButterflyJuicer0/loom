@@ -46,6 +46,10 @@ config :loom, Loom.Agent,
 # The model of the one-shot calls Loom makes itself (Loom.OneShot); empty for the CLI default.
 config :loom, Loom.OneShot, model: System.get_env("LOOM_ONESHOT_MODEL")
 
+# Outer proxies whose X-Forwarded-For hop is not the client: IPs or CIDR
+# blocks, see `LoomWeb.ClientAddress`.
+config :loom, :trusted_proxies, System.get_env("LOOM_TRUSTED_PROXIES")
+
 # Parses `LOOM_BIND`, defaulting to loopback. A hostname is not accepted: a
 # typo there would silently fall back to all interfaces in most parsers, which
 # is the one mistake that must not be easy to make.

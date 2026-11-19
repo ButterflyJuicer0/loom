@@ -5,7 +5,7 @@ defmodule LoomWeb.LobbyChannel do
   Server → client:
     - join reply : `%{sessions: [summary], nodes: [device], projects: [project],
                      employees: [employee], notices: [notice],
-                     todos: [todo]}`,
+                     todos: [todo], auth_pending: [sign-in]}`,
                    all whole lists
     - "session"  : one summary, whenever that session's header changes
     - "removed"  : `%{id: _}`, when a session is stopped or deleted
@@ -19,6 +19,8 @@ defmodule LoomWeb.LobbyChannel do
     - "notices"  : `%{notices: [notice]}`, the whole bell (`Loom.Notices`),
                    whenever it changes
     - "todos"    : `%{todos: [todo]}`, the user's to-dos, likewise
+    - "auth_pending" : `%{pending: [sign-in]}`, password sign-ins waiting for
+                   a signed-in device to allow them (`Loom.Auth`)
 
   Client → server:
     - "watching" : `%{endpoint:, session:}`, which session this device is
@@ -50,7 +52,8 @@ defmodule LoomWeb.LobbyChannel do
        projects: Enum.map(Loom.Projects.list(), &Loom.Projects.view/1),
        employees: Loom.Employees.list(),
        notices: Loom.Notices.list(),
-       todos: Loom.Notices.todos()
+       todos: Loom.Notices.todos(),
+       auth_pending: Loom.Auth.pending()
      }, socket}
   end
 
@@ -104,6 +107,11 @@ defmodule LoomWeb.LobbyChannel do
 
   def handle_info({:todos, list}, socket) do
     push(socket, "todos", %{todos: list})
+    {:noreply, socket}
+  end
+
+  def handle_info({:auth_pending, list}, socket) do
+    push(socket, "auth_pending", %{pending: list})
     {:noreply, socket}
   end
 

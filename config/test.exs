@@ -32,6 +32,7 @@ config :loom, :codex_server, false
 config :loom, Loom.Cron, path: Path.join(System.tmp_dir!(), "loom-test-#{System.pid()}/cron.json")
 
 # Nor the real device registry and CLI key.
+config :loom, Loom.Auth, path: Path.join(System.tmp_dir!(), "loom-test-#{System.pid()}/auth.json")
 config :loom, Loom.Push, path: Path.join(System.tmp_dir!(), "loom-test-#{System.pid()}/push.json")
 config :loom, Loom.Nodes, dir: Path.join(System.tmp_dir!(), "loom-test-#{System.pid()}")
 config :loom, LoomWeb.NodeController, await_ms: 200
