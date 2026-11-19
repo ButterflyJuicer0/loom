@@ -129,6 +129,11 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   as one line.
 
 ### Fixed
+- **山山兔: the head sits square under the ears**: the hood's black rim ran
+  down the right side of the head only, so the head was a square wider on
+  that side and the ears — themselves a mirrored pair — looked uneven. The
+  rim now runs down both sides, on the rabbit on the composer, the big
+  sitting one and the small one.
 - **Themes: a square choice no longer sits in a round track**: in Settings'
   switches (language, appearance, engine) of 死亡细胞, 小丑牌 and 山山兔 the
   track was a pill while what was chosen was square; tags, file cards, menu

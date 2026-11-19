@@ -161,8 +161,9 @@ function doll(version = "amiya") {
     ((x - 23) / (19.4 + grow)) ** 2 + ((y - 32.4) / (7.6 + grow)) ** 2 <= 1
 
   // The jacket behind everything: the rim of its hood shows over the head
-  // and down one side.
-  if (version === "amiya") c.fill((x, y) => headAt(x, y - 0.2, 1.1) && (y < 26 || (x > 23 && y < 39)), "H")
+  // and down both sides alike. (Down one side only, as one photograph has
+  // it, the head sat a square off centre under the ears.)
+  if (version === "amiya") c.fill((x, y) => headAt(x, y - 0.2, 1.1) && y < 39, "H")
 
   // Ears, leaning apart, wider above the middle than at the root.
   for (const side of [-1, 1]) {
@@ -315,12 +316,12 @@ const HALF = [
   ".OHFFLLFFFFDFFFFLLFFHO.",
   "OHFFFFFFFFFFFFFFFFFFFHO",
   "OHFFFFFFFFFFFFFFFFFFFHO",
-  ".OFFFKFFFFFFFKFFFFFFFHO",
-  ".OFFFFKKFFFFFFKKFFFFFHO",
-  ".OFFFFKWKFFFFFKWKFFFFHO",
-  ".OFFFFKWKFFFFFKWKFFFFHO",
-  ".OFFFFKWKFFFFFKWKFFFFHO",
-  ".OFFFFFKFFFKFFFKFFFFFHO",
+  "OHFFFKFFFFFFFKFFFFFFFHO",
+  "OHFFFFKKFFFFFFKKFFFFFHO",
+  "OHFFFFKWKFFFFFKWKFFFFHO",
+  "OHFFFFKWKFFFFFKWKFFFFHO",
+  "OHFFFFKWKFFFFFKWKFFFFHO",
+  "OHFFFFFKFFFKFFFKFFFFFHO",
   "OFFFFFFFFFKFKFFFFFFFFFO",
   ".ODFFFFFFFFFFFFFFFFFDO.",
   "..ODDDFFFFFFFFFFFDDDO..",
@@ -348,7 +349,7 @@ writeSprite("bunny-mark.svg", HALF, VERSIONS.amiya)
 const SMALL_TOP = ["..OO...OO..", ".OFEO.OEFO.", ".OFEO.OEFO.", ".OFEOOOEFO."]
 const SMALL_FEET = [".OLFdFdFLO.", ".ODDOOODDO.", "..OO...OO.."]
 const SMALL = {
-  amiya: [".HFFFFFFFH.", "OFFFFFFFFFH", "OFKFFFFFKFH", "OFWFFFFFWFH", "OFWFFKFFWFH", "OFFFKFKFFFO", ".OSSSSSSSO.", "OFBFFFFFBFO", "OFHBFFFBHFO"],
+  amiya: [".HFFFFFFFH.", "HFFFFFFFFFH", "HFKFFFFFKFH", "HFWFFFFFWFH", "HFWFFKFFWFH", "OFFFKFKFFFO", ".OSSSSSSSO.", "OFBFFFFFBFO", "OFHBFFFBHFO"],
   grey: [".OFFFFFFFO.", "OFFFFFFFFFO", "OFKFFFFFKFO", "OFWFFFFFWFO", "OFWFFFFFWFO", "OFFKWKWKFFO", ".OHHHHHHHO.", "OHHgHhHgHHO", "OHHHgFgHHHO"],
 }
 const small = (version, top = SMALL_TOP) => [...top, ...SMALL[version], ...SMALL_FEET]
