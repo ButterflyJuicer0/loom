@@ -36,6 +36,10 @@ html[data-style="bunny"] {
   --sb-field: url("./art/bunny-f-field.svg");
   --sb-tag: url("./art/bunny-f-tag.svg");
   --sb-grid: url("./art/bunny-grid.svg");
+  /* The sidebar's ground: warm beige by day, ruled a shade deeper. The deck
+     and the door keep the sky. */
+  --sb-wall: #f6e9d4;
+  --sb-wall-grid: url("./art/bunny-grid-wall.svg");
   --sb-deck: url("./art/bunny-deck.svg");
   --sb-arrow: url("./art/bunny-arrow.svg");
   --sb-stamp: url("./art/bunny-stamp.svg");
@@ -76,6 +80,8 @@ html[data-style="bunny"][data-theme="dark"] {
   --sb-field: url("./art/bunny-f-field-night.svg");
   --sb-tag: url("./art/bunny-f-tag-night.svg");
   --sb-grid: url("./art/bunny-grid-night.svg");
+  --sb-wall: #1a2133;
+  --sb-wall-grid: url("./art/bunny-grid-night.svg");
   --sb-deck: url("./art/bunny-deck-night.svg");
   --sb-arrow: url("./art/bunny-arrow-night.svg");
   --sb-stamp: url("./art/bunny-stamp-night.svg");
@@ -178,21 +184,21 @@ html[data-style="bunny"][data-theme] .sidebar {
   isolation: isolate;
   border-right: 0;
   background:
-    var(--sb-grid) 0 0 / 48px 48px repeat,
-    var(--sb-sky);
+    var(--sb-wall-grid) 0 0 / 48px 48px repeat,
+    var(--sb-wall);
 }
 
 /* Quiet text on it: a shade darker than the mix, so it reads. */
 html[data-style="bunny"][data-theme="light"] .sidebar {
-  --fg-dim: #4c5f6d;
+  --fg-dim: #6a5443;
 }
 
 @media (min-width: 641px) {
   /* On a desktop the ground runs behind everything, the page set into it. */
   html[data-style="bunny"][data-theme] .app {
     background:
-      var(--sb-grid) 0 0 / 48px 48px repeat,
-      var(--sb-sky);
+      var(--sb-wall-grid) 0 0 / 48px 48px repeat,
+      var(--sb-wall);
   }
 
   html[data-style="bunny"][data-theme] .sidebar {
@@ -268,7 +274,7 @@ html[data-style="bunny"][data-theme] .sidebar-foot .devices-btn:hover {
 
 /* Unfolded, it is a list with words: on a plain ground, so they read. */
 html[data-style="bunny"][data-theme] .sidebar-foot:not(.folded):not(.dial) {
-  background: var(--sb-sky);
+  background: var(--sb-wall);
   box-shadow: 0 -2px 0 0 var(--sb-line);
 }
 

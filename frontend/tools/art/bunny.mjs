@@ -1001,6 +1001,8 @@ writeSprite("bunny-arrow-night.svg", ["OO.....OO", "OOO...OOO", ".OOO.OOO.", "..
   for (let i = 0; i < 24; i += 2) grid.set(i, 0, "a").set(0, i, "a")
   grid.put(over([".b.", "bbb", ".b."]), 23, 23).set(0, 0, "b").set(1, 0, "b").set(0, 1, "b")
   grid.save("bunny-grid.svg", { a: "#b9d6e6", b: "#8dbbd3" })
+  // The sidebar's, by day: the same rule on warm beige.
+  grid.save("bunny-grid-wall.svg", { a: "#e7d5b6", b: "#d6bd94" })
   grid.save("bunny-grid-night.svg", { a: "#2a3346", b: "#3b4963" })
 }
 

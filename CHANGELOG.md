@@ -90,6 +90,10 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   of Loom's own leaves the sidebar too, into Loom's trash.
 
 ### Changed
+- **山山兔: the sidebar on warm beige**: by day the sidebar's ground is a
+  bright, warm beige, ruled a shade deeper, with its text in the page's
+  brown ink — in place of the pale blue. The deck, the sign-in page and
+  the night appearance keep the sky.
 - **GPT-6.2 in the Codex model menu**: a Codex chat's model list now offers
   GPT-6.2 Astra and GPT-6.2 Sol (`openai.gpt-6.2-astra`, `openai.gpt-6.2-sol`
   on Bedrock), above the earlier ones.
