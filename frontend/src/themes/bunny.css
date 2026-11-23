@@ -195,6 +195,14 @@ html[data-style="bunny"][data-theme] .sidebar {
   --fg-dim: #6a5443;
 }
 
+/* Loom takes its raised surfaces — a queue, a side question's card, the
+   tasks above the composer — from the sidebar's token, which at night is
+   still the day's beige: on the dark page they stay the night's navy.
+   (`:root` to outrank themes.css, which derives it.) */
+html[data-style="bunny"][data-theme="dark"]:root {
+  --bg-raised: #1a2133;
+}
+
 /* At night the page is dark and the sidebar is not: inside it, every colour
    the interface reads from is the day's. (The tokens say its ground and its
    ink; these are what Loom derives from the page's, which here is dark.) */
