@@ -17,6 +17,15 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **A tool call that takes too long can be sent to the background, or
+  stopped**: in a Claude Code session, the row of a tool call the turn is
+  waiting on — a subagent, a shell command — shows how long it has run, **To
+  background** and a stop square. Sent to the background it carries on by
+  itself: the turn continues, the card says where it is and how it ended,
+  and the agent is told when it does. The square stops that call only. Work
+  in the background now keeps the session's process past the 15-minute idle
+  timer and through `/reload`, where it used to be killed with it. MCP tool
+  calls and the built-in file and web tools cannot be sent on.
 - **Passkeys, and a yes from a signed-in device**: a device signs in with a
   passkey (Settings → Sign-in adds one: Face ID, Touch ID, Windows Hello,
   Android's screen lock; it asks for the password again), or with the
@@ -149,6 +158,9 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   as one line.
 
 ### Fixed
+- **A background subagent's text no longer lands in the conversation's
+  reply**: what a subagent says while the agent itself is answering took the
+  answer's placeholder. A subagent's output is kept apart now.
 - **山山兔: the head sits square under the ears**: the hood's black rim ran
   down the right side of the head only, so the head was a square wider on
   that side and the ears — themselves a mirrored pair — looked uneven. The

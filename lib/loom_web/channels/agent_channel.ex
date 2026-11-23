@@ -7,6 +7,8 @@ defmodule LoomWeb.AgentChannel do
     - "submit"    : %{"text" => _, "client_msg_id" => _, "files" => [%{"path" => _}],
                       "refs" => [%{"id" => _}]}
     - "interrupt" : %{}
+    - "background" : %{"tool_use_id" => _} (or none: every foreground task)
+    - "stop_task" : %{"task_id" => _}
 
   Server → client:
     - "event" : one transcript event, `%{seq:, at:, kind:, payload:}`
@@ -83,6 +85,22 @@ defmodule LoomWeb.AgentChannel do
     end
   end
 
+  # What the turn is waiting on — a subagent, a command — sent on without it:
+  # one tool call's task, or with no id every one. See `Loom.Agent.Session.background/2`.
+  def handle_in("background", params, socket) do
+    case Agent.background(socket.assigns.session_id, params["tool_use_id"]) do
+      :ok -> {:reply, :ok, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: reason_text(reason)}}, socket}
+    end
+  end
+
+  def handle_in("stop_task", %{"task_id" => task_id}, socket) do
+    case Agent.stop_task(socket.assigns.session_id, task_id) do
+      :ok -> {:reply, :ok, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: reason_text(reason)}}, socket}
+    end
+  end
+
   def handle_in("steer_queued", _params, socket) do
     case Agent.steer_queued(socket.assigns.session_id) do
       :ok -> {:reply, :ok, socket}
@@ -130,6 +148,10 @@ defmodule LoomWeb.AgentChannel do
     push(socket, "btw", payload)
     {:noreply, socket}
   end
+
+  defp reason_text(reason) when is_binary(reason), do: reason
+  defp reason_text(:unsupported), do: "this session's agent has no tasks"
+  defp reason_text(reason), do: inspect(reason)
 
   defp normalize_seq(seq) when is_integer(seq) and seq >= 0, do: seq
   defp normalize_seq(_), do: 0

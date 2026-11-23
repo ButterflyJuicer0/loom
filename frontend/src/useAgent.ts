@@ -39,7 +39,7 @@ function remember(id: string, t: Transcript) {
   // Streaming placeholders do not survive a remount: the join drops them
   // anyway. Nor does a message's being on its way: its ack may never come to
   // this mount, so it comes back as not got through, to be sent again.
-  cache.set(id, { ...t, streaming: [], toolStreams: [], lastDeltaSeq: 0, pending: unsentOf(t.pending) })
+  cache.set(id, { ...t, streaming: [], toolStreams: [], taskNow: {}, lastDeltaSeq: 0, pending: unsentOf(t.pending) })
   for (const old of cache.keys()) {
     if (cache.size <= CACHED_SESSIONS) break
     cache.delete(old)
@@ -101,6 +101,11 @@ type Agent = {
   // Messages waiting for the turn to end: into the running turn now instead.
   steerQueued: () => void
   rename: (title: string) => void
+  // What the turn is waiting on, sent to the background: the task started by
+  // one tool call, or with no id every one. Resolves to why not, or null.
+  background: (toolUseId?: string) => Promise<string | null>
+  // One task, stopped. Likewise.
+  stopTask: (taskId: string) => Promise<string | null>
   // The composer's draft as last written from any device, while this one has
   // the session open; a fresh object each time. See `useDraft`.
   draft: { id: string; text: string } | null
@@ -395,5 +400,24 @@ export function useAgent(
     channelRef.current?.push("rename", { title })
   }, [])
 
-  return { transcript, joinError, submit, resend, discard, interrupt, dropQueued, steerQueued, rename, draft }
+  // Nothing optimistic: the task's own event says when it has moved or ended.
+  const ask = useCallback((event: string, payload: Record<string, unknown>) => {
+    return new Promise<string | null>((resolve) => {
+      const channel = channelRef.current
+      if (!channel) return resolve(t("not connected"))
+      channel
+        .push(event, payload)
+        .receive("ok", () => resolve(null))
+        .receive("error", (resp: { reason?: string }) => resolve(resp?.reason ?? t("the server refused it")))
+        .receive("timeout", () => resolve(t("no answer — the connection may be weak")))
+    })
+  }, [])
+
+  const background = useCallback(
+    (toolUseId?: string) => ask("background", toolUseId ? { tool_use_id: toolUseId } : {}),
+    [ask],
+  )
+  const stopTask = useCallback((taskId: string) => ask("stop_task", { task_id: taskId }), [ask])
+
+  return { transcript, joinError, submit, resend, discard, interrupt, dropQueued, steerQueued, rename, background, stopTask, draft }
 }

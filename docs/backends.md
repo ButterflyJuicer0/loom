@@ -334,6 +334,57 @@ turn notices. Kiro's ACP has no fork.
   kills the tree as it was found and then the group: a `claude` that is
   still starting spawns its MCP servers after the tree was looked at.
 
+### 6.16 Tasks: sending what a turn waits on to the background
+
+Claude Code calls a subagent (the Agent tool) or a running shell command a
+*task* and reports each on stdout; Loom puts the controls on the tool call's
+own card and lets the user send it on without the turn, or stop it. Measured on 2.1.317, headless
+stream-json. Codex and Kiro have nothing of the kind.
+
+- **What is said.** `system/task_started` (`task_id`, the `tool_use_id` of the
+  call that started it, `task_type` `local_agent` or `local_bash`,
+  `is_backgrounded`), `task_progress` after each of a subagent's tool calls
+  (`description` is what it is doing, `usage` its tokens, tool calls and
+  milliseconds), `task_updated` with a `patch` (`is_backgrounded`, `status`),
+  and `task_notification` (`completed` / `failed` / `stopped`, a `summary`) as
+  the last word. A foreground shell command becomes a task about 3 s after
+  its `tool_use`; a faster one never does. What a subagent starts itself
+  carries `parent_task_id` and `owned_by_subagent`.
+- **To the background.** `control_request` `{subtype: "background_tasks",
+  tool_use_id}`: answered `{backgrounded: true}`, `task_updated`
+  `is_backgrounded: true`, and the blocking call returns at once — "Async
+  agent launched successfully" for an agent, "Command was manually
+  backgrounded by user with ID …" for a command. The turn goes on and ends
+  with its `result`. Without `tool_use_id` it is every foreground task, the
+  terminal's Ctrl+B.
+- **When it ends**, after the turn has: `task_updated` and
+  `task_notification`, then Claude Code starts a turn by itself — `system/init`,
+  the model reading the outcome, a second `result`. A session at rest sees a
+  turn begin with no message of its own; `:status running` from `init` is what
+  moves it.
+- **`stop_task`** `{task_id}`: `task_updated` `status: "killed"`,
+  `task_notification` `stopped`, and a command's call returns "Exit code 137".
+- **A subagent's own messages** come whole, with `parent_tool_use_id`, never
+  as stream events — and from a background one they come while the
+  conversation itself is streaming. They must not claim the conversation's
+  blocks (taking the oldest unclaimed one, as a text block does, handed a
+  subagent's text the conversation's placeholder). Loom gives them ids of
+  their own, and shows a background subagent's not at all.
+- **The process is the task's life.** Letting it go on the idle timer killed
+  a background agent 15 minutes after its turn ended, whatever it was doing.
+  While a background task is live the session keeps the process
+  (`Backend.busy?/1`), `/reload` waits for it, and a restart leaves it
+  running as it leaves a turn. Changing the session's model or effort still
+  respawns the process before the next turn; the tasks that went with it are
+  reported stopped.
+- **An ordinary MCP tool call is not a task.** A 45-second call to a stdio
+  server's tool never produced `task_started`; `background_tasks` with its
+  `tool_use_id` answered `{backgrounded: false}` and the call ran to its end
+  in the foreground (a `tool_progress` heartbeat at 30 s). The CLI has an
+  `mcp_task` type, for servers that offer tasks of their own; not tried.
+- Claude Code refuses `sleep N; command` in the foreground ("Blocked: … use
+  run_in_background"), so a test of this needs another way to be slow.
+
 ## 7. Not done: permission prompts
 
 Codex has proper approval requests. CC auto-denies under

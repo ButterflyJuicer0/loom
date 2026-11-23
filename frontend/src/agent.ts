@@ -50,10 +50,18 @@ export type AgentDelta = {
     | "tool_use_start"
     | "tool_output"
     | "block_end"
+    // What a task (a `task` event; `block_id` is its id) is doing now.
+    | "task_progress"
   chunk?: string
   block_type?: string
   name?: string
   id?: string
+  activity?: string | null
+  summary?: string | null
+  last_tool?: string | null
+  tokens?: number | null
+  tools?: number | null
+  ms?: number | null
 }
 
 export type Snapshot = {
@@ -119,6 +127,38 @@ export type Transcript = {
   // The parked messages themselves, so an interrupted session can show what is
   // waiting and offer to drop a line that no longer applies.
   queue: string[]
+  // What each running task last said it was doing, by task id. Transient,
+  // like `streaming`: the `task` events are what is kept. See `tasksOf`.
+  taskNow: Record<string, TaskNow>
+}
+
+/** A task's latest progress: the line under its name, and its counters. */
+export type TaskNow = { activity?: string; lastTool?: string; tokens?: number; tools?: number; ms?: number }
+
+/**
+ * What a tool call that takes a while runs as, in Claude Code: a subagent (the
+ * Agent tool) or a shell command. In the foreground the turn waits for it; the
+ * user can send it to the background from its tool card, where it carries on
+ * by itself and the agent is told when it ends, or stop it. See
+ * `Loom.Agent.Backend.ClaudeCode`, "Tasks".
+ */
+export type Task = {
+  id: string
+  // The tool call that started it: what "to the background" names.
+  toolUseId?: string
+  kind: string
+  // A subagent's type ("general-purpose", "Explore", …).
+  agent?: string
+  description: string
+  background: boolean
+  status: "running" | "completed" | "failed" | "stopped"
+  summary?: string
+  error?: string
+  startedAt: number
+  // When it ended, and the seq of the last event about it.
+  endedAt?: number
+  seq: number
+  now: TaskNow
 }
 
 export const emptyTranscript: Transcript = {
@@ -135,6 +175,7 @@ export const emptyTranscript: Transcript = {
   contextWindow: null,
   turns: 0,
   queue: [],
+  taskNow: {},
 }
 
 /**
@@ -156,6 +197,7 @@ export function applySnapshot(
     streaming: [],
     lastDeltaSeq: 0,
     toolStreams: [],
+    taskNow: {},
     status: snapshot.meta.status,
     contextTokens: snapshot.meta.context_tokens ?? 0,
     contextWindow: snapshot.meta.context_window ?? null,
@@ -251,6 +293,18 @@ export function applyDelta(t: Transcript, delta: AgentDelta): Transcript {
 
   if (delta.type === "block_end") return t
 
+  if (delta.type === "task_progress") {
+    const now: TaskNow = {
+      ...t.taskNow[delta.block_id],
+      ...(delta.activity || delta.summary ? { activity: delta.summary || delta.activity || undefined } : {}),
+      ...(delta.last_tool ? { lastTool: delta.last_tool } : {}),
+      ...(typeof delta.tokens === "number" ? { tokens: delta.tokens } : {}),
+      ...(typeof delta.tools === "number" ? { tools: delta.tools } : {}),
+      ...(typeof delta.ms === "number" ? { ms: delta.ms } : {}),
+    }
+    return { ...t, taskNow: { ...t.taskNow, [delta.block_id]: now } }
+  }
+
   // Tool output goes into its own bucket, appended onto the card the
   // `tool_use` event already created. Only Codex streams this; a ten-minute
   // build is why it exists.
@@ -310,6 +364,50 @@ function newBlock(delta: AgentDelta): StreamingBlock | null {
     return { blockId: delta.block_id, kind, text: delta.chunk ?? "" }
   }
   return null
+}
+
+/**
+ * The session's tasks, oldest first: every `task` event about one folded
+ * into it (the first says what it is, the rest are patches), with what it
+ * last said it was doing.
+ */
+export function tasksOf(t: Transcript): Task[] {
+  const tasks = new Map<string, Task>()
+  for (const event of t.events) {
+    if (event.kind !== "task") continue
+    const p = event.payload
+    const id = String(p.id)
+    const had = tasks.get(id)
+    const status = (p.status as Task["status"] | undefined) ?? had?.status ?? "running"
+    const task: Task = {
+      id,
+      toolUseId: (p.tool_use_id as string | undefined) ?? had?.toolUseId,
+      kind: (p.kind as string | undefined) ?? had?.kind ?? "task",
+      agent: (p.agent as string | undefined) ?? had?.agent,
+      description: (p.description as string | undefined) ?? had?.description ?? "",
+      background: (p.background as boolean | undefined) ?? had?.background ?? false,
+      status,
+      summary: (p.summary as string | undefined) ?? had?.summary,
+      error: (p.error as string | undefined) ?? had?.error,
+      startedAt: had?.startedAt ?? event.at,
+      endedAt: status === "running" ? undefined : (had?.endedAt ?? event.at),
+      seq: event.seq,
+      now: { ...had?.now },
+    }
+    // How it ended carries its last counters.
+    for (const key of ["tokens", "tools", "ms"] as const) {
+      if (typeof p[key] === "number") task.now[key] = p[key] as number
+    }
+    tasks.set(id, task)
+  }
+  return [...tasks.values()].map((task) =>
+    task.status === "running" && t.taskNow[task.id] ? { ...task, now: { ...task.now, ...t.taskNow[task.id] } } : task,
+  )
+}
+
+/** How many tasks are running with no turn waiting for them. */
+export function backgroundCount(t: Transcript): number {
+  return tasksOf(t).filter((task) => task.status === "running" && task.background).length
 }
 
 export function addPending(t: Transcript, pending: PendingMessage): Transcript {
@@ -404,6 +502,10 @@ export type TimelineItem =
       // finishes — the stream is for liveness, the result is the truth.
       streamed: string
       result: ToolResult | null
+      // What Claude Code runs for this call when it takes a while — a
+      // subagent, a shell command — which is what can be sent to the
+      // background or stopped; see `Task`.
+      task?: Task
     }
   | { key: string; kind: "question"; question: string; options: string[] }
   // A finished stretch of tool calls folded into one card; see `foldFinished`.
@@ -439,6 +541,9 @@ export type TimelineItem =
  */
 export function buildTimeline(t: Transcript, say: Say = asWritten): TimelineItem[] {
   const items: TimelineItem[] = []
+  // The task each tool call started, if it started one, by the call's id.
+  const taskOf = new Map<string, Task>()
+  for (const task of tasksOf(t)) if (task.toolUseId) taskOf.set(task.toolUseId, task)
   // tool_use id → index in `items`, so its result can be attached to the card
   // rather than floating as a separate bubble.
   const toolIndex = new Map<string, number>()
@@ -519,6 +624,7 @@ export function buildTimeline(t: Transcript, say: Say = asWritten): TimelineItem
           input: (p.input as Record<string, unknown>) ?? {},
           streamed: streamFor(t, String(p.block_id ?? p.id)),
           result: null,
+          ...(taskOf.has(String(p.id)) ? { task: taskOf.get(String(p.id)) } : {}),
         })
         break
 

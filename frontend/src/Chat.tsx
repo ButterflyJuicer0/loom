@@ -24,6 +24,7 @@ import {
   PanelLeft,
   Plus,
   RotateCw,
+  SendToBack,
   Share as ShareIcon,
   Sparkles,
   Square,
@@ -61,6 +62,7 @@ import {
   applySnapshot,
   buildTimeline,
   currentReplies,
+  backgroundCount,
   emptyTranscript,
   foldFinished,
   isBusy,
@@ -68,6 +70,7 @@ import {
   type Question,
   type Snapshot,
   type SessionRef,
+  type Task,
   type TimelineItem,
 } from "./agent"
 import { getSocket } from "./socket"
@@ -163,6 +166,14 @@ const OpenSession = createContext<((id: string) => void) | undefined>(undefined)
 // How a card or link deep in the transcript opens something in the canvas.
 const OpenCanvas = createContext<(item: CanvasItem) => void>(() => {})
 
+// What a tool call that takes a while can be told (Claude Code only; see
+// `Task` in agent.ts): carry on in the background, or stop. Each resolves to
+// why not, or null.
+const TaskActions = createContext<{
+  background: (toolUseId?: string) => Promise<string | null>
+  stop: (taskId: string) => Promise<string | null>
+} | null>(null)
+
 // What a message that did not get through can do: be sent again, or let go.
 const Unsent = createContext<{ resend: (id: string) => void; discard: (id: string) => void }>({
   resend: () => {},
@@ -213,7 +224,7 @@ export function Chat({
     })
   }
 
-  const { transcript, joinError, submit, resend, discard, interrupt, dropQueued, steerQueued, rename, draft: remoteDraft } = useAgent(
+  const { transcript, joinError, submit, resend, discard, interrupt, dropQueued, steerQueued, rename, background, stopTask, draft: remoteDraft } = useAgent(
     session.id,
     (event) => {
       if (event.kind === "output_files") {
@@ -231,6 +242,9 @@ export function Chat({
     btw.feed,
   )
   const busy = isBusy(transcript)
+  // Tool calls sent on without the turn: still at work when it is at rest.
+  const inBackground = useMemo(() => backgroundCount(transcript), [transcript.events])
+  const taskActions = useMemo(() => ({ background, stop: stopTask }), [background, stopTask])
   const thread = earlier ?? session.earlier ?? []
   // At the end of the transcript, where the newest reply is.
   const [atEnd, setAtEnd] = useState(true)
@@ -407,6 +421,7 @@ export function Chat({
       <OpenCanvas.Provider value={onOpenCanvas}>
       <OpenSession.Provider value={onOpenSession}>
         <Unsent.Provider value={unsent}>
+        <TaskActions.Provider value={taskActions}>
         <OutputLink.Provider value={renderOutput}>
           <Timeline
             items={items}
@@ -420,7 +435,7 @@ export function Chat({
             }
             onAnswer={submit}
             onAtEnd={setAtEnd}
-            tail={<Working status={transcript.status} queued={transcript.queue.length} />}
+            tail={<Working status={transcript.status} queued={transcript.queue.length} background={inBackground} />}
             focus={
               focus && focus.notice.session === session.id
                 ? {
@@ -455,6 +470,7 @@ export function Chat({
             }
           />
         </OutputLink.Provider>
+        </TaskActions.Provider>
         </Unsent.Provider>
 
         {sharing && (
@@ -2147,17 +2163,26 @@ function ToolCard({
   // coalesces chunks — so it is never the thing we keep.
   const output = result ? result.output : item.streamed
   const live = !result && item.streamed !== ""
+  // Sent to the background, the call has its result — "running in the
+  // background" — while the work itself goes on: that is still at work.
+  const task = item.task
+  const atWork = !result || (task?.status === "running" && task.background)
+  const failed = (result && !result.ok) || (task?.background && task.status === "failed")
+  const doing = task && taskLine(task)
 
   return (
     // `data-tool` is the tool's name, for a theme to give each its own picture.
-    <div className={"tool" + (result && !result.ok ? " failed" : "")} data-tool={item.name}>
+    <div className={"tool" + (failed ? " failed" : "")} data-tool={item.name}>
       <div className="tool-head" onClick={() => setOpen((v) => !v)}>
         <span className="tool-name">{item.name}</span>
         <span className="tool-summary">{summary}</span>
+        {task && <TaskControl task={task} />}
         <span className="tool-state">
-          {result ? result.ok ? <Check className="tool-done" /> : <X /> : <LoaderCircle className="spin" />}
+          {atWork ? <LoaderCircle className="spin" /> : failed ? <X /> : <Check className="tool-done" />}
         </span>
       </div>
+
+      {doing && <div className="tool-activity">{doing}</div>}
 
       {open && Object.keys(item.input).length > 0 && (
         <pre className="tool-input">{formatInput(item.input)}</pre>
@@ -2174,6 +2199,113 @@ function ToolCard({
       )}
     </div>
   )
+}
+
+/**
+ * On a tool card whose call takes a while (a subagent, a shell command: a
+ * `Task`): how long it has run, and what can be done about it. While the turn
+ * waits for it, "To background" sends it on by itself — the call returns at
+ * once and the turn goes on; the agent is told when it ends — and the square
+ * stops it. Once in the background it says so, and how it ended.
+ */
+function TaskControl({ task }: { task: Task }) {
+  const actions = useContext(TaskActions)
+  const [asking, setAsking] = useState(false)
+  const [why, setWhy] = useState<string | null>(null)
+
+  if (task.status !== "running") {
+    if (!task.background) return null
+    return (
+      <span className={"tool-bg " + task.status}>
+        {task.status === "completed"
+          ? t("finished in the background")
+          : task.status === "failed"
+            ? t("failed in the background")
+            : t("stopped in the background")}
+      </span>
+    )
+  }
+
+  const ask = (work: () => Promise<string | null>) => {
+    setAsking(true)
+    setWhy(null)
+    void work().then((reason) => {
+      setAsking(false)
+      setWhy(reason)
+    })
+  }
+
+  return (
+    // Its own buttons: a press on one is not a press on the card.
+    <span className="tool-task" onClick={(e) => e.stopPropagation()}>
+      <Elapsed since={task.startedAt} />
+      {task.background ? (
+        <span className="tool-bg running">{t("in the background")}</span>
+      ) : (
+        actions &&
+        task.toolUseId && (
+          <button
+            type="button"
+            className="queue-steer tool-to-bg"
+            disabled={asking}
+            title={t("Carry on in the background — the turn goes on without waiting for it")}
+            onClick={() => ask(() => actions.background(task.toolUseId))}
+          >
+            <SendToBack />
+            {t("To background")}
+          </button>
+        )
+      )}
+      {actions && (
+        <button
+          type="button"
+          className="tool-stop"
+          disabled={asking}
+          title={t("Stop this tool call")}
+          onClick={() => ask(() => actions.stop(task.id))}
+        >
+          <Square fill="currentColor" />
+        </button>
+      )}
+      {why && (
+        <span className="tool-task-error" title={why}>
+          {why}
+        </span>
+      )}
+    </span>
+  )
+}
+
+/** How long something has been going, ticking. */
+function Elapsed({ since }: { since: number }) {
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const timer = setInterval(() => setTick((n) => n + 1), 1000)
+    return () => clearInterval(timer)
+  }, [])
+  const s = Math.max(0, Math.round((Date.now() - since) / 1000))
+  const m = Math.floor(s / 60)
+  return (
+    <span className="tool-elapsed">
+      {s < 60
+        ? t("{n}s", { n: s })
+        : m < 60
+          ? t("{m}m {s}s", { m, s: s % 60 })
+          : t("{h}h {m}m", { h: Math.floor(m / 60), m: m % 60 })}
+    </span>
+  )
+}
+
+// Under a tool card with a task: what it is doing now (a subagent's latest
+// step) or, once it has ended in the background, the first line of how.
+function taskLine(task: Task): string | undefined {
+  if (task.status === "running") {
+    const calls = task.now.tools ? t("{n} tool calls", { n: task.now.tools }) : ""
+    return [calls, task.now.activity].filter(Boolean).join(" · ") || undefined
+  }
+  if (!task.background) return undefined
+  const said = task.error || task.summary?.split("\n").find((l) => l.trim() !== "")?.trim()
+  return said && said !== task.description ? said : undefined
 }
 
 /** A finished stretch of tool calls, folded; see `foldFinished`. */
@@ -2194,11 +2326,16 @@ function ToolGroup({
   // Folded from the first call (see `foldFinished`), so a card can still be
   // working: one of its calls has no result yet.
   const running = item.steps.some((s) => s.kind === "tool" && s.result === null)
+  // The call the turn is waiting on, if it is one that can be sent on or
+  // stopped: offered here, on the row, without opening it.
+  const tasks = item.steps.flatMap((s) => (s.kind === "tool" && s.task?.status === "running" ? [s.task] : []))
+  const waitedFor = tasks.find((task) => !task.background)
+  const sentOn = tasks.filter((task) => task.background).length
 
   return (
-    <div className={"tool group" + (open ? " open" : "") + (running ? " running" : "")} data-tool={names[0]}>
+    <div className={"tool group" + (open ? " open" : "") + (running || sentOn > 0 ? " running" : "")} data-tool={names[0]}>
       <div className="tool-head" role="button" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <span className="tool-icon">{running ? <LoaderCircle className="spin" /> : <Wrench />}</span>
+        <span className="tool-icon">{running || sentOn > 0 ? <LoaderCircle className="spin" /> : <Wrench />}</span>
         <span className={"tool-name" + (running ? " shimmer" : "")}>
           {running
             ? item.tools === 1
@@ -2215,6 +2352,12 @@ function ToolGroup({
             </span>
           ))}
         </span>
+        {waitedFor && <TaskControl task={waitedFor} />}
+        {sentOn > 0 && (
+          <span className="tool-bg running" title={t("Open to see them, or to stop one")}>
+            {t("{n} in the background", { n: sentOn })}
+          </span>
+        )}
         <span className={"tool-state" + (item.failed > 0 ? " bad" : "")}>
           {item.failed > 0 && (
             <>
@@ -2299,8 +2442,26 @@ function Clock({ at }: { at: number }) {
  * up — the header has no room for it on a phone. Nothing while idle; a stop
  * is already a notice in the transcript.
  */
-function Working({ status, queued }: { status: string; queued: number }) {
-  if (status !== "starting" && status !== "running") return null
+function Working({ status, queued, background }: { status: string; queued: number; background: number }) {
+  if (status !== "starting" && status !== "running") {
+    // At rest, with tool calls the user sent to the background still going:
+    // the agent is told when each ends, and takes a turn of its own then.
+    if (background === 0) return null
+    return (
+      <div className="working background" role="status">
+        <span className="working-dots" aria-hidden>
+          <i />
+          <i />
+          <i />
+        </span>
+        <span>
+          {background === 1
+            ? t("{n} tool call still running in the background", { n: background })
+            : t("{n} tool calls still running in the background", { n: background })}
+        </span>
+      </div>
+    )
+  }
   return (
     <div className={"working " + status} role="status">
       <span className="working-dots" aria-hidden>

@@ -664,6 +664,112 @@ pre.code {
   color: var(--fg-dim);
 }
 
+/* On a call that takes a while (a subagent, a shell command): how long it
+   has run, "To background", stop. */
+.tool-task {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-dim);
+  font-family: var(--ui);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.tool-elapsed {
+  font-variant-numeric: tabular-nums;
+}
+
+.tool-to-bg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.tool-to-bg svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.tool-to-bg:disabled,
+.tool-stop:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.tool-stop {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.tool-stop svg {
+  width: 0.6rem;
+  height: 0.6rem;
+}
+
+.tool-stop:hover:not(:disabled) {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* Where it is, once it is not the turn's to wait for. */
+.tool-bg {
+  flex: 0 0 auto;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--fg-dim);
+  font-family: var(--ui);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.tool-bg.running {
+  border-color: color-mix(in srgb, var(--blue) 55%, var(--line));
+  color: var(--blue);
+}
+
+.tool-bg.failed {
+  border-color: color-mix(in srgb, var(--red) 55%, var(--line));
+  color: var(--red);
+}
+
+.tool-task-error {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--red);
+}
+
+/* What a subagent is doing now, under its card's head. */
+.tool-activity {
+  padding: 0 10px 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-dim);
+  font-family: var(--ui);
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 640px) {
+  /* The row is the tool's name and what can be done; the clock is a detail. */
+  .tool.group > .tool-head .tool-elapsed {
+    display: none;
+  }
+}
+
 .tool.failed .tool-state {
   color: var(--red);
 }

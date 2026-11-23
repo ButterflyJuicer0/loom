@@ -108,6 +108,10 @@ defmodule Loom.Agent.Session do
   # How a turn a safety classifier stopped ends, in any backend's words.
   @flagged_error ~r/safeguards|usage policy|anthropic\.com\/legal\/aup/i
 
+  # How soon a release put off by background work is looked at again, when a
+  # reload is waiting on it.
+  @busy_recheck_ms :timer.seconds(30)
+
   # How long a finished session keeps its backend warm. Long enough to cover
   # reading the output and typing a follow-up; short enough that a session left
   # open overnight costs nothing.
@@ -301,6 +305,16 @@ defmodule Loom.Agent.Session do
   a backend that cannot be copied. Nothing about the session changes.
   """
   def fork_spec(id), do: GenServer.call(via(id), :fork_spec)
+
+  @doc """
+  Send what the turn is waiting on into the background (`Backend.background/2`):
+  the task started by the tool call `tool_use_id`, or with nil every one.
+  `:ok` once asked; the change itself arrives as a `:task` event.
+  """
+  def background(id, tool_use_id \\ nil), do: GenServer.call(via(id), {:background, tool_use_id})
+
+  @doc "Stop one of the session's tasks (`Backend.stop_task/2`)."
+  def stop_task(id, task_id), do: GenServer.call(via(id), {:stop_task, task_id})
 
   def topic(id), do: "agent:#{id}"
   def via(id), do: {:via, Registry, {Loom.Agent.Registry, id}}
@@ -961,6 +975,22 @@ defmodule Loom.Agent.Session do
 
   def handle_call(:info, _from, state), do: {:reply, meta(state), state}
 
+  def handle_call({:background, tool_use_id}, _from, state) do
+    cond do
+      state.handle == nil -> {:reply, {:error, "nothing is running"}, state}
+      not (is_nil(tool_use_id) or task_ref?(tool_use_id)) -> {:reply, {:error, "not a tool call"}, state}
+      true -> tasks_call(state, Backend.background(state.backend, state.handle, tool_use_id))
+    end
+  end
+
+  def handle_call({:stop_task, task_id}, _from, state) do
+    cond do
+      state.handle == nil -> {:reply, {:error, "nothing is running"}, state}
+      not task_ref?(task_id) -> {:reply, {:error, "not a task"}, state}
+      true -> tasks_call(state, Backend.stop_task(state.backend, state.handle, task_id))
+    end
+  end
+
   def handle_call(:fork_spec, _from, %{handle: nil} = state),
     do: {:reply, {:error, "the session has no conversation yet"}, state}
 
@@ -1050,8 +1080,13 @@ defmodule Loom.Agent.Session do
     {:noreply, %{state | release_timer: nil}}
   end
 
+  # Work in the background outlasts the turn that started it (a subagent or
+  # a command the user sent there): the process is kept for as long as there
+  # is some, and the timer starts over.
   def handle_info(:release_backend, state) do
-    {:noreply, release_backend(state)}
+    if busy?(state),
+      do: {:noreply, schedule_release(%{state | release_timer: nil})},
+      else: {:noreply, release_backend(state)}
   end
 
   def handle_info(:reload_backend, %{status: status} = state)
@@ -1060,7 +1095,10 @@ defmodule Loom.Agent.Session do
   end
 
   def handle_info(:reload_backend, state) do
-    {:noreply, release_backend(state)}
+    # With work in the background, once it is done: `schedule_release/1`.
+    if busy?(state),
+      do: {:noreply, schedule_release(%{state | reload_after_turn: true})},
+      else: {:noreply, release_backend(state)}
   end
 
   # The project's name or instructions changed. Mid-turn, the new text goes
@@ -1633,12 +1671,28 @@ defmodule Loom.Agent.Session do
     %{state | handle: handle, reload_after_turn: false}
   end
 
-  defp schedule_release(%{reload_after_turn: true} = state), do: release_backend(state)
-
-  defp schedule_release(state) do
-    state = cancel_release(state)
-    %{state | release_timer: Process.send_after(self(), :release_backend, @idle_release_ms)}
+  # A reload asked for mid-turn happens as the turn ends — unless work in the
+  # background is still using the process, which is then looked at again
+  # shortly (`handle_info(:release_backend, _)`), until it is not.
+  defp schedule_release(%{reload_after_turn: true} = state) do
+    if busy?(state), do: arm_release(state, @busy_recheck_ms), else: release_backend(state)
   end
+
+  defp schedule_release(state), do: arm_release(state, @idle_release_ms)
+
+  defp arm_release(state, after_ms) do
+    state = cancel_release(state)
+    %{state | release_timer: Process.send_after(self(), :release_backend, after_ms)}
+  end
+
+  defp busy?(state), do: Backend.busy?(state.backend, state.handle)
+
+  # A tool call's or a task's id, as the backend names them: never anything
+  # else from a client into the backend's stdin.
+  defp task_ref?(ref), do: is_binary(ref) and Regex.match?(~r/\A[A-Za-z0-9_-]{1,128}\z/, ref)
+
+  defp tasks_call(state, {:ok, handle}), do: {:reply, :ok, checkpoint(%{state | handle: handle})}
+  defp tasks_call(state, {:error, reason}), do: {:reply, {:error, reason}, state}
 
   defp record_usage(state, payload) do
     %{

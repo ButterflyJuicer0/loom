@@ -100,7 +100,8 @@ defmodule Loom.Agent.Backend do
       authoritative event instead.
 
   Delta `type`s a client has to handle: `:block_start`, `:block_end`, `:text`,
-  `:thinking`, `:tool_use_start`, and `:tool_output` — a chunk of a running
+  `:thinking`, `:tool_use_start`, `:task_progress` — what a task (`:task`
+  events) is doing now, keyed by its id — and `:tool_output` — a chunk of a running
   tool's output, keyed by the tool card's `block_id`. `:tool_output` exists so a
   ten-minute build does not look hung; the `:tool_result` event that follows
   replaces whatever accumulated.
@@ -285,13 +286,36 @@ defmodule Loom.Agent.Backend do
   """
   @callback fork_spec(handle) :: {:ok, map()} | {:error, term()}
 
+  @doc """
+  Send what a turn is waiting on — a subagent, a shell command — into the
+  background, so the turn goes on without it: the user's Ctrl+B. `tool_use_id`
+  is the blocking call's, or nil for every one there is. The task keeps
+  running and is reported as it changes (`:task` events); nothing here waits
+  for that. Claude Code only: the others have no tasks.
+  """
+  @callback background(handle, tool_use_id :: String.t() | nil) ::
+              {:ok, handle} | {:error, term()}
+
+  @doc "Stop one task, by its id; the call that started it returns as failed."
+  @callback stop_task(handle, task_id :: String.t()) :: {:ok, handle} | {:error, term()}
+
+  @doc """
+  Whether work is under way that no turn is waiting for: a task in the
+  background. While there is, the session keeps the backend's process past
+  its idle timer — letting it go would take the work with it.
+  """
+  @callback busy?(handle) :: boolean()
+
   @optional_callbacks detach: 1,
                       adopt: 1,
                       checkpoint: 1,
                       set_effort: 2,
                       set_model: 2,
                       warm: 1,
-                      fork_spec: 1
+                      fork_spec: 1,
+                      background: 2,
+                      stop_task: 2,
+                      busy?: 1
 
   @doc """
   The thinking levels a backend takes, lowest first; empty for one that has
@@ -335,6 +359,30 @@ defmodule Loom.Agent.Backend do
 
     if Code.ensure_loaded?(module) and function_exported?(module, :fork_spec, 1),
       do: module.fork_spec(handle),
+      else: {:error, :unsupported}
+  end
+
+  @doc "`background/2`, for a backend that has it; `{:error, :unsupported}` otherwise."
+  def background(kind, handle, tool_use_id), do: optional(kind, :background, [handle, tool_use_id])
+
+  @doc "`stop_task/2`, for a backend that has it; `{:error, :unsupported}` otherwise."
+  def stop_task(kind, handle, task_id), do: optional(kind, :stop_task, [handle, task_id])
+
+  @doc "`busy?/1`, for a backend that has it; false otherwise."
+  def busy?(_kind, nil), do: false
+
+  def busy?(kind, handle) do
+    module = impl(kind)
+
+    Code.ensure_loaded?(module) and function_exported?(module, :busy?, 1) and
+      module.busy?(handle)
+  end
+
+  defp optional(kind, name, args) do
+    module = impl(kind)
+
+    if Code.ensure_loaded?(module) and function_exported?(module, name, length(args)),
+      do: apply(module, name, args),
       else: {:error, :unsupported}
   end
 

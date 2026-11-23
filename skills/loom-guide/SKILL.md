@@ -94,6 +94,30 @@ Some features are told only in the skill that uses them and in
   and `Loom.Agent.Btw.Worker`, `fork_spec/1` in each backend,
   `/api/agents/:id/btw`; `frontend/src/Btw.tsx`, `useBtw.ts`; measurements in
   `docs/backends.md` §6.15.
+- **A tool call that takes too long: send it to the background, or stop it.**
+  In a Claude Code session, a tool call the turn is waiting on gets controls
+  on its own row — the "using N tools" row, and the tool's card inside it —
+  once Claude Code runs it as a task: a subagent (the Agent tool) at once, a
+  shell command after about three seconds. The row then shows how long it
+  has run, **转后台 / To background** and a square. To background: the call
+  returns at once, the agent goes on with the rest of the turn, the work
+  carries on by itself, and when it ends Claude Code tells the agent, which
+  takes a turn of its own to read the outcome. The square stops that call
+  only; the turn goes on. A call in the background says so on its card
+  (后台运行, then how it ended), the row counts them, and while the session is
+  otherwise at rest the line where "Working…" would be says how many are
+  still running. Work in the background keeps the session's process alive
+  past its 15-minute idle timer and through `/reload` until it is done, and
+  carries on through a Loom restart. Limits: Claude Code only; only subagents
+  and shell commands — an ordinary MCP tool call cannot be sent on (Claude
+  Code answers `backgrounded: false`) nor stopped by itself, and neither can
+  the built-in file and web tools: stop the turn instead; what a subagent
+  starts itself has no controls; a background subagent's own steps are not
+  shown, only its card's line; Claude Code stops a background command after
+  30 minutes. Code: "Tasks" in `Loom.Agent.Backend.ClaudeCode`,
+  `Session.background/2` and `stop_task/2`, the channel's `background` /
+  `stop_task`; `TaskControl` in `frontend/src/Chat.tsx`, `tasksOf` in
+  `agent.ts`; measurements in docs/backends.md §6.16.
 - **Signing in: passkeys, and a yes from a signed-in device.** A device signs
   in with a passkey (Face ID, Touch ID, Windows Hello, Android's screen
   lock), or with the password *and* an Allow pressed within two minutes on a

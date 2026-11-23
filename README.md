@@ -96,6 +96,10 @@ See the [changelog](CHANGELOG.md) for what came in which version.
   composer and goes out as the next turn, as in Claude Code — several at once
   go together. **Send now** puts them into the running turn instead; ✕ drops
   one.
+- **A tool call taking too long? Send it to the background.** A subagent or
+  a long command a Claude Code turn is waiting for has **To background** and
+  stop on its own row: one tap and it carries on by itself while the turn
+  goes on.
 - **Ask on the side while it works (BTW).** The question-mark bubble in the
   composer, or `/btw <question>`, asks a copy of the conversation as it
   stands — "what is it doing now?", "why that file?" — and shows the answer

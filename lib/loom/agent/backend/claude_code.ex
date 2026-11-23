@@ -218,7 +218,13 @@ defmodule Loom.Agent.Backend.ClaudeCode do
       # last answered this turn. They differ when Claude Code fell back, or the
       # API answered from another model; `turn_done` carries both.
       asked_model: nil,
-      turn_model: nil
+      turn_model: nil,
+      # What the process is running besides the conversation: its subagents
+      # and shell commands (Claude Code's "tasks"), by task id, until each
+      # says how it ended. See "Tasks" below.
+      tasks: %{},
+      # Tasks that went with a process Loom let go of, to be said so.
+      lost: []
     }
   end
 
@@ -415,19 +421,55 @@ defmodule Loom.Agent.Backend.ClaudeCode do
   def interrupt(handle) do
     # Asking beats killing: the process survives, so the next turn is still
     # warm. See the moduledoc.
-    id = "int_#{handle.next_control_id}"
-
-    write(
-      handle,
-      Jsonl.line(%{
-        "type" => "control_request",
-        "request_id" => id,
-        "request" => %{"subtype" => "interrupt"}
-      })
-    )
-
-    {:ok, %{handle | interrupted?: true, next_control_id: handle.next_control_id + 1}}
+    {:ok, %{control(handle, "int", %{"subtype" => "interrupt"}) | interrupted?: true}}
   end
+
+  defp control(handle, tag, request) do
+    id = "#{tag}_#{handle.next_control_id}"
+    write(handle, Jsonl.line(%{"type" => "control_request", "request_id" => id, "request" => request}))
+    %{handle | next_control_id: handle.next_control_id + 1}
+  end
+
+  # ── Tasks: what a turn is waiting on, sent on without it ──────────────────
+  #
+  # A subagent (the Agent tool) or a shell command runs in the foreground by
+  # default: the tool call blocks, and the turn with it. Claude Code calls
+  # each a task and says so on stdout — `task_started`, `task_progress`,
+  # `task_updated`, `task_notification` — and takes two requests about them
+  # on stdin (measured on 2.1.317, docs/backends.md §6.16):
+  #
+  #   * `background_tasks` with the `tool_use_id` of the blocking call: the
+  #     call returns at once ("running in the background"), the turn goes on,
+  #     the task keeps running, and when it settles Claude Code starts a turn
+  #     of its own to read the outcome. Without an id, every foreground task —
+  #     Ctrl+B in the terminal.
+  #   * `stop_task` with the task's id: it is killed, and its call returns.
+  #
+  # Neither waits for an answer here: what happened arrives as `task_updated`.
+
+  @impl Backend
+  def background(%{proc: nil}, _tool_use_id), do: {:error, "nothing is running"}
+
+  def background(handle, tool_use_id) do
+    request =
+      if is_binary(tool_use_id),
+        do: %{"subtype" => "background_tasks", "tool_use_id" => tool_use_id},
+        else: %{"subtype" => "background_tasks"}
+
+    {:ok, control(handle, "bg", request)}
+  end
+
+  @impl Backend
+  def stop_task(%{proc: nil}, _task_id), do: {:error, "nothing is running"}
+
+  def stop_task(handle, task_id) when is_binary(task_id),
+    do: {:ok, control(handle, "stop", %{"subtype" => "stop_task", "task_id" => task_id})}
+
+  # Work that outlasts the turn: while there is some, the process is not to
+  # be let go on the idle timer — it would take the work with it.
+  @impl Backend
+  def busy?(handle),
+    do: Enum.any?(Map.get(handle, :tasks, %{}), fn {_id, task} -> task.background and not task.done end)
 
   # A flag, so a warm process spawned with another level is let go of; the
   # turn about to start spawns its successor, which resumes the conversation.
@@ -477,7 +519,33 @@ defmodule Loom.Agent.Backend.ClaudeCode do
 
   defp teardown(handle) do
     Proc.kill(handle.proc)
-    %{handle | proc: nil, buffer: "", saved: nil}
+    orphan(%{handle | proc: nil, buffer: "", saved: nil})
+  end
+
+  # The process is gone and its tasks with it: remembered, to be reported
+  # with the next output there is (`lost_tasks/1`).
+  defp orphan(handle) do
+    ids = for {id, task} <- Map.get(handle, :tasks, %{}), not task.done, do: id
+
+    handle
+    |> Map.put(:tasks, %{})
+    |> Map.put(:lost, Map.get(handle, :lost, []) ++ ids)
+  end
+
+  defp lost_tasks(handle) do
+    case Map.get(handle, :lost, []) do
+      [] ->
+        {handle, []}
+
+      ids ->
+        {Map.put(handle, :lost, []),
+         for(
+           id <- ids,
+           do:
+             {:event, :task,
+              %{id: id, status: "stopped", error: "its process was let go before it finished"}}
+         )}
+    end
   end
 
   # ── Outliving the node ───────────────────────────────────────────────────
@@ -526,8 +594,9 @@ defmodule Loom.Agent.Backend.ClaudeCode do
         {:ok, %{handle | proc: proc}, []}
 
       {data, proc, :alive} ->
-        {handle, out} = feed(%{handle | proc: proc}, data)
-        {:ok, handle, out}
+        {handle, lost} = lost_tasks(%{handle | proc: proc})
+        {handle, out} = feed(handle, data)
+        {:ok, handle, lost ++ out}
 
       {"", _proc, {:exited, status}} ->
         died(handle, status)
@@ -607,11 +676,14 @@ defmodule Loom.Agent.Backend.ClaudeCode do
   def died(handle, status), do: exited(handle, status)
 
   defp exited(handle, status) do
-    {:ok, %{handle | proc: nil, booting: nil, saved: nil},
-     [
-       {:event, :turn_failed,
-        %{reason: "claude exited with status #{status || "?"} before finishing the turn"}}
-     ]}
+    {handle, lost} = lost_tasks(orphan(%{handle | proc: nil, booting: nil, saved: nil}))
+
+    {:ok, handle,
+     lost ++
+       [
+         {:event, :turn_failed,
+          %{reason: "claude exited with status #{status || "?"} before finishing the turn"}}
+       ]}
   end
 
   defp reduce_line(line, {handle, out}) do
@@ -740,7 +812,149 @@ defmodule Loom.Agent.Backend.ClaudeCode do
       else: {handle, []}
   end
 
+  # A task begins. Only the conversation's own: what a subagent starts in
+  # turn (`parent_task_id`) is that subagent's business, and housekeeping
+  # tasks are nobody's.
+  defp translate(handle, %{"type" => "system", "subtype" => "task_started", "task_id" => id} = m)
+       when is_binary(id) do
+    if m["parent_task_id"] || m["owned_by_subagent"] || m["skip_transcript"] || m["ambient"] do
+      {handle, []}
+    else
+      background = m["is_backgrounded"] == true
+      task = %{tool: m["tool_use_id"], background: background, done: false}
+
+      {Map.put(handle, :tasks, Map.put(Map.get(handle, :tasks, %{}), id, task)),
+       [
+         {:event, :task,
+          %{
+            id: id,
+            tool_use_id: m["tool_use_id"],
+            kind: task_kind(m["task_type"]),
+            agent: m["subagent_type"],
+            description: m["description"],
+            background: background,
+            status: "running"
+          }}
+       ]}
+    end
+  end
+
+  # What it is doing now: transient, like a typewriter's text.
+  defp translate(handle, %{"type" => "system", "subtype" => "task_progress", "task_id" => id} = m) do
+    if known_task?(handle, id) do
+      usage = m["usage"] || %{}
+
+      {handle,
+       [
+         {:delta,
+          %{
+            type: :task_progress,
+            block_id: id,
+            activity: m["description"],
+            summary: m["summary"],
+            last_tool: m["last_tool_name"],
+            tokens: usage["total_tokens"],
+            tools: usage["tool_uses"],
+            ms: usage["duration_ms"]
+          }}
+       ]}
+    else
+      {handle, []}
+    end
+  end
+
+  # Something about it changed: moved to the background, ended, renamed.
+  defp translate(handle, %{"type" => "system", "subtype" => "task_updated", "task_id" => id} = m) do
+    patch = m["patch"] || %{}
+
+    with %{} = task <- Map.get(handle, :tasks, %{})[id],
+         change when map_size(change) > 0 <-
+           %{}
+           |> put_some(:background, if(is_boolean(patch["is_backgrounded"]), do: patch["is_backgrounded"]))
+           |> put_some(:status, task_status(patch["status"]))
+           |> put_some(:description, patch["description"])
+           |> put_some(:error, patch["error"]) do
+      task = %{
+        task
+        | background: Map.get(change, :background, task.background),
+          done: task.done or Map.get(change, :status, "running") != "running"
+      }
+
+      {Map.put(handle, :tasks, Map.put(handle.tasks, id, task)),
+       [{:event, :task, Map.put(change, :id, id)}]}
+    else
+      _ -> {handle, []}
+    end
+  end
+
+  # How it ended, in its own words: the last there is to hear of it.
+  defp translate(handle, %{"type" => "system", "subtype" => "task_notification", "task_id" => id} = m) do
+    if known_task?(handle, id) do
+      usage = m["usage"] || %{}
+
+      event =
+        %{id: id, status: task_status(m["status"]) || "completed"}
+        |> put_some(:summary, m["summary"] && String.slice(m["summary"], 0, 2_000))
+        |> put_some(:tokens, usage["total_tokens"])
+        |> put_some(:tools, usage["tool_uses"])
+        |> put_some(:ms, usage["duration_ms"])
+
+      {Map.put(handle, :tasks, Map.delete(handle.tasks, id)), [{:event, :task, event}]}
+    else
+      {handle, []}
+    end
+  end
+
   defp translate(handle, %{"type" => "system"}), do: {handle, []}
+
+  # What a subagent itself says and does (`parent_tool_use_id`: the Agent call
+  # it was started by). Kept apart from the conversation's own stream: it has
+  # no deltas, so it claims no block of the conversation's — which, once a
+  # subagent runs beside the turn, are being streamed at the same moment.
+  #
+  # In the foreground its tool calls show among the turn's, as they always
+  # have. In the background they do not: they would land in whatever the
+  # conversation is doing by then, or after it has finished; the task's own
+  # row says what it is doing. A result is still shown for a call that was.
+  defp translate(handle, %{"parent_tool_use_id" => parent, "type" => type, "message" => message})
+       when is_binary(parent) and type in ["assistant", "user"] do
+    hidden? = background_call?(handle, parent)
+
+    Enum.reduce(List.wrap(message["content"]), {handle, []}, fn
+      %{"type" => "tool_use", "id" => id, "name" => name} = block, {acc, out} ->
+        if hidden? do
+          {acc, out}
+        else
+          {%{acc | tools: Map.put(acc.tools, id, name)},
+           out ++
+             [
+               {:event, :tool_use,
+                %{id: id, block_id: "sub." <> id, name: name, input: Map.get(block, "input", %{}), parent: parent}}
+             ]}
+        end
+
+      %{"type" => "tool_result", "tool_use_id" => id} = block, {acc, out} ->
+        if hidden? and not Map.has_key?(acc.tools, id) do
+          {acc, out}
+        else
+          {acc,
+           out ++
+             [
+               {:event, :tool_result,
+                %{
+                  id: id,
+                  name: Map.get(acc.tools, id, "tool"),
+                  status: if(block["is_error"], do: :error, else: :ok),
+                  output: describe(block["content"]),
+                  parent: parent
+                }}
+             ]}
+        end
+
+      _block, acc ->
+        acc
+    end)
+  end
 
   # The ack for our own interrupt. `still_queued` would list messages that
   # survived it, which cannot happen here — the session never writes a second
@@ -860,6 +1074,31 @@ defmodule Loom.Agent.Backend.ClaudeCode do
   end
 
   defp translate(handle, _message), do: {handle, []}
+
+  defp task_kind("local_agent"), do: "agent"
+  defp task_kind("local_bash"), do: "shell"
+  defp task_kind(type) when is_binary(type), do: type
+  defp task_kind(_type), do: "task"
+
+  # Claude Code's words for how a task stands, as three: it ran to its end,
+  # it failed, or it was stopped (killed, by the user or with its process).
+  defp task_status(status) when status in ["pending", "running", "paused"], do: "running"
+  defp task_status("completed"), do: "completed"
+  defp task_status("failed"), do: "failed"
+  defp task_status(status) when status in ["killed", "stopped"], do: "stopped"
+  defp task_status(_status), do: nil
+
+  defp known_task?(handle, id), do: is_map_key(Map.get(handle, :tasks, %{}), id)
+
+  # Whether the Agent call `tool_use_id` is a task now in the background.
+  defp background_call?(handle, tool_use_id) do
+    Enum.any?(Map.get(handle, :tasks, %{}), fn {_id, task} ->
+      task.tool == tool_use_id and task.background
+    end)
+  end
+
+  defp put_some(map, _key, nil), do: map
+  defp put_some(map, key, value), do: Map.put(map, key, value)
 
   # This turn's share of the process's running total. A smaller total than
   # last seen means a process that started over, so all of it is this turn's.
