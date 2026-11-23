@@ -16,6 +16,9 @@
   border-radius: 1rem;
   background: var(--bg-raised);
   font-family: var(--ui);
+  /* Over whatever a theme stands on the composer; see Subtasks.css. */
+  position: relative;
+  z-index: 1;
 }
 
 .btw-head {

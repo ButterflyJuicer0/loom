@@ -11,7 +11,6 @@ export default {
   Passkeys: "Passkey",
   "Face ID, Touch ID, Windows Hello or an Android screen lock signs in at once. Without one, the password has to be allowed on a device already signed in.":
     "用 Face ID、Touch ID、Windows Hello 或安卓锁屏一步登录。没有 passkey 时，输入密码后还要在一台已登录的设备上批准。",
-  "None yet.": "还没有。",
   "used {when}": "上次使用：{when}",
   "Remove passkey": "删除 passkey",
   "Remove the passkey made on {name}? Delete it from that device's passwords too.":

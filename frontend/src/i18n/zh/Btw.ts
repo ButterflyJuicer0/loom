@@ -8,7 +8,6 @@ export default {
   "Ask on the side: what is it doing, why, what does that mean…": "顺便问：它在做什么、为什么这么做、这是什么意思…",
   "Stop this answer": "停止这次回答",
   "Ask on the side": "顺便问",
-  "Reading the conversation…": "正在看对话…",
   "Stopped": "已停止",
   "It could not be answered": "没能回答",
 }
