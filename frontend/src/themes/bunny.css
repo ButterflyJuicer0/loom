@@ -24,7 +24,11 @@
    Each selector starts `html[data-style="bunny"][data-theme]`: as specific
    as themes.css's shapes, and after them, so these win. */
 
-html[data-style="bunny"] {
+/* The second selector: the sidebar stays beige at night, so what is in it
+   — rows, buttons, label bars — keeps its daytime pictures and colours
+   there, declared again over the night's (the rule after next). */
+html[data-style="bunny"],
+html[data-style="bunny"][data-theme="dark"] .sidebar {
   --sb-card: url("./art/bunny-f-card.svg");
   --sb-cream: url("./art/bunny-f-cream.svg");
   --sb-pop: url("./art/bunny-f-pop.svg");
@@ -36,8 +40,8 @@ html[data-style="bunny"] {
   --sb-field: url("./art/bunny-f-field.svg");
   --sb-tag: url("./art/bunny-f-tag.svg");
   --sb-grid: url("./art/bunny-grid.svg");
-  /* The sidebar's ground: warm beige by day, ruled a shade deeper. The deck
-     and the door keep the sky. */
+  /* The sidebar's ground: warm, bright beige, ruled a shade deeper — by day
+     and by night alike. The deck and the door keep the sky. */
   --sb-wall: #f6e9d4;
   --sb-wall-grid: url("./art/bunny-grid-wall.svg");
   --sb-deck: url("./art/bunny-deck.svg");
@@ -80,8 +84,6 @@ html[data-style="bunny"][data-theme="dark"] {
   --sb-field: url("./art/bunny-f-field-night.svg");
   --sb-tag: url("./art/bunny-f-tag-night.svg");
   --sb-grid: url("./art/bunny-grid-night.svg");
-  --sb-wall: #1a2133;
-  --sb-wall-grid: url("./art/bunny-grid-night.svg");
   --sb-deck: url("./art/bunny-deck-night.svg");
   --sb-arrow: url("./art/bunny-arrow-night.svg");
   --sb-stamp: url("./art/bunny-stamp-night.svg");
@@ -189,8 +191,27 @@ html[data-style="bunny"][data-theme] .sidebar {
 }
 
 /* Quiet text on it: a shade darker than the mix, so it reads. */
-html[data-style="bunny"][data-theme="light"] .sidebar {
+html[data-style="bunny"][data-theme] .sidebar {
   --fg-dim: #6a5443;
+}
+
+/* At night the page is dark and the sidebar is not: inside it, every colour
+   the interface reads from is the day's. (The tokens say its ground and its
+   ink; these are what Loom derives from the page's, which here is dark.) */
+html[data-style="bunny"][data-theme="dark"] .sidebar {
+  --line: #e3cdab;
+  --bg-raised: #f6e9d4;
+  --loom-accent: #33261f;
+  --unread: #a55824;
+  --primary: #a55824;
+  --primary-foreground: #ffffff;
+  --border: #e3cdab;
+  --surface-field: #fffaf4;
+  --blue: #2964aa;
+  --red: #d03b3b;
+  --green: #0e8f6f;
+  --shadow: rgb(0 0 0 / 12%);
+  color-scheme: light;
 }
 
 @media (min-width: 641px) {
@@ -351,8 +372,7 @@ html[data-style="bunny"][data-theme] .nav-item > svg.nav-icon.lucide-messages-sq
 }
 
 /* By night the things' black edges would be lost in the ground: a pale
-   line round each. */
-html[data-style="bunny"][data-theme="dark"] .nav-item > svg.nav-icon,
+   line round each. (Not the sidebar's: its ground is beige by night too.) */
 html[data-style="bunny"][data-theme="dark"] .composer-btn.effort-btn > svg,
 html[data-style="bunny"][data-theme="dark"] .emp-spend > svg,
 html[data-style="bunny"][data-theme="dark"] .tool:not(.group) > .tool-head::before {
@@ -1178,8 +1198,9 @@ html[data-style="bunny"][data-theme] .chip.button:not(.head-btn) {
   transition: none;
 }
 
-html[data-style="bunny"][data-theme="dark"] :is(.text-btn, .option, .bell-btn, .new-chat, .new-chat-more, .replies-send, .queue-steer, .emp-new),
-html[data-style="bunny"][data-theme="dark"] .chip.button:not(.head-btn) {
+/* (Outside the sidebar, which is by day at any hour.) */
+html[data-style="bunny"][data-theme="dark"] :is(.text-btn, .option, .bell-btn, .new-chat, .new-chat-more, .replies-send, .queue-steer, .emp-new):not(.sidebar *),
+html[data-style="bunny"][data-theme="dark"] .chip.button:not(.head-btn):not(.sidebar *) {
   background-color: #4a3c35;
 }
 
@@ -1190,8 +1211,8 @@ html[data-style="bunny"][data-theme] .chip.button:not(.head-btn):hover {
   color: #1d3442;
 }
 
-html[data-style="bunny"][data-theme="dark"] :is(.text-btn, .option, .bell-btn, .new-chat, .new-chat-more, .replies-send, .queue-steer, .emp-new):hover:not(:disabled),
-html[data-style="bunny"][data-theme="dark"] .chip.button:not(.head-btn):hover {
+html[data-style="bunny"][data-theme="dark"] :is(.text-btn, .option, .bell-btn, .new-chat, .new-chat-more, .replies-send, .queue-steer, .emp-new):hover:not(:disabled):not(.sidebar *),
+html[data-style="bunny"][data-theme="dark"] .chip.button:not(.head-btn):hover:not(.sidebar *) {
   background-color: #35576f;
   color: #e8f3fb;
 }
@@ -2022,12 +2043,9 @@ html[data-style="bunny"][data-theme] .to-bottom > * {
     box-shadow: 0 3px 0 0 var(--sb-drop);
   }
 
+  /* (The sidebar's own buttons stay the day's.) */
   html[data-style="bunny"][data-theme="dark"] .chat-header .icon-btn.glass,
-  html[data-style="bunny"][data-theme="dark"] .chat-header .chip.button.pane-more,
-  html[data-style="bunny"][data-theme="dark"] .sidebar .sidebar-head .bell-btn,
-  html[data-style="bunny"][data-theme="dark"] .sidebar .search-btn,
-  html[data-style="bunny"][data-theme="dark"] .dial-btn,
-  html[data-style="bunny"][data-theme="dark"] .sidebar-foot.dial .devices-btn svg {
+  html[data-style="bunny"][data-theme="dark"] .chat-header .chip.button.pane-more {
     background-color: #4a3c35;
   }
 
