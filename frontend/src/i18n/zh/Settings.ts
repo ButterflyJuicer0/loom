@@ -6,6 +6,8 @@ export default {
   Light: "浅色",
   Dark: "深色",
   Theme: "主题",
+  "Sign-in": "登录",
+  "Passkeys, and the devices signed in.": "Passkey 和已登录的设备。",
   "{name}. Colours, corners and type for the whole interface.": "{name}。整个界面的配色、圆角和字体。",
   "Every theme has a light and a dark side.": "每套主题都有浅色和深色两面。",
   "In use": "使用中",

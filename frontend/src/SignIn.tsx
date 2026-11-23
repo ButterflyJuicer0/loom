@@ -12,16 +12,27 @@ import {
   type AuthOverview,
   type PendingSignIn,
 } from "./api"
+import { t } from "./i18n"
 
 // An IPv6 address is too long for a phone's row; its first half says enough.
 const shortIp = (ip: string) => (ip.includes(":") ? ip.split(":").slice(0, 4).join(":") + ":…" : ip)
 
 const since = (iso: string | null) => {
-  if (!iso) return "never"
+  if (!iso) return t("never")
   const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000)
-  if (s < 3600) return "just now"
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
-  return `${Math.floor(s / 86400)}d ago`
+  if (s < 3600) return t("just now")
+  if (s < 86400) return t("{n}h ago", { n: Math.floor(s / 3600) })
+  return t("{n}d ago", { n: Math.floor(s / 86400) })
+}
+
+// How a device signed in, as the server words it (`Loom.Auth`): the fixed
+// part in the interface's language, the device's name as it is.
+const how = (method: string) => {
+  const allowed = /^password, allowed on (.*)$/.exec(method)
+  if (allowed) return t("password, allowed on {name}", { name: allowed[1] })
+  const made = /^passkey made on (.*)$/.exec(method)
+  if (made) return t("passkey made on {name}", { name: made[1] })
+  return method === "password" ? t("password") : method === "passkey" ? t("passkey") : method
 }
 
 /**
@@ -69,23 +80,22 @@ export function SignInPage() {
 
   return (
     <div className="archived-list signin-page">
-      <p className="settings-label">Passkeys</p>
+      <p className="settings-label">{t("Passkeys")}</p>
       <p className="settings-hint">
-        Face ID, Touch ID, Windows Hello or an Android screen lock signs in at once. Without one, the
-        password has to be allowed on a device already signed in.
+        {t("Face ID, Touch ID, Windows Hello or an Android screen lock signs in at once. Without one, the password has to be allowed on a device already signed in.")}
       </p>
-      {overview.passkeys.length === 0 && <p className="settings-hint">None yet.</p>}
+      {overview.passkeys.length === 0 && <p className="settings-hint">{t("None yet.")}</p>}
       {overview.passkeys.map((p) => (
         <div className="signin-item" key={p.id}>
           <div className="signin-body">
             <span className="signin-name">{p.name}</span>
-            <span className="signin-meta">used {since(p.last_used_at)}</span>
+            <span className="signin-meta">{t("used {when}", { when: since(p.last_used_at) })}</span>
           </div>
           <button
             className="icon-btn"
-            title="Remove passkey"
+            title={t("Remove passkey")}
             onClick={() =>
-              confirm(`Remove the passkey made on ${p.name}? Delete it from that device's passwords too.`) &&
+              confirm(t("Remove the passkey made on {name}? Delete it from that device's passwords too.", { name: p.name })) &&
               run(() => deletePasskey(p.id))
             }
           >
@@ -99,34 +109,33 @@ export function SignInPage() {
             <input
               type="password"
               className="signin-input"
-              placeholder="Password, to confirm"
+              placeholder={t("Password, to confirm")}
               autoComplete="current-password"
               autoFocus
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
             <button type="submit" className="keep-btn" disabled={busy || !password}>
-              {busy ? "…" : "Add"}
+              {busy ? "…" : t("Add")}
             </button>
-            <button type="button" className="icon-btn" title="Cancel" onClick={() => setAdding(false)}>
+            <button type="button" className="icon-btn" title={t("Cancel")} onClick={() => setAdding(false)}>
               <X />
             </button>
           </form>
         ) : (
           <div>
             <button className="keep-btn" onClick={() => setAdding(true)}>
-              Add a passkey on this device
+              {t("Add a passkey on this device")}
             </button>
           </div>
         )
       ) : (
-        <p className="settings-hint">This browser can't make passkeys.</p>
+        <p className="settings-hint">{t("This browser can't make passkeys.")}</p>
       )}
 
-      <p className="settings-label signin-gap">Signed-in devices</p>
+      <p className="settings-label signin-gap">{t("Signed-in devices")}</p>
       <p className="settings-hint">
-        Each signs out after {overview.idle_days} days unused. A device shows up here the next time it
-        opens Loom.
+        {t("Each signs out after {n} days unused. A device shows up here the next time it opens Loom.", { n: overview.idle_days })}
       </p>
       {[...overview.logins]
         .sort((a, b) => Number(b.id === overview.current) - Number(a.id === overview.current))
@@ -137,17 +146,17 @@ export function SignInPage() {
             <div className="signin-body">
               <span className="signin-name">
                 {l.name}
-                {me && <span className="signin-me">This device</span>}
+                {me && <span className="signin-me">{t("This device")}</span>}
               </span>
               <span className="signin-meta" title={l.ip ?? undefined}>
-                {l.method} · {since(l.last_seen_at)}
+                {how(l.method)} · {since(l.last_seen_at)}
                 {l.ip ? ` · ${shortIp(l.ip)}` : ""}
               </span>
             </div>
             <button
               className="keep-btn"
               onClick={() => {
-                if (!confirm(me ? "Sign this device out?" : `Sign ${l.name} out?`)) return
+                if (!confirm(me ? t("Sign this device out?") : t("Sign {name} out?", { name: l.name }))) return
                 void run(async () => {
                   await revokeLogin(l.id)
                   if (me) {
@@ -157,7 +166,7 @@ export function SignInPage() {
                 })
               }}
             >
-              Sign out
+              {t("Sign out")}
             </button>
           </div>
         )
@@ -189,23 +198,25 @@ export function SignInRequest({ pending }: { pending: PendingSignIn[] }) {
 
   return createPortal(
     <div className="modal-scrim">
-      <div className="modal signin-request" role="alertdialog" aria-label="Sign-in request">
+      <div className="modal signin-request" role="alertdialog" aria-label={t("Sign-in request")}>
         <div className="modal-head">
-          <span>Sign-in request</span>
+          <span>{t("Sign-in request")}</span>
         </div>
         <div className="settings-body">
           <p>
             <b>{req.name}</b>
-            {req.ip ? ` from ${req.ip}` : ""} entered the right password and wants to sign in.
+            {req.ip
+              ? t(" from {ip} entered the right password and wants to sign in.", { ip: req.ip })
+              : t(" entered the right password and wants to sign in.")}
           </p>
-          <p className="settings-hint">Only allow it if it's you, on that device, right now.</p>
+          <p className="settings-hint">{t("Only allow it if it's you, on that device, right now.")}</p>
           {error && <p className="signin-error">{error}</p>}
           <div className="signin-actions">
             <button className="keep-btn" onClick={() => void decide(false)}>
-              Deny
+              {t("Deny")}
             </button>
             <button className="keep-btn signin-allow" onClick={() => void decide(true)}>
-              Allow
+              {t("Allow")}
             </button>
           </div>
         </div>

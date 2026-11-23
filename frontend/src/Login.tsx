@@ -53,10 +53,10 @@ export function Login({ onSuccess }: Props) {
         onSuccess()
       } else if (result === "denied") {
         setWaiting(null)
-        setError("Denied on your other device")
+        setError(t("Denied on your other device"))
       } else if (result === "expired" || Date.now() > waiting.until) {
         setWaiting(null)
-        setError("Nobody allowed it in time — try again")
+        setError(t("Nobody allowed it in time — try again"))
       }
     }
     const timer = setInterval(tick, 2000)
@@ -112,7 +112,7 @@ export function Login({ onSuccess }: Props) {
     } catch (err) {
       // Dismissing the sheet is not an error worth a message.
       if (!(err instanceof DOMException && err.name === "NotAllowedError")) {
-        setError("That passkey was not accepted")
+        setError(t("That passkey was not accepted"))
       }
     } finally {
       setBusy(false)
@@ -131,12 +131,11 @@ export function Login({ onSuccess }: Props) {
         <div className="login-box">
           <div className="login-title">loom</div>
           <div className="login-wait">
-            Password OK. Allow this sign-in on a device that is already signed in — your phone has a
-            notification.
+            {t("Password OK. Allow this sign-in on a device that is already signed in — your phone has a notification.")}
           </div>
-          <div className="login-wait-time">{left}s left</div>
+          <div className="login-wait-time">{t("{n}s left", { n: left })}</div>
           <button type="button" className="login-btn login-secondary" onClick={giveUp}>
-            Cancel
+            {t("Cancel")}
           </button>
         </div>
       </div>
@@ -153,9 +152,9 @@ export function Login({ onSuccess }: Props) {
           <>
             <button type="button" className="login-btn login-passkey" onClick={withPasskey} disabled={busy}>
               <Fingerprint />
-              Sign in with passkey
+              {t("Sign in with passkey")}
             </button>
-            <div className="login-or">or</div>
+            <div className="login-or">{tc("login", "or")}</div>
           </>
         )}
         <input

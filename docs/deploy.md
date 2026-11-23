@@ -128,7 +128,36 @@ systemd gives up, and you move `loom.prev` back by hand.
 A frontend-only change needs no restart. Copy `frontend/dist` into the running
 release's `lib/loom-*/priv/static`.
 
-## 7. Limits
+## 7. Signing in, and getting back in
+
+Who is signed in has a shell, so sign-in is guarded twice over (`Loom.Auth`):
+a device comes in with a **passkey**, or with the **password and an Allow
+from a device already signed in** (two minutes to press it). The password
+alone works only while no device is signed in — the first one, or after
+every one has signed out or gone 30 days unused. Passkeys and devices are
+under Settings → Sign-in; what is on disk is `~/.loom/auth.json` (mode 0600).
+
+A passkey belongs to the address it was made at: one made at
+`https://loom.example.com` does not work at another hostname for the same
+Loom. Passkeys need https (or `localhost`).
+
+`loomctl login` (and anything else that signs in with the password, such as
+`frontend/tools/transcript.mjs`) waits for that Allow like any new device;
+it shows on the signed-in devices as a request from `loomctl · <host>`.
+
+**Every device lost, or none at hand to press Allow.** On the host:
+
+- A release: `bin/loom rpc 'Loom.Auth.pending() |> IO.inspect'` lists the
+  requests waiting, and `bin/loom rpc 'Loom.Auth.approve("<id>")'` allows
+  one.
+- A dev server (`mix phx.server`) has no `rpc`. Stop Loom, set `"logins"` to
+  `{}` in `~/.loom/auth.json` (or delete the file, which forgets the
+  passkeys too), start Loom: with nobody signed in the password alone works
+  again. Every device is signed out by it; passkeys kept in the file still
+  work. (Measured on a dev server: the old tokens answered 401, the password
+  200, and the passkey was still offered.)
+
+## 8. Limits
 
 - Cloudflare caps request bodies at 100 MB. Attachments are capped at 25 MB
   per file. A 413 from Cloudflare never shows up in Loom's logs.

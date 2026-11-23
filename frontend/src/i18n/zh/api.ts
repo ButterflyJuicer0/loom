@@ -1,5 +1,10 @@
 // Errors and notices from api.ts that components show as they are.
 export default {
+  // Sign-in (Settings → Sign-in, and a request to allow).
+  "This browser did not give the passkey's public key": "这个浏览器没有给出 passkey 的公钥",
+  "Reload Loom first, then try again": "请先刷新 Loom 再试",
+  "Passkey refused: {why}": "passkey 被拒绝：{why}",
+  "That request has already expired": "这个请求已经过期",
   "Couldn't save that — {error}": "保存失败：{error}",
   "renameAgent failed: {status}": "服务器返回 {status}",
   "deleteAgent failed: {status}": "服务器返回 {status}",

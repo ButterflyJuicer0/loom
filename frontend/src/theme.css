@@ -1097,6 +1097,24 @@ pre.code {
   font-weight: 600;
 }
 
+/* The password's button once a passkey is on offer, and the wait for another
+   device's yes: in the theme's own colours, light or dark. */
+.login-secondary {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid color-mix(in srgb, var(--fg) 22%, transparent);
+  font-weight: 500;
+}
+
+.login-wait {
+  color: var(--fg);
+}
+
+.login-or,
+.login-wait-time {
+  color: var(--fg-dim);
+}
+
 /* ── Sizes: ChatGPT's proportions ───────────────────────────────────────
    16px body text with a 1.75 line, 14px in the sidebar, a 260px sidebar
    and a 52px header: the web page. A phone is the app; see the end. */

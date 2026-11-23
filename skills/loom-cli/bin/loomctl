@@ -7,7 +7,8 @@
   loomctl config set KEY VALUE           url (the API, default http://127.0.0.1:4000),
                                          public_url (what devices dial, e.g. https://x.cloudfront.net)
   loomctl config unset KEY
-  loomctl login [--password-stdin]       exchange the Loom password for a 30-day token
+  loomctl login [--password-stdin]       sign this command line in with the Loom password;
+                                         once a device is signed in, one of them has to allow it
   loomctl logout
   loomctl node list [--json]
   loomctl node add NAME [--icon linux|mac|windows|android|bot] [--wait [SECONDS]]
@@ -22,12 +23,20 @@ the one-line join command for each system; the code in it works once and only
 for 2 minutes, so run it on the device right away (`--wait` watches for it).
 
 The password is read from $LOOM_PASSWORD, or asked for. Nothing else needs it:
-the token is kept in ~/.loom/cli-token (mode 0600) until it expires.
+the token is kept in ~/.loom/cli-token (mode 0600), and lasts while it is used
+(Loom signs a device out after 30 days unused). Once any device is signed in to
+Loom, the password alone lets no new one in: `loomctl login` then waits, up to
+two minutes, for "Allow" on a device that is — it shows there as a sign-in
+request from "loomctl · <this host>" (Settings → Sign-in lists it afterwards).
 """
 import argparse, getpass, json, os, re, shutil, stat, subprocess, sys, time
 import urllib.error, urllib.parse, urllib.request
 
 HOME = os.environ.get("LOOM_HOME") or os.path.expanduser("~/.loom")
+# How this sign-in is named on the devices asked to allow it, and in Settings →
+# Sign-in afterwards (`LoomWeb.AuthController.device_name/1`).
+DEVICE_NAME = "loomctl · " + (os.uname().nodename.split(".")[0] or "host")[:40]
+USER_AGENT = "loomctl/1 (" + (os.uname().nodename.split(".")[0] or "host")[:40] + ")"
 CONFIG = os.path.join(HOME, "cli.json")
 TOKEN = os.path.join(HOME, "cli-token")
 DEFAULT_URL = "http://127.0.0.1:4000"
@@ -91,7 +100,8 @@ def public_url(required=True):
 def http(method, url, body=None, headers=None, timeout=30):
     req = urllib.request.Request(url, method=method,
                                  data=json.dumps(body).encode() if body is not None else None,
-                                 headers={"content-type": "application/json", **(headers or {})})
+                                 headers={"content-type": "application/json", "user-agent": USER_AGENT,
+                                          **(headers or {})})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             raw = r.read()
@@ -126,7 +136,9 @@ def login(password=None, quiet=False):
     status, data = http("POST", api_url() + "/api/login", {"password": password})
     if status == 429:
         die(f"too many wrong passwords; try again in {(data or {}).get('retry_after', '?')} s")
-    if status != 200 or not data or "token" not in data:
+    if status == 202 and data and "pending" in data:
+        data = await_allow(data)
+    elif status != 200 or not data or "token" not in data:
         die("wrong password" if status == 401 else f"login failed ({status}): {data}")
     os.makedirs(HOME, exist_ok=True)
     fd = os.open(TOKEN, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
@@ -135,6 +147,37 @@ def login(password=None, quiet=False):
     if not quiet:
         print(f"logged in to {api_url()}")
     return data["token"]
+
+
+def await_allow(pending):
+    """The password was right, and a device is already signed in: it has to say yes.
+
+    Loom shows the request on every signed-in device (and pushes it to phones);
+    this asks every two seconds until one answers or the request runs out.
+    """
+    ask = {"id": pending["pending"], "poll": pending["poll"]}
+    left = int(pending.get("expires_in") or 120)
+    print(f"password accepted. Now allow this sign-in on a device already signed in to Loom:\n"
+          f"  it shows \"Sign-in request\" from {DEVICE_NAME} - press Allow there (within {left} s).",
+          file=sys.stderr, flush=True)
+    deadline = time.time() + left + 5
+    try:
+        while time.time() < deadline:
+            time.sleep(2)
+            status, data = http("POST", api_url() + "/api/login/poll", ask)
+            if status == 200 and data and "token" in data:
+                return data
+            if status == 403:
+                die("the sign-in was denied on the other device")
+            if status == 410:
+                break
+            if status != 202:
+                die(f"login failed while waiting ({status}): {data}")
+    except KeyboardInterrupt:
+        http("POST", api_url() + "/api/login/cancel", ask)
+        die("cancelled")
+    die("nobody allowed the sign-in in time; run `loomctl login` again with a signed-in device at hand\n"
+        "(every device lost? see \"Signing in\" in docs/deploy.md for the way back in on the host)")
 
 
 def api(method, route, body=None):

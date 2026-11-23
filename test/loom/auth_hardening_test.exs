@@ -82,6 +82,15 @@ defmodule Loom.AuthHardeningTest do
     assert {:ok, _} = Auth.verify_token(token)
   end
 
+  test "a sign-in from the command line says which machine it is on" do
+    name = &LoomWeb.AuthController.device_name/1
+    assert name.("loomctl/1 (build-host)") == "loomctl · build-host"
+    assert name.("loomctl/1") == "loomctl"
+    # Nothing it sends is taken on trust beyond a short name.
+    assert name.("loomctl/1 (" <> String.duplicate("x", 200) <> ")") == "loomctl"
+    assert name.("Python-urllib/3.9") == "Unknown device"
+  end
+
   test "adding a passkey needs the password again", %{conn: conn} do
     Application.put_env(:loom, :password, "right-password")
     token = Auth.mint_token("Mac")

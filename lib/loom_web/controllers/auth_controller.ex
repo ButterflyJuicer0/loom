@@ -202,6 +202,14 @@ defmodule LoomWeb.AuthController do
   end
 
   @doc false
+  def device_name("loomctl/" <> _ = ua) do
+    # The command line (skills/loom-cli) says which machine it is on.
+    case Regex.run(~r/\((?<host>[^()]{1,40})\)/, ua, capture: ["host"]) do
+      [host] -> "loomctl · " <> host
+      _ -> "loomctl"
+    end
+  end
+
   def device_name(ua) do
     platform =
       cond do

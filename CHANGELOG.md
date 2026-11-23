@@ -17,6 +17,20 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Passkeys, and a yes from a signed-in device**: a device signs in with a
+  passkey (Settings → Sign-in adds one: Face ID, Touch ID, Windows Hello,
+  Android's screen lock; it asks for the password again), or with the
+  password and an Allow pressed within two minutes on a device already
+  signed in — each shows "Sign-in request · Allow / Deny", and phones get a
+  push. The password alone works only while no device is signed in. Every
+  device has a login of its own, listed in Settings → Sign-in, where it can
+  be signed out; 30 days unused signs it out. Nobody is signed out by the
+  change. `loomctl login` waits for the Allow too and shows as `loomctl ·
+  <host>`; the way back in with no device at hand is in docs/deploy.md §7.
+  From quanquan1996/loom 0.7.0 (7013b68, 7eeb53a, d77e543, bf1891e), with
+  the screens in Chinese and in the theme's colours.
+- **`LOOM_TRUSTED_PROXIES`**: with a CDN in front of the tunnel, the outer
+  proxy's addresses, so sign-in notices and the login brake see the visitor.
 - **BTW — ask on the side while the agent works**: a button beside the
   thinking level (or `/btw <question>`, or the second button beside send
   while a turn runs) puts a question to a copy of the conversation as it

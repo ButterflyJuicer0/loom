@@ -47,7 +47,21 @@ async function login() {
     body: JSON.stringify({ password: PASSWORD }),
   })
   if (!res.ok) throw new Error(`login failed: ${res.status} — is the server up at ${BASE}?`)
-  return (await res.json()).token
+  const data = await res.json()
+  if (res.status !== 202) return data.token
+
+  // A device is signed in already, so one of them has to allow this (`Loom.Auth`).
+  console.error(`password accepted — press Allow on a device signed in to Loom (within ${data.expires_in} s)`)
+  for (;;) {
+    await new Promise((r) => setTimeout(r, 2000))
+    const poll = await fetch(`${BASE}/api/login/poll`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: data.pending, poll: data.poll }),
+    })
+    if (poll.status === 200) return (await poll.json()).token
+    if (poll.status !== 202) throw new Error(poll.status === 403 ? "the sign-in was denied" : "nobody allowed the sign-in in time")
+  }
 }
 
 /** Upload local files as this session's attachments, as the browser does. */

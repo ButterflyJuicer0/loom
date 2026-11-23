@@ -94,6 +94,23 @@ Some features are told only in the skill that uses them and in
   and `Loom.Agent.Btw.Worker`, `fork_spec/1` in each backend,
   `/api/agents/:id/btw`; `frontend/src/Btw.tsx`, `useBtw.ts`; measurements in
   `docs/backends.md` §6.15.
+- **Signing in: passkeys, and a yes from a signed-in device.** A device signs
+  in with a passkey (Face ID, Touch ID, Windows Hello, Android's screen
+  lock), or with the password *and* an Allow pressed within two minutes on a
+  device already signed in — every signed-in device shows "Sign-in request ·
+  Allow / Deny", and phones with notifications on get a push. The password
+  alone works only while no device is signed in. Settings → Sign-in adds a
+  passkey on this device (it asks for the password again), lists the
+  passkeys and the signed-in devices, and signs one out; a device unused for
+  30 days is signed out by itself. Limits: a passkey works only at the
+  address it was made at, and needs https; devices signed in before this
+  existed stay signed in and appear in the list the next time they open
+  Loom; `loomctl login` waits for an Allow like any new device (it shows as
+  `loomctl · <host>`). No device left to press Allow: docs/deploy.md §7 —
+  on a dev server, stop Loom, empty `"logins"` in `~/.loom/auth.json`, start
+  it. Code: `Loom.Auth`, `Loom.Auth.WebAuthn`, `LoomWeb.AuthController`;
+  `frontend/src/Login.tsx`, `SignIn.tsx`. Ported from quanquan1996/loom
+  0.7.0 (itself after EthanLLL/loom).
 - **Language of the interface.** Settings → Language: 中文 or English, per
   device (localStorage), Chinese by default; changing it reloads the page.
   Only the interface is translated — titles, replies and notices show as they

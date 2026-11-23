@@ -7,7 +7,13 @@ description: Set up this Loom host and add the user's machines to it with `loomc
 
 `loomctl` runs on the host Loom runs on. It talks to Loom's own API, so it
 needs the Loom password once (`$LOOM_PASSWORD`, or asked for); the token is
-cached in `~/.loom/cli-token` for 30 days. If `loomctl` is not on PATH, it is
+cached in `~/.loom/cli-token` and lasts while it is used (30 days unused signs
+it out). Once any device is signed in to Loom, the password alone lets no new
+one in: `loomctl login` then prints "allow this sign-in" and waits up to two
+minutes for the user to press **Allow** on a signed-in device, where it shows
+as a sign-in request from `loomctl · <host>` — so ask the user to have Loom
+open before logging in, and do not retry in a loop (each try is another
+request on their screen). If `loomctl` is not on PATH, it is
 `skills/loom-cli/bin/loomctl` in the Loom repo (`loomctl install` links it into
 `~/.local/bin`; `rel/deploy.sh` does that too).
 

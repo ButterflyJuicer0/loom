@@ -256,7 +256,7 @@ export async function registerPasskey(password: string): Promise<Passkey> {
   if (!cred) throw new Error("cancelled")
   const response = cred.response as AuthenticatorAttestationResponse
   const publicKey = response.getPublicKey()
-  if (!publicKey) throw new Error("This browser did not give the passkey's public key")
+  if (!publicKey) throw new Error(t("This browser did not give the passkey's public key"))
 
   const res = await fetch("/api/auth/passkeys", {
     method: "POST",
@@ -269,10 +269,10 @@ export async function registerPasskey(password: string): Promise<Passkey> {
       password,
     }),
   })
-  if (res.status === 401) throw new Error("Wrong password")
-  if (res.status === 429) throw new Error("Too many tries — wait a few minutes")
-  if (res.status === 403) throw new Error("Reload Loom first, then try again")
-  if (!res.ok) throw new Error(`Passkey refused: ${(await res.json()).error}`)
+  if (res.status === 401) throw new Error(t("Wrong password"))
+  if (res.status === 429) throw new Error(t("Too many tries — wait a few minutes"))
+  if (res.status === 403) throw new Error(t("Reload Loom first, then try again"))
+  if (!res.ok) throw new Error(t("Passkey refused: {why}", { why: (await res.json()).error }))
   return (await res.json()).passkey
 }
 
@@ -291,8 +291,8 @@ export async function decideSignIn(id: string, allow: boolean): Promise<void> {
     headers: authHeaders(),
   })
   if (res.status === 401) throw unauthorized()
-  if (res.status === 410) throw new Error("That request has already expired")
-  if (res.status === 403) throw new Error("Reload Loom first, then try again")
+  if (res.status === 410) throw new Error(t("That request has already expired"))
+  if (res.status === 403) throw new Error(t("Reload Loom first, then try again"))
   if (!res.ok) throw new Error(`decideSignIn failed: ${res.status}`)
 }
 
