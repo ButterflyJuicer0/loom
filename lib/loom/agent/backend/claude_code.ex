@@ -1012,6 +1012,21 @@ defmodule Loom.Agent.Backend.ClaudeCode do
     end)
   end
 
+  # The model wrote its tool calls out as text instead of making them (see
+  # `strip_stray_calls/1`), and Claude Code is asking it again — in a user
+  # message of its own. Said, so that the second answer under the first is
+  # not a mystery.
+  defp translate(handle, %{
+         "type" => "user",
+         "isSynthetic" => true,
+         "message" => %{"content" => [%{"type" => "text", "text" => text} | _]}
+       })
+       when is_binary(text) do
+    if text =~ "failed to produce a valid tool call",
+      do: {handle, [{:event, :call_retry, %{}}]},
+      else: {handle, []}
+  end
+
   defp translate(handle, %{"type" => "user", "message" => %{"content" => content}})
        when is_list(content) do
     produced =
@@ -1074,6 +1089,51 @@ defmodule Loom.Agent.Backend.ClaudeCode do
   end
 
   defp translate(handle, _message), do: {handle, []}
+
+  @doc """
+  A reply's text without the tool calls the model wrote into it as text.
+
+  It happens: the response ends as if a tool were being called
+  (`stop_reason: "tool_use"`) but holds no call, only the call's markup at
+  the end of the text — `<invoke name="Bash"><parameter name="command">…`.
+  Claude Code then asks the model to try again (measured, 2.1.317: a
+  synthetic user message, "The previous response failed to produce a valid
+  tool call"), and the markup is left in the reply for the user to read.
+
+  Only a run of such calls that reaches the end of the text is taken off,
+  and never one inside a code fence: a reply that explains the syntax keeps
+  its example.
+  """
+  def strip_stray_calls(text) when is_binary(text) do
+    ~r/<(?:antml:)?invoke name="/
+    |> Regex.scan(text, return: :index)
+    |> Enum.find_value(text, fn [{at, _len}] ->
+      head = binary_part(text, 0, at)
+      tail = binary_part(text, at, byte_size(text) - at)
+
+      if only_calls?(tail) and not in_fence?(head),
+        do: head |> String.replace(~r/(?:\s*<(?:antml:)?function_calls>)?\s*\z/, "")
+    end)
+  end
+
+  # Whole calls, then nothing — or one more that was cut short.
+  defp only_calls?(tail) do
+    rest =
+      tail
+      |> String.replace(~r/<(?:antml:)?invoke name="[^"\n]*">.*?<\/(?:antml:)?invoke>/s, "")
+      |> String.replace(~r/<\/?(?:antml:)?function_calls>/, "")
+      |> String.trim()
+
+    # Cut short, it is still a call's opening tag and then its parameters —
+    # not a sentence that happens to mention the tag.
+    rest == "" or
+      Regex.match?(
+        ~r/\A<(?:antml:)?invoke name="[^"\n]*">\s*(?:<(?:antml:)?parameter name="[^"\n]*">(?:(?!<(?:antml:)?invoke name=").)*)?\z/s,
+        rest
+      )
+  end
+
+  defp in_fence?(head), do: rem(length(String.split(head, "```")) - 1, 2) == 1
 
   defp task_kind("local_agent"), do: "agent"
   defp task_kind("local_bash"), do: "shell"
@@ -1161,7 +1221,7 @@ defmodule Loom.Agent.Backend.ClaudeCode do
 
   defp assistant_block(handle, %{"type" => "text", "text" => text}) do
     {block_id, handle} = claim_block(handle, nil)
-    {handle, [{:event, :assistant_text, %{block_id: block_id, text: text}}]}
+    {handle, [{:event, :assistant_text, %{block_id: block_id, text: strip_stray_calls(text)}}]}
   end
 
   defp assistant_block(handle, %{"type" => "thinking"} = block) do

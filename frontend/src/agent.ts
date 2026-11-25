@@ -367,6 +367,44 @@ function newBlock(delta: AgentDelta): StreamingBlock | null {
 }
 
 /**
+ * A reply's text without the tool calls the model wrote into it as text.
+ *
+ * It happens: a response ends as if a tool were being called but holds no
+ * call, only the call's markup at the end of its text (`<invoke name="Bash">`
+ * and its parameters). Claude Code asks the model again, and the markup is
+ * left in the reply. The server takes it off new replies
+ * (`Loom.Agent.Backend.ClaudeCode.strip_stray_calls/1`, the same rule); this
+ * is for the ones already recorded, and for the text as it streams.
+ *
+ * Only a run of calls that reaches the end of the text goes, and never one
+ * inside a code fence: a reply that explains the syntax keeps its example.
+ */
+export function stripStrayCalls(text: string): string {
+  if (!text.includes("invoke name=")) return text
+  for (const open of text.matchAll(/<(?:antml:)?invoke name="/g)) {
+    const head = text.slice(0, open.index)
+    const fenced = (head.split("```").length - 1) % 2 === 1
+    if (!fenced && onlyCalls(text.slice(open.index))) {
+      return head.replace(/(?:\s*<(?:antml:)?function_calls>)?\s*$/, "")
+    }
+  }
+  return text
+}
+
+// Whole calls, then nothing — or one more that was cut short: still its
+// opening tag and then its parameters, not a sentence that mentions the tag.
+function onlyCalls(tail: string): boolean {
+  const rest = tail
+    .replace(/<(?:antml:)?invoke name="[^"\n]*">[\s\S]*?<\/(?:antml:)?invoke>/g, "")
+    .replace(/<\/?(?:antml:)?function_calls>/g, "")
+    .trim()
+  return (
+    rest === "" ||
+    /^<(?:antml:)?invoke name="[^"\n]*">\s*(?:<(?:antml:)?parameter name="[^"\n]*">(?:(?!<(?:antml:)?invoke name=")[\s\S])*)?$/.test(rest)
+  )
+}
+
+/**
  * The session's tasks, oldest first: every `task` event about one folded
  * into it (the first says what it is, the rest are patches), with what it
  * last said it was doing.
@@ -597,12 +635,27 @@ export function buildTimeline(t: Transcript, say: Say = asWritten): TimelineItem
         })
         break
 
-      case "assistant_text":
+      case "assistant_text": {
+        const raw = String(p.text ?? "")
+        const text = stripStrayCalls(raw)
+        // A reply that was nothing but calls written as text says nothing.
+        if (text.trim() === "" && raw.trim() !== "") break
         items.push({
           key,
           kind: "assistant",
-          ...splitReplies(String(p.text ?? "")),
+          ...splitReplies(text),
           streaming: false,
+        })
+        break
+      }
+
+      // The model wrote its tool calls as text instead of making them, and
+      // Claude Code asked it again: why a second answer follows the first.
+      case "call_retry":
+        items.push({
+          key,
+          kind: "notice",
+          text: say("The model wrote a tool call out as text instead of making it, and was asked again"),
         })
         break
 
@@ -802,7 +855,7 @@ export function buildTimeline(t: Transcript, say: Say = asWritten): TimelineItem
       items.push({
         key: `s${block.blockId}`,
         kind: block.kind === "thinking" ? "thinking" : "assistant",
-        text: block.kind === "thinking" ? block.text : splitReplies(block.text).text,
+        text: block.kind === "thinking" ? block.text : splitReplies(stripStrayCalls(block.text)).text,
         streaming: true,
       })
     }

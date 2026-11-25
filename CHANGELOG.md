@@ -158,6 +158,12 @@ that ran live. Format after [Keep a Changelog](https://keepachangelog.com/).
   as one line.
 
 ### Fixed
+- **A tool call written out as text no longer shows in the reply**: now and
+  then the model ends a reply with its tool calls as plain text (`<invoke
+  name="Bash">` and its parameters) instead of making them; Claude Code asks
+  it again, and the markup was left for the user to read. It is taken off
+  the end of the reply — recorded ones included — and a line says the model
+  was asked again, which is why a second answer follows.
 - **A background subagent's text no longer lands in the conversation's
   reply**: what a subagent says while the agent itself is answering took the
   answer's placeholder. A subagent's output is kept apart now.

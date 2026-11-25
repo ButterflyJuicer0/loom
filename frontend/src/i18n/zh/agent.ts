@@ -9,6 +9,8 @@ export default {
   // {count} is " 2" or " 2/10", or nothing.
   "API {status}, retrying{count}": "API {status}，正在重试{count}",
   "API {status}, retrying{count} in {s}s": "API {status}，{s} 秒后重试{count}",
+  "The model wrote a tool call out as text instead of making it, and was asked again":
+    "模型把工具调用写成了文字，没有真正发起；已让它重试",
   "context compacted automatically": "上下文已自动压缩",
   "context compacted": "上下文已压缩",
   // After either of the two above.

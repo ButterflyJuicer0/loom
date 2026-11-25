@@ -385,6 +385,22 @@ stream-json. Codex and Kiro have nothing of the kind.
 - Claude Code refuses `sleep N; command` in the foreground ("Blocked: … use
   run_in_background"), so a test of this needs another way to be slow.
 
+### 6.17 A tool call written as text
+
+Seen once in 1,869 replies (2.1.317, Fable 5.2): a response ended with
+`stop_reason: "tool_use"` and no `tool_use` block — the calls were at the end
+of its text block, as markup (`<invoke name="Bash">`, `<parameter name=…>`).
+Claude Code then wrote a user message of its own (`isSynthetic: true`, "The
+previous response failed to produce a valid tool call. Please retry the tool
+call now.") and the model answered a second time, in full, calling nothing.
+
+Both answers are the conversation's, so both are shown; the markup is not.
+`strip_stray_calls/1` takes a run of such calls off the end of an assistant
+text (never one inside a code fence, never one followed by more text), the
+client does the same for replies already recorded (`stripStrayCalls` in
+`agent.ts`), and the synthetic message becomes a `:call_retry` event: a line
+that says the model was asked again.
+
 ## 7. Not done: permission prompts
 
 Codex has proper approval requests. CC auto-denies under
